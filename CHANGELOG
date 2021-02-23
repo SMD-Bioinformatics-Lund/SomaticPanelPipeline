@@ -1,5 +1,12 @@
 ## Changelog ##
 
+### 1.0.1
+- bug fixes for aggregate_cnv2.pl, rare delly div 0
+
+### 1.0
+- live version, supporting PARP_inib, myeloid
+- test versions for Solid, Lymphoid and pancancer
+
 2020-07-10
 Merged master with ovarian:
 # queue set to high
