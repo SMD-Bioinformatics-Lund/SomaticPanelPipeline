@@ -1,5 +1,8 @@
 ## Changelog ##
 
+### 1.0.2
+- feature, added param for cdm page for myeloid and parpinhib
+
 ### 1.0.1
 - bug fixes for aggregate_cnv2.pl, rare delly div 0
 
