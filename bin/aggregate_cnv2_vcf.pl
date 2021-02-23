@@ -184,7 +184,13 @@ sub fix_gt {
             my $altc = 0;
             my $depth = 0;
             if ($gt->{RV} == 0) {
-                $af = sprintf "%.3f", $gt->{DV} / ($gt->{DR}+$gt->{DV});
+                my $totcount = $gt->{DR}+$gt->{DV};
+                if ($totcount == 0) { 
+                    $af = 0;
+                }
+                else {
+                    $af = sprintf "%.3f", $gt->{DV} / $totcount;
+                }
                 $altc = $gt->{DV};
                 $depth = ($gt->{DV}+$gt->{DR});
             }
