@@ -642,7 +642,7 @@ process melt {
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
 	cpus 2
 	//container = '/fs1/resources/containers/container_twist-brca.sif'
-	memory '10 GB'
+	memory '50 GB'
 	tag "$group"
 	scratch true
 	stageInMode 'copy'
@@ -689,6 +689,7 @@ process manta {
 	//container = '/fs1/resources/containers/wgs_2020-03-25.sif'
 	tag "$group"
 	scratch true
+	memory '10GB'
 	stageInMode 'copy'
 	stageOutMode 'copy'
 	
@@ -747,6 +748,7 @@ process delly {
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
 	cpus 2
 	time '20h'
+	memory '10GB'
 	//container = '/fs1/resources/containers/wgs_2020-03-25.sif'
 	tag "$group"
 		
