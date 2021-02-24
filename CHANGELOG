@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 1.0.3
+- fixes: melt peak mem higher than expected
+- added: added memory variable to manta and delly 
+
 ### 1.0.2
 - feature, added param for cdm page for myeloid and parpinhib
 
