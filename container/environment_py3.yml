@@ -1,9 +1,0 @@
-name: py3-env
-channels:
-    - bioconda
-    - conda-forge
-    - defaults
-
-dependencies:
-    - bioconda::varlociraptor=1.7.2
-

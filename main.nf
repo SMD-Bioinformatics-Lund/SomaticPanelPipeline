@@ -296,6 +296,7 @@ process lowcov {
 		set group, type, file("${id}.lowcov.bed") into lowcov_coyote
 
 	"""
+        source activate sambamba
 	panel_depth.pl $bam $params.regions_proteincoding > lowcov.bed
 	overlapping_genes.pl lowcov.bed $params.gene_regions > ${id}.lowcov.bed
 	"""
@@ -357,7 +358,6 @@ process qc_values {
 				ins_size = it =~ /\"(ins_size)\" : \"(\S+)\"/
 			}
 		}
-		// might need to be defined for -resume to work "def INS_SIZE" and so on....
 		INS_SIZE = ins_size[0][2]
 		MEAN_DEPTH = coverage[0][2]
 		COV_DEV = ins_dev[0][2]
@@ -599,6 +599,7 @@ process cnvkit {
 		freebayes_idx = vc.findIndexOf{ it == 'freebayes' }
 
 	"""
+        source activate py2
 	cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
 	cnvkit.py call results/*.cns -v $vcf -o ${gr}.${id}.call.cns
 	filter_cnvkit.pl ${gr}.${id}.call.cns $MEAN_DEPTH > ${gr}.${id}.filtered
@@ -613,7 +614,6 @@ process cnvkit {
 process gene_plot {
 	publishDir "${OUTDIR}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
 	cpus 1
-	container = '/fs1/resources/containers/cnvkit91_montage.sif'
 	time '5m'
 	tag "$id"
 
@@ -627,6 +627,7 @@ process gene_plot {
 
 		if (params.assay == "PARP_inhib") {
 			"""
+                        source activate cnvkit-old
 			cnvkit.py scatter -s $cns $cnr -c 13:32165479-32549672 -o brca2.png --title 'BRCA2'
 			cnvkit.py scatter -s $cns $cnr -c 17:42894294-43350132 -o brca1.png --title 'BRCA1'
 			montage -mode concatenate -tile 1x *.png ${gr}.${id}.cnvkit.png
@@ -664,7 +665,7 @@ process melt {
 
 	"""
 	set +eu
-	source activate java8-env
+	source activate java8
 	set -eu
 	java -jar  /opt/MELT.jar Single \\
 		-bamfile $bam \\
@@ -715,6 +716,7 @@ process manta {
 			tumor_id = id[tumor_idx]
 
 			"""
+                        source activate py2
 			configManta.py \\
 				--tumorBam $tumor \\
 				--normalBam $normal \\
@@ -724,6 +726,7 @@ process manta {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
+                        source deactivate
 			#filter_manta_paired.pl results/variants/somaticSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/somaticSV.vcf.gz ${group}_manta.vcf.gz
 			gunzip ${group}_manta.vcf.gz
@@ -731,6 +734,7 @@ process manta {
 		}
 		else {
 			"""
+                        source activate py2
 			configManta.py \\
 				--tumorBam $bam \\
 				--reference $genome_file \\
@@ -739,6 +743,7 @@ process manta {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
+                        source deactivate
 			#filter_manta.pl results/variants/tumorSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/tumorSV.vcf.gz ${group}_manta.vcf.gz
 			gunzip ${group}_manta.vcf.gz
@@ -825,8 +830,6 @@ process concat_cnv {
 		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
 		vcfs = tmp.join(' ')
 		"""
-		set +eu
-		source activate py3-env
 		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
 			--tumor-id ${id_c[tumor_idx_c]} \\
@@ -839,8 +842,6 @@ process concat_cnv {
 		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
 		vcfs = tmp.join(' ')
 		"""
-		set +eu
-		source activate py3-env
 		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
 		"""
@@ -999,7 +1000,6 @@ process umi_confirm {
 				normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
 				"""
-				source activate samtools
 				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > umitmp.vcf
 				UMIconfirm_vcf.py ${bam[normal_idx]} umitmp.vcf $genome_file ${id[normal_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
 				"""
@@ -1008,7 +1008,6 @@ process umi_confirm {
 				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 
 				"""
-				source activate samtools
 				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
 				"""
 			}

@@ -1,0 +1,10 @@
+name: py2
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+
+dependencies:
+    - conda-forge:python=2.7
+    - bioconda::manta=1.6.0
+    - bioconda::cnvkit=0.9.6=py27_1
