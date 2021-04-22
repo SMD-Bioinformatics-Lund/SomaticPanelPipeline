@@ -343,7 +343,10 @@ process qc_values {
 	
 	script:
 		// Collect qc-data if possible from normal sample, if only tumor; tumor
-		qc.readLines().each{
+                def ins_dev
+                def coverage
+                def ins_size
+                qc.readLines().each{
 			if (it =~ /\"(ins_size_dev)\" : \"(\S+)\"/) {
 				ins_dev = it =~ /\"(ins_size_dev)\" : \"(\S+)\"/
 			}
