@@ -599,7 +599,10 @@ process cnvkit {
 		freebayes_idx = vc.findIndexOf{ it == 'freebayes' }
 
 	"""
+	set +eu
         source activate py2
+	set -eu
+
 	cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
 	cnvkit.py call results/*.cns -v $vcf -o ${gr}.${id}.call.cns
 	filter_cnvkit.pl ${gr}.${id}.call.cns $MEAN_DEPTH > ${gr}.${id}.filtered
