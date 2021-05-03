@@ -113,7 +113,7 @@ process bwa_umi {
 		-t ${task.cpus} \\
 		-p -C $genome_file - \\
 	|tee -a noumi.sam \\
-	|sentieon umi consensus -o consensus.fastq.gz
+	|sentieon umi consensus --copy_tags XR,RX,MI,XZ -o consensus.fastq.gz
 
 	sentieon bwa mem \\
 		-R "@RG\\tID:$id\\tSM:$id\\tLB:$id\\tPL:illumina" \\
@@ -121,7 +121,7 @@ process bwa_umi {
 		-p -C $genome_file consensus.fastq.gz \\
 	|sentieon util sort -i - \\
 		-o ${id}.${type}.bwa.umi.sort.bam \\
-		--sam2bam
+		--sam2bam --umi_post_process
 
 	sentieon util sort -i noumi.sam -o ${id}.${type}.bwa.sort.bam --sam2bam
 	rm noumi.sam
