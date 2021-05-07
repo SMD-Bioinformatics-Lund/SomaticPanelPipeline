@@ -600,7 +600,7 @@ process cnvkit {
 
 	"""
 	set +eu
-        source activate py2
+	source activate py2
 	set -eu
 
 	cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
@@ -946,6 +946,7 @@ process annotate_vep {
 	--dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
 	--distance 200 \\
 	--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
+	--custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
 	--cache \\
 	"""
 }
