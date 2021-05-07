@@ -945,8 +945,8 @@ process annotate_vep {
 	--fasta $params.VEP_FASTA \\
 	--dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
 	--distance 200 \\
-	-custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
-	-cache \\
+	--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
+	--cache \\
 	"""
 }
 
