@@ -576,6 +576,7 @@ process concatenate_vcfs {
 
 process cnvkit {
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf'
+	publishDir "${OUTDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
 	cpus 1
 	time '1h'
 	tag "$id"
@@ -591,7 +592,7 @@ process cnvkit {
 		set gr, id, type, file("${gr}.${id}.cnvkit_overview.png"), file("${gr}.${id}.call.cns"), file("${gr}.${id}.cnr"), file("${gr}.${id}.filtered") into geneplot_cnvkit
 		set gr, id, type, file("${gr}.${id}.filtered.vcf") into cnvkit_vcf 
 		file("${gr}.${id}.cns") into cns_notcalled
-
+		file("*.bed.gz*")
 	when:
 		params.cnvkit
 
@@ -610,6 +611,7 @@ process cnvkit {
 	cnvkit.py scatter -s results/*.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf[freebayes_idx]} -i $id
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
+	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
 	"""
 }
 
