@@ -459,7 +459,7 @@ process tnscope {
 		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
-		if( mode == 'paired' ) {
+		if( id.size() >= 2 ) {
 			"""
 			sentieon driver -t ${task.cpus} \\
 				-r $genome_file \\
@@ -817,7 +817,7 @@ process concat_cnv {
 	
 	script:
 	
-	if (mode == 'paired') {
+	if( id.size() >= 2 ) {
 		tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
 		tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
