@@ -6,9 +6,8 @@ OUTDIR = params.outdir+'/'+params.subdir
 CRONDIR = params.crondir
 
 csv = file(params.csv)
-mode = csv.countLines() > 2 ? "paired" : "unpaired"
 println(csv)
-println(mode)
+
 
 
 workflow.onComplete {
@@ -382,7 +381,7 @@ process freebayes {
 		params.freebayes
 
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
@@ -393,7 +392,7 @@ process freebayes {
 			filter_freebayes_somatic.pl freebayes_${bed}.filt1.vcf ${id[tumor_idx]} ${id[normal_idx]} > freebayes_${bed}.vcf
 			"""
 		}
-		else if( mode == "unpaired" ) {
+		else if( id.size() == 1 ) {
 			"""
 			freebayes -f $genome_file -t $bed --pooled-continuous --pooled-discrete --min-repeat-entropy 1 -F 0.03 $bams > freebayes_${bed}.vcf.raw
 			vcffilter -F LowCov -f "DP > 500" -f "QA > 1500" freebayes_${bed}.vcf.raw | vcffilter -F LowFrq -o -f "AB > 0.05" -f "AB = 0" | vcfglxgt > freebayes_${bed}.filt1.vcf
@@ -420,7 +419,7 @@ process vardict {
 		params.vardict
     
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
@@ -432,7 +431,7 @@ process vardict {
 			filter_vardict_somatic.pl vardict_${bed}.vcf.raw ${id[tumor_idx]} ${id[normal_idx]} > vardict_${bed}.vcf
 			"""
 		}
-		else if( mode == "unpaired" ) {
+		else if( id.size() == 1 ) {
 			"""
 			vardict-java -G $genome_file -f 0.03 -N ${id[0]} -b ${bams[0]} -c 1 -S 2 -E 3 -g 4 -U $bed | teststrandbias.R | var2vcf_valid.pl -N ${id[0]} -E -f 0.01 > vardict_${bed}.vcf.raw
 			filter_vardict_unpaired.pl vardict_${bed}.vcf.raw > vardict_${bed}.vcf
@@ -460,7 +459,7 @@ process tnscope {
 		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
-		if( mode == 'paired' ) {
+		if( id.size() >= 2 ) {
 			"""
 			sentieon driver -t ${task.cpus} \\
 				-r $genome_file \\
@@ -508,7 +507,7 @@ process pindel {
 		params.pindel
 
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			ins_tumor = ins_size[tumor_idx]
@@ -576,6 +575,7 @@ process concatenate_vcfs {
 
 process cnvkit {
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf'
+	publishDir "${OUTDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
 	cpus 1
 	time '1h'
 	tag "$id"
@@ -584,14 +584,14 @@ process cnvkit {
 	stageOutMode 'copy'
 	
 	input:
-		set gr, id, type, file(bam), file(bai), file(bqsr), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV),g ,vc, file(vcf) from bam_cnvkit.join(qc_cnvkit_val, by:[0,1]) \
-			.combine(vcf_cnvkit.filter { item -> item[1] == 'freebayes' })
+		set gr, id, type, file(bam), file(bai), file(bqsr), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV), vc, file(vcf) from bam_cnvkit.join(qc_cnvkit_val, by:[0,1]) \
+			.combine(vcf_cnvkit.filter { item -> item[1] == 'freebayes' }, by:[0])
 		
 	output:
 		set gr, id, type, file("${gr}.${id}.cnvkit_overview.png"), file("${gr}.${id}.call.cns"), file("${gr}.${id}.cnr"), file("${gr}.${id}.filtered") into geneplot_cnvkit
 		set gr, id, type, file("${gr}.${id}.filtered.vcf") into cnvkit_vcf 
 		file("${gr}.${id}.cns") into cns_notcalled
-
+		file("*.bed.gz*")
 	when:
 		params.cnvkit
 
@@ -610,6 +610,7 @@ process cnvkit {
 	cnvkit.py scatter -s results/*.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf[freebayes_idx]} -i $id
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
+	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
 	"""
 }
 
@@ -710,7 +711,7 @@ process manta {
 		params.manta
 	
 	script:
-		if(mode == "paired") { 
+		if(id.size() >= 2) { 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			normal = bam[normal_idx]
@@ -773,7 +774,7 @@ process delly {
 		params.manta
 	
 	script:
-		if(mode == "paired") { 
+		if(id.size() >= 2) { 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			normal = bam[normal_idx]
@@ -816,7 +817,7 @@ process concat_cnv {
 	
 	script:
 	
-	if (mode == 'paired') {
+	if( id.size() >= 2 ) {
 		tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
 		tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
@@ -869,7 +870,7 @@ process aggregate_vcfs {
 
 	script:
 		sample_order = id[0]
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			sample_order = id[tumor_idx]+","+id[normal_idx]
@@ -966,14 +967,14 @@ process mark_germlines {
 
 
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			"""
 			mark_germlines.pl --vcf $vcf --tumor-id ${id[tumor_idx]} --normal-id ${id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
-		else if( mode == "unpaired" ) {
+		else if( id.size() == 1 ) {
 			"""
 			mark_germlines.pl --vcf $vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
@@ -1000,7 +1001,7 @@ process umi_confirm {
 	script:
 		if (params.conform) {
 	
-			if( mode == "paired" ) {
+			if( id.size() >= 2 ) {
 				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 				normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
@@ -1009,7 +1010,7 @@ process umi_confirm {
 				UMIconfirm_vcf.py ${bam[normal_idx]} umitmp.vcf $genome_file ${id[normal_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
 				"""
 			}
-			else if( mode == "unpaired" ) {
+			else if( id.size() == 1 ) {
 				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 
 				"""
