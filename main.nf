@@ -631,7 +631,9 @@ process gene_plot {
 
 		if (params.assay == "PARP_inhib") {
 			"""
-                        source activate cnvkit-old
+                        set +eu
+                        source activate old-cnvkit
+                        set -eu
 			cnvkit.py scatter -s $cns $cnr -c 13:32165479-32549672 -o brca2.png --title 'BRCA2'
 			cnvkit.py scatter -s $cns $cnr -c 17:42894294-43350132 -o brca1.png --title 'BRCA1'
 			montage -mode concatenate -tile 1x *.png ${gr}.${id}.cnvkit.png
@@ -683,6 +685,7 @@ process melt {
 		-c $MEAN_DEPTH \\
 		-cov $COV_DEV \\
 		-e $INS_SIZE
+        source deactivate
 	merge_melt.pl $params.meltheader $id
 	"""
 
@@ -818,7 +821,7 @@ process concat_cnv {
 	
 	script:
 	
-	if( id.size() >= 2 ) {
+	if( id_c.size() >= 2 ) {
 		tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
 		tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
