@@ -683,7 +683,6 @@ process melt {
 		-c $MEAN_DEPTH \\
 		-cov $COV_DEV \\
 		-e $INS_SIZE
-	source deactivate
 	merge_melt.pl $params.meltheader $id
 	"""
 
@@ -720,7 +719,9 @@ process manta {
 			tumor_id = id[tumor_idx]
 
 			"""
+                        set +eu
                         source activate py2
+                        set -eu
 			configManta.py \\
 				--tumorBam $tumor \\
 				--normalBam $normal \\
@@ -730,7 +731,6 @@ process manta {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-                        source deactivate
 			#filter_manta_paired.pl results/variants/somaticSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/somaticSV.vcf.gz ${group}_manta.vcf.gz
 			gunzip ${group}_manta.vcf.gz
@@ -738,7 +738,9 @@ process manta {
 		}
 		else {
 			"""
+                        set +eu
                         source activate py2
+                        set -eu
 			configManta.py \\
 				--tumorBam $bam \\
 				--reference $genome_file \\
@@ -747,7 +749,6 @@ process manta {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-                        source deactivate
 			#filter_manta.pl results/variants/tumorSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/tumorSV.vcf.gz ${group}_manta.vcf.gz
 			gunzip ${group}_manta.vcf.gz
