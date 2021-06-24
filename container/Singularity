@@ -29,7 +29,7 @@ From:nfcore/base:1.8
 	apt -y clean
 	apt -y update
 	apt -y install build-essential make
-	apt -y install graphicsmagick-imagemagick-compat
+	apt -y install graphicsmagick-imagemagick-compat libtbb2
 
 	/opt/conda/bin/conda install mamba -n base -c conda-forge
 
