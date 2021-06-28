@@ -7,4 +7,4 @@ channels:
 dependencies:
     - conda-forge:python=2.7
     - bioconda::cnvkit=0.9.5=py27_1
-
+    - openssl=1.0
