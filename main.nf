@@ -576,6 +576,7 @@ process concatenate_vcfs {
 process cnvkit {
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf'
 	publishDir "${OUTDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
+	publishDir "${CRONDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.gens'
 	cpus 1
 	time '1h'
 	tag "$id"
@@ -592,6 +593,7 @@ process cnvkit {
 		set gr, id, type, file("${gr}.${id}.filtered.vcf") into cnvkit_vcf 
 		file("${gr}.${id}.cns") into cns_notcalled
 		file("*.bed.gz*")
+		file("${id}.gens") into gens_middleman
 	when:
 		params.cnvkit
 
@@ -611,6 +613,7 @@ process cnvkit {
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
 	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
+	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz --overview-json ${params.gens_accessdir}/${id}.overview.json.gz" > ${id}.gens
 	"""
 }
 
