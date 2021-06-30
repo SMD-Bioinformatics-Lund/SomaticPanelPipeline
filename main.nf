@@ -6,9 +6,8 @@ OUTDIR = params.outdir+'/'+params.subdir
 CRONDIR = params.crondir
 
 csv = file(params.csv)
-mode = csv.countLines() > 2 ? "paired" : "unpaired"
 println(csv)
-println(mode)
+
 
 
 workflow.onComplete {
@@ -113,7 +112,7 @@ process bwa_umi {
 		-t ${task.cpus} \\
 		-p -C $genome_file - \\
 	|tee -a noumi.sam \\
-	|sentieon umi consensus -o consensus.fastq.gz
+	|sentieon umi consensus --copy_tags XR,RX,MI,XZ -o consensus.fastq.gz
 
 	sentieon bwa mem \\
 		-R "@RG\\tID:$id\\tSM:$id\\tLB:$id\\tPL:illumina" \\
@@ -121,7 +120,7 @@ process bwa_umi {
 		-p -C $genome_file consensus.fastq.gz \\
 	|sentieon util sort -i - \\
 		-o ${id}.${type}.bwa.umi.sort.bam \\
-		--sam2bam
+		--sam2bam --umi_post_process
 
 	sentieon util sort -i noumi.sam -o ${id}.${type}.bwa.sort.bam --sam2bam
 	rm noumi.sam
@@ -296,6 +295,7 @@ process lowcov {
 		set group, type, file("${id}.lowcov.bed") into lowcov_coyote
 
 	"""
+        source activate sambamba
 	panel_depth.pl $bam $params.regions_proteincoding > lowcov.bed
 	overlapping_genes.pl lowcov.bed $params.gene_regions > ${id}.lowcov.bed
 	"""
@@ -343,7 +343,10 @@ process qc_values {
 	
 	script:
 		// Collect qc-data if possible from normal sample, if only tumor; tumor
-		qc.readLines().each{
+                def ins_dev
+                def coverage
+                def ins_size
+                qc.readLines().each{
 			if (it =~ /\"(ins_size_dev)\" : \"(\S+)\"/) {
 				ins_dev = it =~ /\"(ins_size_dev)\" : \"(\S+)\"/
 			}
@@ -354,7 +357,6 @@ process qc_values {
 				ins_size = it =~ /\"(ins_size)\" : \"(\S+)\"/
 			}
 		}
-		// might need to be defined for -resume to work "def INS_SIZE" and so on....
 		INS_SIZE = ins_size[0][2]
 		MEAN_DEPTH = coverage[0][2]
 		COV_DEV = ins_dev[0][2]
@@ -379,7 +381,7 @@ process freebayes {
 		params.freebayes
 
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
@@ -390,7 +392,7 @@ process freebayes {
 			filter_freebayes_somatic.pl freebayes_${bed}.filt1.vcf ${id[tumor_idx]} ${id[normal_idx]} > freebayes_${bed}.vcf
 			"""
 		}
-		else if( mode == "unpaired" ) {
+		else if( id.size() == 1 ) {
 			"""
 			freebayes -f $genome_file -t $bed --pooled-continuous --pooled-discrete --min-repeat-entropy 1 -F 0.03 $bams > freebayes_${bed}.vcf.raw
 			vcffilter -F LowCov -f "DP > 500" -f "QA > 1500" freebayes_${bed}.vcf.raw | vcffilter -F LowFrq -o -f "AB > 0.05" -f "AB = 0" | vcfglxgt > freebayes_${bed}.filt1.vcf
@@ -417,7 +419,7 @@ process vardict {
 		params.vardict
     
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
@@ -429,7 +431,7 @@ process vardict {
 			filter_vardict_somatic.pl vardict_${bed}.vcf.raw ${id[tumor_idx]} ${id[normal_idx]} > vardict_${bed}.vcf
 			"""
 		}
-		else if( mode == "unpaired" ) {
+		else if( id.size() == 1 ) {
 			"""
 			vardict-java -G $genome_file -f 0.03 -N ${id[0]} -b ${bams[0]} -c 1 -S 2 -E 3 -g 4 -U $bed | teststrandbias.R | var2vcf_valid.pl -N ${id[0]} -E -f 0.01 > vardict_${bed}.vcf.raw
 			filter_vardict_unpaired.pl vardict_${bed}.vcf.raw > vardict_${bed}.vcf
@@ -457,7 +459,7 @@ process tnscope {
 		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
-		if( mode == 'paired' ) {
+		if( id.size() >= 2 ) {
 			"""
 			sentieon driver -t ${task.cpus} \\
 				-r $genome_file \\
@@ -505,7 +507,7 @@ process pindel {
 		params.pindel
 
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			ins_tumor = ins_size[tumor_idx]
@@ -573,6 +575,7 @@ process concatenate_vcfs {
 
 process cnvkit {
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf'
+	publishDir "${OUTDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
 	cpus 1
 	time '1h'
 	tag "$id"
@@ -581,14 +584,14 @@ process cnvkit {
 	stageOutMode 'copy'
 	
 	input:
-		set gr, id, type, file(bam), file(bai), file(bqsr), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV),g ,vc, file(vcf) from bam_cnvkit.join(qc_cnvkit_val, by:[0,1]) \
-			.combine(vcf_cnvkit.filter { item -> item[1] == 'freebayes' })
+		set gr, id, type, file(bam), file(bai), file(bqsr), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV), vc, file(vcf) from bam_cnvkit.join(qc_cnvkit_val, by:[0,1]) \
+			.combine(vcf_cnvkit.filter { item -> item[1] == 'freebayes' }, by:[0])
 		
 	output:
 		set gr, id, type, file("${gr}.${id}.cnvkit_overview.png"), file("${gr}.${id}.call.cns"), file("${gr}.${id}.cnr"), file("${gr}.${id}.filtered") into geneplot_cnvkit
 		set gr, id, type, file("${gr}.${id}.filtered.vcf") into cnvkit_vcf 
 		file("${gr}.${id}.cns") into cns_notcalled
-
+		file("*.bed.gz*")
 	when:
 		params.cnvkit
 
@@ -596,6 +599,10 @@ process cnvkit {
 		freebayes_idx = vc.findIndexOf{ it == 'freebayes' }
 
 	"""
+	set +eu
+	source activate py2
+	set -eu
+
 	cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
 	cnvkit.py call results/*.cns -v $vcf -o ${gr}.${id}.call.cns
 	filter_cnvkit.pl ${gr}.${id}.call.cns $MEAN_DEPTH > ${gr}.${id}.filtered
@@ -603,6 +610,7 @@ process cnvkit {
 	cnvkit.py scatter -s results/*.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf[freebayes_idx]} -i $id
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
+	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
 	"""
 }
 
@@ -610,7 +618,6 @@ process cnvkit {
 process gene_plot {
 	publishDir "${OUTDIR}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
 	cpus 1
-	container = '/fs1/resources/containers/cnvkit91_montage.sif'
 	time '5m'
 	tag "$id"
 
@@ -624,6 +631,9 @@ process gene_plot {
 
 		if (params.assay == "PARP_inhib") {
 			"""
+                        set +eu
+                        source activate old-cnvkit
+                        set -eu
 			cnvkit.py scatter -s $cns $cnr -c 13:32165479-32549672 -o brca2.png --title 'BRCA2'
 			cnvkit.py scatter -s $cns $cnr -c 17:42894294-43350132 -o brca1.png --title 'BRCA1'
 			montage -mode concatenate -tile 1x *.png ${gr}.${id}.cnvkit.png
@@ -661,7 +671,7 @@ process melt {
 
 	"""
 	set +eu
-	source activate java8-env
+	source activate java8
 	set -eu
 	java -jar  /opt/MELT.jar Single \\
 		-bamfile $bam \\
@@ -675,7 +685,7 @@ process melt {
 		-c $MEAN_DEPTH \\
 		-cov $COV_DEV \\
 		-e $INS_SIZE
-	source deactivate
+        source deactivate
 	merge_melt.pl $params.meltheader $id
 	"""
 
@@ -703,7 +713,7 @@ process manta {
 		params.manta
 	
 	script:
-		if(mode == "paired") { 
+		if(id.size() >= 2) { 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			normal = bam[normal_idx]
@@ -712,6 +722,9 @@ process manta {
 			tumor_id = id[tumor_idx]
 
 			"""
+                        set +eu
+                        source activate py2
+                        set -eu
 			configManta.py \\
 				--tumorBam $tumor \\
 				--normalBam $normal \\
@@ -728,6 +741,9 @@ process manta {
 		}
 		else {
 			"""
+                        set +eu
+                        source activate py2
+                        set -eu
 			configManta.py \\
 				--tumorBam $bam \\
 				--reference $genome_file \\
@@ -762,7 +778,7 @@ process delly {
 		params.manta
 	
 	script:
-		if(mode == "paired") { 
+		if(id.size() >= 2) { 
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			normal = bam[normal_idx]
@@ -805,7 +821,7 @@ process concat_cnv {
 	
 	script:
 	
-	if (mode == 'paired') {
+	if( id_c.size() >= 2 ) {
 		tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
 		tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
@@ -822,8 +838,6 @@ process concat_cnv {
 		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
 		vcfs = tmp.join(' ')
 		"""
-		set +eu
-		source activate py3-env
 		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
 			--tumor-id ${id_c[tumor_idx_c]} \\
@@ -836,8 +850,6 @@ process concat_cnv {
 		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
 		vcfs = tmp.join(' ')
 		"""
-		set +eu
-		source activate py3-env
 		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
 		"""
@@ -862,7 +874,7 @@ process aggregate_vcfs {
 
 	script:
 		sample_order = id[0]
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			sample_order = id[tumor_idx]+","+id[normal_idx]
@@ -938,7 +950,9 @@ process annotate_vep {
 	--fasta $params.VEP_FASTA \\
 	--dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
 	--distance 200 \\
-	-cache -custom $params.GNOMAD \\
+	--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
+	--custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
+	--cache \\
 	"""
 }
 
@@ -957,14 +971,14 @@ process mark_germlines {
 
 
 	script:
-		if( mode == "paired" ) {
+		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			"""
 			mark_germlines.pl --vcf $vcf --tumor-id ${id[tumor_idx]} --normal-id ${id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
-		else if( mode == "unpaired" ) {
+		else if( id.size() == 1 ) {
 			"""
 			mark_germlines.pl --vcf $vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
@@ -991,21 +1005,19 @@ process umi_confirm {
 	script:
 		if (params.conform) {
 	
-			if( mode == "paired" ) {
+			if( id.size() >= 2 ) {
 				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 				normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
 				"""
-				source activate samtools
 				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > umitmp.vcf
 				UMIconfirm_vcf.py ${bam[normal_idx]} umitmp.vcf $genome_file ${id[normal_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
 				"""
 			}
-			else if( mode == "unpaired" ) {
+			else if( id.size() == 1 ) {
 				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 
 				"""
-				source activate samtools
 				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
 				"""
 			}

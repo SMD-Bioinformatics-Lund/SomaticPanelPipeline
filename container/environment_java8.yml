@@ -1,4 +1,4 @@
-name: java8-env
+name: java8
 channels:
     - bioconda
     - conda-forge

@@ -47,7 +47,7 @@ while ( my $var = $vcf->next_var() ) {
 	    my $p = $pon->{$varid};
 	    my $frac = $p->{num_non_germ} / $p->{total};
 
-	    if( $frac > 0.2 ) {
+	    if( $frac > 0.05 ) {
 		if( $T_VAF < $p->{mean_vaf} + $p->{stdev_vaf}*2 ) {
 		    push @filters, "FAIL_PON_$vc";
 		    $remove_pass = 1;
