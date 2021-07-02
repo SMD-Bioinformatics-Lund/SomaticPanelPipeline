@@ -613,7 +613,7 @@ process cnvkit {
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
 	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
-	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz --overview-json ${params.gens_accessdir}/${id}.overview.json.gz" > ${id}.gens
+	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz" > ${id}.gens
 	"""
 }
 
