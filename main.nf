@@ -1068,10 +1068,10 @@ process coyote {
 
 	"""
 	echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
-		--vcf /access/${params.assay}/vcf/${vcf} --id ${group} \\
-		--cnv /access/${params.assay}/plots/${cnvplot[cnv_index]} \\
+		--vcf /access/${params.subdir}/vcf/${vcf} --id ${group} \\
+		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
-		--lowcov /access/${params.assay}/QC/${lowcov[tumor_idx_lowcov]} \\
+		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
 		--clarity-pool-id ${pool_id[tumor_idx]}" > ${group}.coyote
 	"""
 }
