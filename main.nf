@@ -1072,6 +1072,8 @@ process coyote {
 		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
 		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
+                --build 38 \\
+                --gens ${group} \\
 		--clarity-pool-id ${pool_id[tumor_idx]}" > ${group}.coyote
 	"""
 }
