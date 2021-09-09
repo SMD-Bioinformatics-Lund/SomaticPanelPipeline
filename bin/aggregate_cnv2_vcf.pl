@@ -215,6 +215,7 @@ sub fix_gt {
             my $vd = 100;
             my $dp = 100;
             if ($gt->{GT} eq "./.") { $vaf = 0; $dp = 0; $vd = 0; }
+            elsif ($gt->{GT} eq "1/1") { $vaf = 1; $dp = 100; $vd = 100; })
 			add_gt( $var, $gt->{_sample_id}, "GT", $gt->{GT});
 			add_gt( $var, $gt->{_sample_id}, "VAF", $vaf );
 			add_gt( $var, $gt->{_sample_id}, "VD", $vd );

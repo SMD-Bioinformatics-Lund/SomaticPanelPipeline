@@ -820,6 +820,7 @@ process concat_cnv {
 
 
 	output:
+		file("${group}.cnvkit-agg.vcf")
 		file("${group}.cnvs.agg.vcf") into cnvs
 	
 	script:
@@ -838,10 +839,11 @@ process concat_cnv {
 			meltvcf = meltvcf[tumor_idx_m]
 
 		}
-		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
+		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' }
 		vcfs = tmp.join(' ')
 		"""
-		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
+		aggregate_CNVkit.pl ${cnvkitvcf[tumor_idx_c]} ${id_c[tumor_idx_c]} ${cnvkitvcf[normal_idx_c]} ${id_c[normal_idx_c]} > ${group}.cnvkit-agg.vcf
+		svdb --merge --vcf $vcfs ${group}.cnvkit-agg.vcf:cnvkit --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
 			--tumor-id ${id_c[tumor_idx_c]} \\
 			--normal-id ${id_c[normal_idx_c]} \\
