@@ -120,7 +120,7 @@ process bwa_umi {
 		-p -C $genome_file consensus.fastq.gz \\
 	|sentieon util sort -i - \\
 		-o ${id}.${type}.bwa.umi.sort.bam \\
-		--sam2bam --umi_post_process
+		--sam2bam
 
 	sentieon util sort -i noumi.sam -o ${id}.${type}.bwa.sort.bam --sam2bam
 	rm noumi.sam
