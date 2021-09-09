@@ -295,7 +295,6 @@ process lowcov {
 		set group, type, file("${id}.lowcov.bed") into lowcov_coyote
 
 	"""
-        source activate sambamba
 	panel_depth.pl $bam $params.regions_proteincoding > lowcov.bed
 	overlapping_genes.pl lowcov.bed $params.gene_regions > ${id}.lowcov.bed
 	"""
