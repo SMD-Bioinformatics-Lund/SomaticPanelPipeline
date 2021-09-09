@@ -120,7 +120,7 @@ process bwa_umi {
 		-p -C $genome_file consensus.fastq.gz \\
 	|sentieon util sort -i - \\
 		-o ${id}.${type}.bwa.umi.sort.bam \\
-		--sam2bam
+		--sam2bam --umi_post_process
 
 	sentieon util sort -i noumi.sam -o ${id}.${type}.bwa.sort.bam --sam2bam
 	rm noumi.sam
@@ -295,7 +295,7 @@ process lowcov {
 		set group, type, file("${id}.lowcov.bed") into lowcov_coyote
 
 	"""
-        source activate sambamba
+    source activate sambamba
 	panel_depth.pl $bam $params.regions_proteincoding > lowcov.bed
 	overlapping_genes.pl lowcov.bed $params.gene_regions > ${id}.lowcov.bed
 	"""
