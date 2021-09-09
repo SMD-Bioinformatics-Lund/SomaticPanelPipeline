@@ -47,7 +47,7 @@ println("container: "+container)
 Channel
     .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.id, row.type, file(row.read1), file(row.read2)) }
-    .into { fastq_umi; fastq_noumi }
+    .into { fastq_umi; fastq_noumi; meta_nocnv }
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
@@ -120,7 +120,7 @@ process bwa_umi {
 		-p -C $genome_file consensus.fastq.gz \\
 	|sentieon util sort -i - \\
 		-o ${id}.${type}.bwa.umi.sort.bam \\
-		--sam2bam
+		--sam2bam --umi_post_process
 
 	sentieon util sort -i noumi.sam -o ${id}.${type}.bwa.sort.bam --sam2bam
 	rm noumi.sam
@@ -295,6 +295,7 @@ process lowcov {
 		set group, type, file("${id}.lowcov.bed") into lowcov_coyote
 
 	"""
+    source activate sambamba
 	panel_depth.pl $bam $params.regions_proteincoding > lowcov.bed
 	overlapping_genes.pl lowcov.bed $params.gene_regions > ${id}.lowcov.bed
 	"""
@@ -612,7 +613,7 @@ process cnvkit {
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
 	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
-	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz" > ${id}.gens
+	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz --overview-json ${params.gens_accessdir}/${id}.overview.json.gz" > ${id}.gens
 	"""
 }
 
@@ -724,9 +725,9 @@ process manta {
 			tumor_id = id[tumor_idx]
 
 			"""
-                        set +eu
-                        source activate py2
-                        set -eu
+            set +eu
+            source activate py2
+            set -eu
 			configManta.py \\
 				--tumorBam $tumor \\
 				--normalBam $normal \\
@@ -743,9 +744,9 @@ process manta {
 		}
 		else {
 			"""
-                        set +eu
-                        source activate py2
-                        set -eu
+            set +eu
+            source activate py2
+            set -eu
 			configManta.py \\
 				--tumorBam $bam \\
 				--reference $genome_file \\
@@ -812,15 +813,13 @@ process concat_cnv {
 	tag "$group"
 
 	input:
-		set group, file(mantavcf) from manta_vcf
-		set group, file(dellyvcf) from delly_vcf
-		set g_c, id_c, type_c, file(cnvkitvcf), tissue_c from cnvkit_vcf.join(meta_cnvkit, by:[0,1,2]).groupTuple()
-		set g_m, id_m, type_m, file(meltvcf), tissue_m from melt_vcf.join(meta_melt, by:[0,1,2]).groupTuple()
-
-
+		set group, file(mantavcf), file(dellyvcf), id_c, type_c, file(cnvkitvcf), tissue_c, id_m, type_m, file(meltvcf), tissue_m from manta_vcf.join(delly_vcf) \
+			.join(cnvkit_vcf.join(meta_cnvkit, by:[0,1,2]).groupTuple()) \
+			.join(melt_vcf.join(meta_melt, by:[0,1,2]).groupTuple())
+		
+	
 	output:
-		file("${group}.cnvkit-agg.vcf")
-		file("${group}.cnvs.agg.vcf") into cnvs
+		set group, file("${group}.cnvs.agg.vcf") into cnvs
 	
 	script:
 	
@@ -838,11 +837,10 @@ process concat_cnv {
 			meltvcf = meltvcf[tumor_idx_m]
 
 		}
-		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' }
+		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
 		vcfs = tmp.join(' ')
 		"""
-		aggregate_CNVkit.pl ${cnvkitvcf[tumor_idx_c]} ${id_c[tumor_idx_c]} ${cnvkitvcf[normal_idx_c]} ${id_c[normal_idx_c]} > ${group}.cnvkit-agg.vcf
-		svdb --merge --vcf $vcfs ${group}.cnvkit-agg.vcf:cnvkit --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
+		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
 			--tumor-id ${id_c[tumor_idx_c]} \\
 			--normal-id ${id_c[normal_idx_c]} \\
@@ -862,6 +860,26 @@ process concat_cnv {
 
 }
 
+
+process single_cnv_pipe {
+	time '2m'
+	tag "$group"
+
+	when:
+		params.single_cnvcaller
+
+	input:
+		set group, id, type, file(read1), file(read2) from meta_nocnv
+	
+	output:
+		set group, file("${group}.cnvs.agg.vcf") into cnvs_singlecaller
+	
+	script:
+	"""
+	echo singe_cnv_caller_pipeline > ${group}.cnvs.agg.vcf
+	"""
+}
+
 process aggregate_vcfs {
 	cpus 1
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
@@ -869,9 +887,7 @@ process aggregate_vcfs {
 	tag "$group"
 
 	input:
-		set group, vc, file(vcfs) from concatenated_vcfs.mix(vcf_pindel).groupTuple()
-		set g, id, type, tissue from meta_aggregate.groupTuple()
-		file(cnvs) from cnvs.ifEmpty("nocnvs")
+		set group, vc, file(vcfs), id, type, tissue, file(cnvs) from concatenated_vcfs.mix(vcf_pindel).groupTuple().join(meta_aggregate.groupTuple()).join(cnvs.mix(cnvs_singlecaller))
 
 	output:
 		set group, file("${group}.agg.vcf") into vcf_pon, vcf_done
@@ -883,7 +899,7 @@ process aggregate_vcfs {
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			sample_order = id[tumor_idx]+","+id[normal_idx]
 		}
-		if (params.assay == 'myeloid') {
+		if (params.single_cnvcaller) {
 			"""
 			aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.vcf
 			"""
@@ -905,9 +921,8 @@ process pon_filter {
 	memory '32 GB'
 
 	input:
-		set group, file(vcf) from vcf_pon
-		set g, id, type, tissue from meta_pon.groupTuple()
-
+		set group, file(vcf), id, type, tissue from vcf_pon.join(meta_pon.groupTuple())
+		
 	output:
 		set group, file("${group}.agg.pon.vcf") into vcf_vep
 
@@ -967,9 +982,8 @@ process mark_germlines {
 	tag "$group"
 
 	input:
-		set group, file(vcf) from vcf_germline
-		set g, id, type, tissue from meta_germline.groupTuple()
-
+		set group, file(vcf), id, type, tissue from vcf_germline.join(meta_germline.groupTuple())
+		
 	output:
 		set group, file("${group}.agg.pon.vep.markgerm.vcf") into vcf_umi
 
@@ -999,9 +1013,8 @@ process umi_confirm {
 		params.umi
 
 	input:
-		set group, file(vcf) from vcf_umi
-		set g, id, type, file(bam), file(bai) from bam_umi_confirm.groupTuple()
-
+		set group, file(vcf), id, type, file(bam), file(bai) from vcf_umi.join(bam_umi_confirm.groupTuple())
+		
 	output:
 		set group, file("${group}.agg.pon.vep.markgerm.umi*") into vcf_coyote
 
@@ -1042,12 +1055,8 @@ process coyote {
 	tag "$group"
 
 	input:
-		set group, file(vcf) from vcf_coyote
-		set g, type, lims_id, pool_id from meta_coyote.groupTuple()
-		set g2, id, cnv_type, file(cnvplot), tissue_c from cnvplot_coyote.join(meta_cnvplot, by:[0,1,2]).groupTuple()
-		set g3, lowcov_type, file(lowcov) from lowcov_coyote.groupTuple()
-
-
+		set group, file(vcf),  type, lims_id, pool_id, id, cnv_type, file(cnvplot), tissue_c, lowcov_type, file(lowcov) from vcf_coyote.join(meta_coyote.groupTuple()).join(cnvplot_coyote.join(meta_cnvplot, by:[0,1,2]).groupTuple()).join(lowcov_coyote.groupTuple())
+		
 	output:
 		file("${group}.coyote")
 
@@ -1069,12 +1078,10 @@ process coyote {
 
 	"""
 	echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
-		--vcf /access/${params.subdir}/vcf/${vcf} --id ${group} \\
-		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
+		--vcf /access/${params.assay}/vcf/${vcf} --id ${group} \\
+		--cnv /access/${params.assay}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
-		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
-                --build 38 \\
-                --gens ${group} \\
+		--lowcov /access/${params.assay}/QC/${lowcov[tumor_idx_lowcov]} \\
 		--clarity-pool-id ${pool_id[tumor_idx]}" > ${group}.coyote
 	"""
 }
