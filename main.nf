@@ -120,7 +120,7 @@ process bwa_umi {
 		-p -C $genome_file consensus.fastq.gz \\
 	|sentieon util sort -i - \\
 		-o ${id}.${type}.bwa.umi.sort.bam \\
-		--sam2bam --umi_post_process
+		--sam2bam
 
 	sentieon util sort -i noumi.sam -o ${id}.${type}.bwa.sort.bam --sam2bam
 	rm noumi.sam
@@ -613,7 +613,7 @@ process cnvkit {
 	cp results/*.cnr ${gr}.${id}.cnr
 	cp results/*.cns ${gr}.${id}.cns
 	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
-	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz --overview-json ${params.gens_accessdir}/${id}.overview.json.gz" > ${id}.gens
+	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz" > ${id}.gens
 	"""
 }
 
@@ -1070,10 +1070,12 @@ process coyote {
 
 	"""
 	echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
-		--vcf /access/${params.assay}/vcf/${vcf} --id ${group} \\
-		--cnv /access/${params.assay}/plots/${cnvplot[cnv_index]} \\
+		--vcf /access/${params.subdir}/vcf/${vcf} --id ${group} \\
+		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
-		--lowcov /access/${params.assay}/QC/${lowcov[tumor_idx_lowcov]} \\
+		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
+                --build 38 \\
+                --gens ${group} \\
 		--clarity-pool-id ${pool_id[tumor_idx]}" > ${group}.coyote
 	"""
 }
