@@ -815,10 +815,11 @@ process concat_cnv {
 	input:
 		set group, file(mantavcf), file(dellyvcf), id_c, type_c, file(cnvkitvcf), tissue_c, id_m, type_m, file(meltvcf), tissue_m from manta_vcf.join(delly_vcf) \
 			.join(cnvkit_vcf.join(meta_cnvkit, by:[0,1,2]).groupTuple()) \
-			.join(melt_vcf.join(meta_melt, by:[0,1,2]).groupTuple())
+			.join(melt_vcf.join(meta_melt, by:[0,1,2]).groupTuple()).view()
 		
 	
 	output:
+		file("${group}_cnvkitagg.vcf") into aggcnvkit
 		set group, file("${group}.cnvs.agg.vcf") into cnvs
 	
 	script:
@@ -829,18 +830,19 @@ process concat_cnv {
 		normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
 		normal_idx_m = type_m.findIndexOf{ it == 'normal' || it == 'N' }
 		if (tissue_c[tumor_idx_c] == 'ffpe') {
-			cnvkitvcf = cnvkitvcf[normal_idx_c]
+			cnvkitvcf2 = cnvkitvcf[normal_idx_c]
 			meltvcf = meltvcf[normal_idx_m]
 		}
 		else {
-			cnvkitvcf = cnvkitvcf[tumor_idx_c]
+			cnvkitvcf2 = cnvkitvcf[tumor_idx_c]
 			meltvcf = meltvcf[tumor_idx_m]
 
 		}
-		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
+		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' }
 		vcfs = tmp.join(' ')
 		"""
-		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
+		aggregate_CNVkit.pl ${cnvkitvcf[tumor_idx_c]} ${id_c[tumor_idx_c]} ${cnvkitvcf[normal_idx_c]} ${id_c[normal_idx_c]} > ${group}_cnvkitagg.vcf
+		svdb --merge --vcf $vcfs ${group}_cnvkitagg.vcf:cnvkit --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
 			--tumor-id ${id_c[tumor_idx_c]} \\
 			--normal-id ${id_c[normal_idx_c]} \\
