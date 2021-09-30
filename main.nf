@@ -1070,12 +1070,7 @@ process coyote {
 		tumor_idx_cnv = cnv_type.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx_cnv = cnv_type.findIndexOf{ it == 'normal' || it == 'N' }
 		cnv_index = tumor_idx_cnv
-		if (params.assay == 'myeloid') {
-			cnv_index = tumor_idx_cnv
-		}
-		else if (tissue_c[tumor_idx_cnv] == 'ffpe' || 'FFPE') {
-			cnv_index = normal_idx_cnv
-		}
+
 		tumor_idx_lowcov = lowcov_type.findIndexOf{ it == 'tumor' || it == 'T' }
 
 	"""
