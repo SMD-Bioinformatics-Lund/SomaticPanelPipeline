@@ -1,5 +1,14 @@
 ## Changelog ##
 
+### 2.0.0
+### Major release
+- PARP_inhib and myeloid remerged into same pipeline
+- config-logic added. --dev automatically adds results to dev-folders
+- PARP_inhib cnvcalling updates. CNVkit merged before SVDB merge for paired samples
+- Genomeplot and BRCA1 BRCA2 plot is defaulting to tumor even if FFPE
+- Batch-start for all profiles
+- Solid profile, and soon lymph
+
 ### 1.0.3
 - fixes: melt peak mem higher than expected
 - added: added memory variable to manta and delly 
