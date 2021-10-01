@@ -854,6 +854,7 @@ process concat_cnv {
 		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
 		vcfs = tmp.join(' ')
 		"""
+		touch ${group}_cnvkitagg.vcf
 		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
 		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
 		"""
