@@ -114,13 +114,25 @@ sub merge {
 				### aggregate information
 			}
 			elsif (!defined $combvars{$Nvar}) { ## not the same variant add normal to combined, with empty tumor
-				$normvar{$Nvar}{GT}{$tumid} = "0/0:0";
+				my $type = $normvar{$Nvar}{INFO}{SVTYPE};
+				if ($type eq 'DUP') {
+					$normvar{$Nvar}{GT}{$tumid} = "0/0:0:0:0";
+				}
+				else {
+					$normvar{$Nvar}{GT}{$tumid} = "0/0:0";
+				}
 				$combvars{$Nvar} = $normvar{$Nvar};
 
 			}
 		}
 		unless ($check) {
-			$tumvar{$Tvar}{GT}{$normid} = "0/0:0";
+			my $type = $tumvar{$Tvar}{INFO}{SVTYPE};
+			if ($type eq 'DUP') {
+				$tumvar{$Tvar}{GT}{$normid} = "0/0:0:0:0";
+			}
+			else {
+				$tumvar{$Tvar}{GT}{$normid} = "0/0:0";
+			}	
 			$combvars{$Tvar} = $tumvar{$Tvar};
 		}
 
