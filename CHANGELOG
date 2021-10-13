@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 2.0.1
+### Bugfix
+- CNVkit called duplications, when merged missed information, causing SVDB merge to crash
+
 ### 2.0.0
 ### Major release
 - PARP_inhib and myeloid remerged into same pipeline
