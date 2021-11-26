@@ -804,65 +804,6 @@ process delly {
 		}
 }
 
-process concat_cnv {
-	cpus 1
-	memory '1GB'
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
-	//container = '/fs1/resources/containers/wgs_2020-03-25.sif'
-	time '20m'
-	tag "$group"
-
-	input:
-		set group, file(mantavcf), file(dellyvcf), id_c, type_c, file(cnvkitvcf), tissue_c, id_m, type_m, file(meltvcf), tissue_m from manta_vcf.join(delly_vcf) \
-			.join(cnvkit_vcf.join(meta_cnvkit, by:[0,1,2]).groupTuple()) \
-			.join(melt_vcf.join(meta_melt, by:[0,1,2]).groupTuple()).view()
-		
-	
-	output:
-		file("${group}_cnvkitagg.vcf") into aggcnvkit
-		set group, file("${group}.cnvs.agg.vcf") into cnvs
-	
-	script:
-	
-	if( id_c.size() >= 2 ) {
-		tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
-		tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
-		normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
-		normal_idx_m = type_m.findIndexOf{ it == 'normal' || it == 'N' }
-		if (tissue_c[tumor_idx_c] == 'ffpe') {
-			cnvkitvcf2 = cnvkitvcf[normal_idx_c]
-			meltvcf = meltvcf[normal_idx_m]
-		}
-		else {
-			cnvkitvcf2 = cnvkitvcf[tumor_idx_c]
-			meltvcf = meltvcf[tumor_idx_m]
-
-		}
-		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' }
-		vcfs = tmp.join(' ')
-		"""
-		aggregate_CNVkit.pl ${cnvkitvcf[tumor_idx_c]} ${id_c[tumor_idx_c]} ${cnvkitvcf[normal_idx_c]} ${id_c[normal_idx_c]} > ${group}_cnvkitagg.vcf
-		svdb --merge --vcf $vcfs ${group}_cnvkitagg.vcf:cnvkit --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
-		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
-			--tumor-id ${id_c[tumor_idx_c]} \\
-			--normal-id ${id_c[normal_idx_c]} \\
-			--paired paired \\
-			--sample-order ${id_c[tumor_idx_c]},${id_c[normal_idx_c]} > ${group}.cnvs.agg.vcf
-		"""
-	}
-	else {
-		tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
-		vcfs = tmp.join(' ')
-		"""
-		touch ${group}_cnvkitagg.vcf
-		svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
-		aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
-		"""
-		
-	}
-
-}
-
 process single_cnv_pipe {
        time '2m'
        tag "$group"
@@ -939,26 +880,6 @@ process concat_cnv {
                 """
                 
         }
-}
-
-
-process single_cnv_pipe {
-	time '2m'
-	tag "$group"
-
-	when:
-		params.single_cnvcaller
-
-	input:
-		set group, id, type, file(read1), file(read2) from meta_nocnv
-	
-	output:
-		set group, file("${group}.cnvs.agg.vcf") into cnvs_singlecaller
-	
-	script:
-	"""
-	echo singe_cnv_caller_pipeline > ${group}.cnvs.agg.vcf
-	"""
 }
 
 process aggregate_vcfs {
