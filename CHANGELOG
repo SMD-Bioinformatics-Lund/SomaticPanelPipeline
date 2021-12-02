@@ -1,5 +1,11 @@
 ## Changelog ##
 
+### 2.1.0
+### Clearing up and merging of PARP and myeloid
+- merged myeloid_hg38 into master
+- both profiles now can be run with same code base
+- fully supports batches
+
 ### 2.0.1
 ### Bugfix
 - CNVkit called duplications, when merged missed information, causing SVDB merge to crash
