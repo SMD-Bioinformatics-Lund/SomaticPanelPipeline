@@ -996,12 +996,14 @@ process mark_germlines {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			"""
-			mark_germlines.pl --vcf $vcf --tumor-id ${id[tumor_idx]} --normal-id ${id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+			fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
+			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${id[tumor_idx]} --normal-id ${id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
 		else if( id.size() == 1 ) {
 			"""
-			mark_germlines.pl --vcf $vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+			fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
+			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
 }
