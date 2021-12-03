@@ -1,5 +1,10 @@
 ## Changelog ##
 
+### 2.1.1
+### Bugfix
+- coyote cannot handle multiallelic indels produced by tnscope
+- added fix_vep_gnomad.pl which fixes above variants
+
 ### 2.1.0
 ### Clearing up and merging of PARP and myeloid
 - merged myeloid_hg38 into master
