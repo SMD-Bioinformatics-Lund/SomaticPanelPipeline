@@ -682,7 +682,7 @@ process melt {
 		params.melt
 
 	output:
-		set group, id, type, file("${id}.melt.merged.vcf") into melt_vcf
+		set group, file("${id}_${type}.melt.merged.vcf") into melt_vcf
 
 	"""
 	set +eu
@@ -702,6 +702,7 @@ process melt {
 		-e $INS_SIZE
         source deactivate
 	merge_melt.pl $params.meltheader $id
+	mv ${id}.melt.merged.vcf ${id}_${type}.melt.merged.vcf
 	"""
 
 }
@@ -790,7 +791,7 @@ process delly {
 		set group, file("${group}.delly.filtered.vcf") into delly_vcf
 
 	when:
-		params.manta
+		params.delly
 	
 	script:
 		if(id.size() >= 2) { 
@@ -816,6 +817,137 @@ process delly {
 		}
 }
 
+process aggregate_CNVkit {
+    time '20m'
+    tag "$group"¨
+	cpus 2
+	memory '1GB'
+	//publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+
+    input:
+        set group, id, type, file(vcf) from cnvkit_vcf.groupTuple()
+       
+    output:
+        set group, file("${group}_cnvkit_agg.vcf") into cnvkit_vcfagg
+       
+    script:
+		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+        normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+
+	if (id.size() >= 2 ) {
+		"""
+		aggregate_CNVkit.pl ${vcf[tumor_idx]} ${id[tumor_idx]} ${vcf[normal_idx]} ${id[normal_idx]} > ${group}_cnvkit_agg.vcf
+		"""
+	}
+	else {
+		"""
+		mv $vcf ${group}_cnvkit_agg.vcf
+		"""
+	}
+
+}
+
+process aggregate_cnvs {
+        cpus 2
+        memory '1GB'
+        publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+        time '20m'
+        tag "$group"
+
+        input:
+			set group, file(vcfs) from cnvkit_vcfagg.mix(manta_vcf,delly_vcf).groupTuple().view()
+			
+        output:
+            set group, file("${group}.cnvs.agg.vcf") into cnvs
+
+		script:
+			if (vcfs.getClass().isArray()) {
+				// for each sv-caller add idx, find vcf and find priority, add in priority order! //
+				// index of vcfs added from mix //
+				manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
+				delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
+				cnvkit_idx = vcfs.findIndexOf{ it =~ 'cnvkit' }
+
+				// find vcfs //
+				manta = manta_idx >= 0 ? vcfs[manta_idx].collect {it + ':manta ' } : null
+				delly = delly_idx >= 0 ? vcfs[delly_idx].collect {it + ':delly ' } : null
+				cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
+				tmp = manta + delly + cnvkit
+				tmp = tmp - null
+				vcfs_svdb = tmp.join(' ')
+
+				// find priorities //
+				mantap = manta_idx >= 0 ? 'manta' : null
+				dellyp = delly_idx >= 0 ? 'delly' : null
+				cnvkitp = cnvkit_idx >= 0 ? 'cnvkit' : null
+				tmpp = [mantap, dellyp, cnvkitp]
+				tmpp = tmpp - null
+				priority = tmpp.join(',')
+
+				"""
+				svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority $priority > ${group}.merged.vcf
+				"""
+
+			}
+			else {
+				"""
+				cat $vcf > ${group}.cnvs.agg.vcf
+				"""
+			}
+
+}
+
+process standardize_cnvs {
+	cpus 1
+	memory '1GB'
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	time '20m'
+	tag "$group"
+
+	input:
+		set group, vcf, id, type, tissue from cnvs.mix(melt_vcf.groupTuple()).groupTuple().join(meta_cnvkit.groupTuple()).view()
+		
+	
+	output:
+		set group, file("${group}.cnvs.agg.vcf") into standard_cnvs
+	
+	script:
+		// check vcf.size, if two elements then melt was run, vcf = agg,melt(tumor) //
+		if (vcf.size() > 1) {
+			cnv_idx = vcf.findIndexOf{ it =~ 'agg' }
+			melt_idx = cnv_idx == 0 ? 1 : 0
+			melt_t = vcf[melt_idx].findIndexOf{ it =~ 'T.melt' }
+			melt = vcf[melt_idx][melt_t]
+			tmp = [vcf[cnv_idx], melt]
+			vcf = tmp.join(',')
+		}
+		else {
+			vcf = vcf.join(',')
+		}
+		// if paired
+		if( id.size() >= 2 ) {
+				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+				normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+
+				"""
+				echo aggregate_cnv2_vcf.pl --vcfs $vcf \\
+						--tumor-id ${id[tumor_idx]} \\
+						--normal-id ${id[normal_idx]} \\
+						--paired paired \\
+						--sample-order ${id[tumor_idx]},${id[normal_idx]} > ${group}.cnvs.agg.vcf
+				"""
+		}
+		// tumor only
+		else {
+
+			"""
+			echo aggregate_cnv2_vcf.pl --vcfs $vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
+			"""
+		}
+}
+
 process single_cnv_pipe {
        time '2m'
        tag "$group"
@@ -835,112 +967,6 @@ process single_cnv_pipe {
        """
 }
 
-process concat_cnv_nomelt {
-        cpus 1
-        memory '1GB'
-        publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
-        //container = '/fs1/resources/containers/wgs_2020-03-25.sif'
-        time '20m'
-        tag "$group"
-
-        input:
-                set group, file(mantavcf), file(dellyvcf), id_c, type_c, file(cnvkitvcf), tissue_c, id_m, type_m from manta_vcf.join(delly_vcf) \
-                        .join(cnvkit_vcf.join(meta_cnvkit, by:[0,1,2]).groupTuple())
-                
-        
-        output:
-                file("${group}_cnvkitagg.vcf") into aggcnvkit
-                set group, file("${group}.cnvs.agg.vcf") into cnvs
-        
-        script:
-        
-        if( id_c.size() >= 2 ) {
-                tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
-                tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
-                normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
-                normal_idx_m = type_m.findIndexOf{ it == 'normal' || it == 'N' }
-                tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' }
-                vcfs = tmp.join(' ')
-                """
-                aggregate_CNVkit.pl ${cnvkitvcf[tumor_idx_c]} ${id_c[tumor_idx_c]} ${cnvkitvcf[normal_idx_c]} ${id_c[normal_idx_c]} > ${group}_cnvkitagg.vcf
-                svdb --merge --vcf $vcfs ${group}_cnvkitagg.vcf:cnvkit --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
-                aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf \\
-                        --tumor-id ${id_c[tumor_idx_c]} \\
-                        --normal-id ${id_c[normal_idx_c]} \\
-                        --paired paired \\
-                        --sample-order ${id_c[tumor_idx_c]},${id_c[normal_idx_c]} > ${group}.cnvs.agg.vcf
-                """
-        }
-        else {
-                tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
-                vcfs = tmp.join(' ')
-                """
-                touch ${group}_cnvkitagg.vcf
-                svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
-                aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf --paired no > ${group}.cnvs.agg.vcf
-                """
-                
-        }
-}
-
-// process concat_cnv {
-//         cpus 1
-//         memory '1GB'
-//         publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
-//         //container = '/fs1/resources/containers/wgs_2020-03-25.sif'
-//         time '20m'
-//         tag "$group"
-
-//         input:
-//                 set group, file(mantavcf), file(dellyvcf), id_c, type_c, file(cnvkitvcf), tissue_c, id_m, type_m, file(meltvcf), tissue_m from manta_vcf.join(delly_vcf) \
-//                         .join(cnvkit_vcf.join(meta_cnvkit, by:[0,1,2]).groupTuple()) \
-//                         .join(melt_vcf.join(meta_melt, by:[0,1,2]).groupTuple()).view()
-                
-        
-//         output:
-//                 file("${group}_cnvkitagg.vcf") into aggcnvkit
-//                 set group, file("${group}.cnvs.agg.vcf") into cnvs
-        
-//         script:
-        
-//         if( id_c.size() >= 2 ) {
-//                 tumor_idx_c = type_c.findIndexOf{ it == 'tumor' || it == 'T' }
-//                 tumor_idx_m = type_m.findIndexOf{ it == 'tumor' || it == 'T' }
-//                 normal_idx_c = type_c.findIndexOf{ it == 'normal' || it == 'N' }
-//                 normal_idx_m = type_m.findIndexOf{ it == 'normal' || it == 'N' }
-//                 if (tissue_c[tumor_idx_c] == 'ffpe') {
-//                         cnvkitvcf2 = cnvkitvcf[normal_idx_c]
-//                         meltvcf = meltvcf[normal_idx_m]
-//                 }
-//                 else {
-//                         cnvkitvcf2 = cnvkitvcf[tumor_idx_c]
-//                         meltvcf = meltvcf[tumor_idx_m]
-
-//                 }
-//                 tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' }
-//                 vcfs = tmp.join(' ')
-//                 """
-//                 aggregate_CNVkit.pl ${cnvkitvcf[tumor_idx_c]} ${id_c[tumor_idx_c]} ${cnvkitvcf[normal_idx_c]} ${id_c[normal_idx_c]} > ${group}_cnvkitagg.vcf
-//                 svdb --merge --vcf $vcfs ${group}_cnvkitagg.vcf:cnvkit --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
-//                 aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf \\
-//                         --tumor-id ${id_c[tumor_idx_c]} \\
-//                         --normal-id ${id_c[normal_idx_c]} \\
-//                         --paired paired \\
-//                         --sample-order ${id_c[tumor_idx_c]},${id_c[normal_idx_c]} > ${group}.cnvs.agg.vcf
-//                 """
-//         }
-//         else {
-//                 tmp = mantavcf.collect {it + ':manta ' } + dellyvcf.collect {it + ':delly ' } + cnvkitvcf.collect {it + ':cnvkit ' }
-//                 vcfs = tmp.join(' ')
-//                 """
-//                 touch ${group}_cnvkitagg.vcf
-//                 svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
-//                 aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
-//                 """
-                
-//         }
-// }
-
 process aggregate_vcfs {
 	cpus 1
 	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
@@ -948,7 +974,7 @@ process aggregate_vcfs {
 	tag "$group"
 
 	input:
-		set group, vc, file(vcfs), id, type, tissue, file(cnvs) from concatenated_vcfs.mix(vcf_pindel).groupTuple().join(meta_aggregate.groupTuple()).join(cnvs.mix(cnvs_singlecaller))
+		set group, vc, file(vcfs), id, type, tissue, file(cnvs) from concatenated_vcfs.mix(vcf_pindel).groupTuple().join(meta_aggregate.groupTuple()).join(standard_cnvs.mix(cnvs_singlecaller))
 
 	output:
 		set group, file("${group}.agg.vcf") into vcf_pon, vcf_done
