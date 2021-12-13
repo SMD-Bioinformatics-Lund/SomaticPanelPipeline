@@ -617,7 +617,7 @@ process cnvkit {
 
 	cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
 	cnvkit.py call results/*.cns -v $vcf -o ${gr}.${id}.call.cns
-	filter_cnvkit.pl ${gr}.${id}.call.cns $MEAN_DEPTH > ${gr}.${id}.filtered
+	filter_cnvkit.pl ${gr}.${id}.call.cns $MEAN_DEPTH 1000000 > ${gr}.${id}.filtered
 	cnvkit.py export vcf ${gr}.${id}.filtered -i "$id" > ${gr}.${id}.filtered.vcf		
 	cnvkit.py scatter -s results/*.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf[freebayes_idx]} -i $id
 	cp results/*.cnr ${gr}.${id}.cnr
@@ -819,7 +819,7 @@ process delly {
 
 process aggregate_CNVkit {
     time '20m'
-    tag "$group"¨
+    tag "$group"
 	cpus 2
 	memory '1GB'
 	//publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
@@ -856,14 +856,17 @@ process aggregate_cnvs {
         time '20m'
         tag "$group"
 
+		when:
+			!params.single_cnvcaller
+
         input:
 			set group, file(vcfs) from cnvkit_vcfagg.mix(manta_vcf,delly_vcf).groupTuple().view()
 			
         output:
-            set group, file("${group}.cnvs.agg.vcf") into cnvs
+            set group, file("${group}.merged.vcf") into cnvs
 
 		script:
-			if (vcfs.getClass().isArray()) {
+			if (vcfs.size() > 1) {
 				// for each sv-caller add idx, find vcf and find priority, add in priority order! //
 				// index of vcfs added from mix //
 				manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
@@ -893,7 +896,7 @@ process aggregate_cnvs {
 			}
 			else {
 				"""
-				cat $vcf > ${group}.cnvs.agg.vcf
+				cat $vcfs > ${group}.merged.vcf
 				"""
 			}
 
@@ -932,7 +935,7 @@ process standardize_cnvs {
 				normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 
 				"""
-				echo aggregate_cnv2_vcf.pl --vcfs $vcf \\
+				aggregate_cnv2_vcf.pl --vcfs $vcf \\
 						--tumor-id ${id[tumor_idx]} \\
 						--normal-id ${id[normal_idx]} \\
 						--paired paired \\
@@ -943,7 +946,7 @@ process standardize_cnvs {
 		else {
 
 			"""
-			echo aggregate_cnv2_vcf.pl --vcfs $vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
+			aggregate_cnv2_vcf.pl --vcfs $vcf --paired no > ${group}.cnvs.agg.vcf
 			"""
 		}
 }
@@ -1026,10 +1029,15 @@ process pon_filter {
 		filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${id[tumor_idx]} > ${group}.agg.pon.vcf
 		"""
 	}
-	// werid placement, no PON for PARP_inhib, Adds enigma-db to vcf. Move to separate process?
+	// weird placement, no PON for PARP_inhib, Adds enigma-db to vcf. Move to separate process?
 	else if (params.assay == 'PARP_inhib') {
 		"""
 		vcfanno_linux64 -lua /fs1/resources/ref/hg19/bed/scout/sv_tracks/silly.lua $params.vcfanno $vcf > ${group}.agg.pon.vcf
+		"""
+	}
+	else {
+		"""
+		mv $vcf ${group}.agg.pon.vcf
 		"""
 	}
 }
