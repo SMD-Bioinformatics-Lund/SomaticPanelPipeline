@@ -634,9 +634,9 @@ process gene_plot {
 
 		if (params.assay == "PARP_inhib") {
 			"""
-                        set +eu
-                        source activate old-cnvkit
-                        set -eu
+            set +eu
+            source activate old-cnvkit
+            set -eu
 			cnvkit.py scatter -s $cns $cnr -c 13:32165479-32549672 -o brca2.png --title 'BRCA2'
 			cnvkit.py scatter -s $cns $cnr -c 17:42894294-43350132 -o brca1.png --title 'BRCA1'
 			montage -mode concatenate -tile 1x *.png ${gr}.${id}.cnvkit.png
@@ -1021,10 +1021,14 @@ process umi_confirm {
 		set group, file(vcf), id, type, file(bam), file(bai) from vcf_umi.join(bam_umi_confirm.groupTuple())
 	
 	output:
-		set group, file("${group}.agg.pon.vep.markgerm.umi*") into vcf_coyote
+		set group, file("${process_group}.agg.pon.vep.markgerm.umi*") into vcf_coyote
 
 
 	script:
+		process_group = group
+		if( id.size() >= 2 ) {
+			process_group = group + 'p'
+		}
 		if (params.conform) {
 	
 			if( id.size() >= 2 ) {
@@ -1033,21 +1037,21 @@ process umi_confirm {
 
 				"""
 				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > umitmp.vcf
-				UMIconfirm_vcf.py ${bam[normal_idx]} umitmp.vcf $genome_file ${id[normal_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
+				UMIconfirm_vcf.py ${bam[normal_idx]} umitmp.vcf $genome_file ${id[normal_idx]} > ${process_group}.agg.pon.vep.markgerm.umi.vcf
 				"""
 			}
 			else if( id.size() == 1 ) {
 				tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
 
 				"""
-				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > ${group}.agg.pon.vep.markgerm.umi.vcf
+				UMIconfirm_vcf.py ${bam[tumor_idx]} $vcf $genome_file ${id[tumor_idx]} > ${process_group}.agg.pon.vep.markgerm.umi.vcf
 				"""
 			}
 
 		}
 		else {
 			"""
-			cp $vcf ${group}.agg.pon.vep.markgerm.umino.vcf
+			cp $vcf ${process_group}.agg.pon.vep.markgerm.umino.vcf
 			"""
 		}
 }
@@ -1066,7 +1070,7 @@ process coyote {
 
 
 	output:
-		file("${group}.coyote")
+		file("${process_group}.coyote")
 
 	when:
 		!params.noupload
@@ -1077,19 +1081,20 @@ process coyote {
 		normal_idx_cnv = cnv_type.findIndexOf{ it == 'normal' || it == 'N' }
 		cnv_index = tumor_idx_cnv
 		tumor_idx_lowcov = lowcov_type.findIndexOf{ it == 'tumor' || it == 'T' }
+		process_group = group
 		if( id.size() >= 2 ) {
-			group = group + 'p'
+			process_group = group + 'p'
 		}
 
 
 	"""
 	echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
-		--vcf /access/${params.subdir}/vcf/${vcf} --id ${group} \\
+		--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
 		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
                 --build 38 \\
                 --gens ${group} \\
-		--clarity-pool-id ${pool_id[tumor_idx]}" > ${group}.coyote
+		--clarity-pool-id ${pool_id[tumor_idx]}" > ${process_group}.coyote
 	"""
 }
