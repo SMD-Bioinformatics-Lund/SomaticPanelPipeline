@@ -78,7 +78,11 @@ Channel
     .splitText( by: 200, file: 'bedpart.bed' )
     .into { beds_mutect; beds_freebayes; beds_tnscope; beds_vardict }
 
-
+Channel
+	.fromPath(params.gatkreffolders)
+	.splitCsv(header:true)
+	.map{ row-> tuple(row.i, row.refpart) }
+	.into{ gatk_ref; gatk_postprocess }
 
 process bwa_umi {
 	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
@@ -205,7 +209,7 @@ process bqsr_umi {
 		set group, id, type, file(bam), file(bai) from bam_umi_bqsr
 
 	output:
-		set group, id, type, file(bam), file(bai), file("${id}.bqsr.table") into bam_freebayes, bam_vardict, bam_tnscope, bam_cnvkit, bam_varli
+		set group, id, type, file(bam), file(bai), file("${id}.bqsr.table") into bam_freebayes, bam_vardict, bam_tnscope, bam_cnvkit, bam_varli, bam_gatk
 	when:
 		params.umi
 
@@ -383,7 +387,7 @@ process freebayes {
 	script:
 		dp = 500
 		if (params.assay == "solid") {
-			dp = 150
+			dp = 20
 		}
 			
 
@@ -584,12 +588,14 @@ process cnvkit {
 	publishDir "${OUTDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
 	publishDir "${CRONDIR}/gens", mode: 'copy', overwrite: true, pattern: '*.gens'
 	publishDir "${OUTDIR}/cnvkit", mode: 'copy', overwrite: true, pattern: '*.cnvkit'
+	publishDir "${OUTDIR}/cnvkit/HRD", mode: 'copy', overwrite: true, pattern: '*.HRD'
 	cpus 1
 	time '1h'
 	tag "$id"
 	scratch true
 	stageInMode 'copy'
 	stageOutMode 'copy'
+	container = '/fs1/resources/containers/cnvkit099.sif'
 	
 	input:
 		set gr, id, type, file(bam), file(bai), file(bqsr), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV), vc, file(vcf) from bam_cnvkit.join(qc_cnvkit_val, by:[0,1]) \
@@ -603,6 +609,7 @@ process cnvkit {
 		file("${id}.gens") into gens_middleman
 		file("${gr}.${id}_logr_ballele.cnvkit")
 		file("${gr}.${id}_seg.cnvkit")
+		file("${id}.HRD")
 
 	when:
 		params.cnvkit
@@ -616,15 +623,16 @@ process cnvkit {
 	set -eu
 
 	cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
-	cnvkit.py call results/*.cns -v $vcf -o ${gr}.${id}.call.cns
+	cnvkit.py call results/*sort.cns -v $vcf -o ${gr}.${id}.call.cns
 	filter_cnvkit.pl ${gr}.${id}.call.cns $MEAN_DEPTH 1000000 > ${gr}.${id}.filtered
 	cnvkit.py export vcf ${gr}.${id}.filtered -i "$id" > ${gr}.${id}.filtered.vcf		
-	cnvkit.py scatter -s results/*.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf[freebayes_idx]} -i $id
-	cp results/*.cnr ${gr}.${id}.cnr
-	cp results/*.cns ${gr}.${id}.cns
+	cnvkit.py scatter -s results/*sort.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf[freebayes_idx]} -i $id
+	cp results/*sort.cnr ${gr}.${id}.cnr
+	cp results/*sort.cns ${gr}.${id}.cns
 	cnvkit.py export nexus-ogt -o 11-FF-HRD-GMSSTv1-0-210203.nexus -o ${gr}.${id}_logr_ballele.cnvkit ${gr}.${id}.cnr ${vcf[freebayes_idx]}
 	cnvkit.py export seg -o ${gr}.${id}_seg.cnvkit ${gr}.${id}.cns
 	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
+	python /fs1/viktor/SomaticPanelPipeline/bin/HRD.py ${gr}.${id}.call.cns tmp > ${id}.HRD
 	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz" > ${id}.gens
 	"""
 }
@@ -848,6 +856,186 @@ process aggregate_CNVkit {
 	}
 
 }
+
+process gatk_coverage {
+    cpus 10
+    memory '50GB'
+    time '2h'
+    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
+    scratch true
+	stageInMode 'copy'
+	stageOutMode 'copy'
+    tag "$id"   
+
+	when:
+		params.gatk_cnv
+
+    input:
+        set group, id, type, file(bam), file(bai) from bam_gatk
+
+    output:
+        set group, id, file("${id}.tsv") into call_ploidy, call_cnv
+
+    """
+	export THEANO_FLAGS="base_compiledir=."
+    export MKL_NUM_THREADS=${task.cpus}
+    export OMP_NUM_THREADS=${task.cpus}
+	set +u
+	source activate gatk
+    gatk --java-options "-Xmx20g" CollectReadCounts \\
+        -L $params.gatk_intervals \\
+        -R $params.genome_file \\
+        -imr OVERLAPPING_ONLY \\
+        -I $bam \\
+        --format TSV -O ${id}.tsv
+    """
+}
+
+process gatk_call_ploidy {
+    cpus 10
+    memory '40GB'
+    time '2h'
+    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
+    scratch true
+	stageInMode 'copy'
+	stageOutMode 'copy'
+    tag "$id"
+
+    input:
+        set group, id, file(tsv) from call_ploidy
+
+    output:
+        set group, id, file("ploidy.tar") into ploidy_to_cnvcall, ploidy_to_post
+
+    """
+	export THEANO_FLAGS="base_compiledir=."
+    export MKL_NUM_THREADS=${task.cpus}
+    export OMP_NUM_THREADS=${task.cpus}
+	set +u
+	source activate gatk
+    gatk --java-options "-Xmx20g" DetermineGermlineContigPloidy \\
+        --model $params.ploidymodel \\
+        -I $tsv \\
+        -O ploidy/ \\
+        --output-prefix $group
+    tar -cvf ploidy.tar ploidy/
+    """
+}
+
+process gatk_call_cnv {
+    cpus 8
+    memory '45GB'
+    time '3h'
+    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
+    scratch true
+	stageInMode 'copy'
+	stageOutMode 'copy'
+    tag "$id"
+
+    input:
+        set group, id, file(tsv), file(ploidy), i, refpart \
+            from call_cnv.join(ploidy_to_cnvcall, by: [0,1]).combine(gatk_ref)
+
+    output:
+        set group, id, i, file("${group}_${i}.tar") into postprocessgatk
+
+    """
+	export THEANO_FLAGS="base_compiledir=."
+	set +u
+	source activate gatk
+	export HOME=/local/scratch
+    export MKL_NUM_THREADS=${task.cpus}
+    export OMP_NUM_THREADS=${task.cpus}
+    tar -xvf ploidy.tar
+    mkdir ${group}_${i}
+    gatk --java-options "-Xmx25g" GermlineCNVCaller \\
+        --run-mode CASE \\
+        -I $tsv \\
+        --contig-ploidy-calls ploidy/${group}-calls/ \\
+        --model ${refpart} \\
+        --output ${group}_${i}/ \\
+        --output-prefix ${group}_${i}
+    tar -cvf ${group}_${i}.tar ${group}_${i}/
+    """
+}
+
+process postprocessgatk {
+    cpus 8
+    memory '40GB'
+    time '3h'
+    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
+	
+    //scratch true
+	// stageInMode 'copy'
+	// stageOutMode 'copy'
+    publishDir "${OUTDIR}/gatk_cnv/", mode: 'copy', overwrite: 'true'
+    tag "$id"
+
+
+    input:
+        set group, id, i, file(tar), file(ploidy), shard_no, shard \
+			from postprocessgatk.groupTuple(by: [0,1]).join(ploidy_to_post, by: [0,1]).combine(gatk_postprocess.groupTuple(by: [3]))
+
+
+    output:
+        set group, id, \
+            file("genotyped-intervals-${group}-vs-cohort30.vcf.gz"), \
+            file("genotyped-segments-${group}-vs-cohort30.vcf.gz"), \
+            file("denoised-${group}-vs-cohort30.vcf.gz") into called_gatk
+
+    script:
+        modelshards = shard.join(' --model-shard-path ') // join each reference shard
+        caseshards = []
+        for (n = 1; n <= i.size(); n++) { // join each shard(n) that's been called
+            tmp = group+'_'+i[n-1]+'/'+group+'_'+i[n-1]+'-calls' 
+            caseshards = caseshards + tmp
+        }
+        caseshards = caseshards.join( ' --calls-shard-path ')
+ 	shell:
+	'''
+	THEANO_FLAGS="base_compiledir=/fs1/resources/theano"
+	for model in !{tar}; do
+	tar -xvf $model
+	done
+    tar -xvf !{ploidy}
+	set +u
+	source activate gatk
+    export MKL_NUM_THREADS=!{task.cpus}
+    export OMP_NUM_THREADS=!{task.cpus}
+    gatk --java-options "-Xmx25g" PostprocessGermlineCNVCalls \
+        --allosomal-contig X --allosomal-contig Y \
+        --contig-ploidy-calls ploidy/!{group}-calls/ \
+        --sample-index 0 \\
+        --output-genotyped-intervals genotyped-intervals-!{group}-vs-cohort30.vcf.gz \
+        --output-genotyped-segments genotyped-segments-!{group}-vs-cohort30.vcf.gz \
+        --output-denoised-copy-ratios denoised-!{group}-vs-cohort30.vcf.gz \
+        --sequence-dictionary !{params.GENOMEDICT} \
+        --calls-shard-path !{caseshards} \
+        --model-shard-path !{modelshards}
+	'''
+
+}
+
+process filter_merge_gatk {
+	cpus 1
+	tag "$group"
+	time '2h'
+	memory '1 GB'
+	publishDir "${OUTDIR}/gatk_cnv", mode: 'copy', overwrite: 'true'
+
+	input:
+		set group, id, file(inter), file(gatk), file(denoised) from called_gatk
+
+	output:
+		set group, id, file("${id}.gatk.filtred.merged.vcf") into merged_gatk
+
+	"""
+	filter_gatk.pl $gatk > ${id}.gatk.filtered.vcf
+	mergeGATK.pl ${id}.gatk.filtered.vcf > ${id}.gatk.filtred.merged.vcf
+	"""
+}
+
+
 
 process aggregate_cnvs {
         cpus 2
