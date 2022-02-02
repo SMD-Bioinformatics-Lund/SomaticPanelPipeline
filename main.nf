@@ -85,7 +85,7 @@ Channel
 	.into{ gatk_ref; gatk_postprocess }
 
 process bwa_umi {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true, pattern: "*.bam*"
 	cpus params.cpu_all
 	memory '128 GB'
 	time '2h'
@@ -387,7 +387,7 @@ process freebayes {
 	script:
 		dp = 500
 		if (params.assay == "solid") {
-			dp = 20
+			dp = 80
 		}
 			
 
@@ -654,9 +654,9 @@ process gene_plot {
 
 		if (params.assay == "PARP_inhib") {
 			"""
-                        set +eu
-                        source activate old-cnvkit
-                        set -eu
+            set +eu
+            source activate old-cnvkit
+            set -eu
 			cnvkit.py scatter -s $cns $cnr -c 13:32165479-32549672 -o brca2.png --title 'BRCA2'
 			cnvkit.py scatter -s $cns $cnr -c 17:42894294-43350132 -o brca1.png --title 'BRCA1'
 			montage -mode concatenate -tile 1x *.png ${gr}.${id}.cnvkit.png
