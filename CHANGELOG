@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 2.1.2
+### Bugfix
+- cnvkit 0/0 genotypes wrongly was presented as 0/1
+
 ### 2.1.1
 ### Bugfix
 - coyote cannot handle multiallelic indels produced by tnscope
