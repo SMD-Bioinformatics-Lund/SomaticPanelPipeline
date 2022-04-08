@@ -269,14 +269,14 @@ process sentieon_qc {
 
 	"""
 	sentieon driver \\
-		--interval $params.regions_bed -r $genome_file -t ${task.cpus} -i ${bam} \\
+		--interval $params.regions_bed_qc -r $genome_file -t ${task.cpus} -i ${bam} \\
 		--algo MeanQualityByCycle mq_metrics.txt --algo QualDistribution qd_metrics.txt \\
 		--algo GCBias --summary gc_summary.txt gc_metrics.txt --algo AlignmentStat aln_metrics.txt \\
 		--algo InsertSizeMetricAlgo is_metrics.txt \\
 		--algo CoverageMetrics --cov_thresh 1 --cov_thresh 10 --cov_thresh 30 --cov_thresh 100 --cov_thresh 250 --cov_thresh 500 cov_metrics.txt
 	sentieon driver \\
 		-r $genome_file -t ${task.cpus} -i ${bam} \\
-		--algo HsMetricAlgo --targets_list $params.interval_list --baits_list $params.interval_list hs_metrics.txt
+		--algo HsMetricAlgo --targets_list $params.interval_list_qc --baits_list $params.interval_list_qc hs_metrics.txt
 
 	cp is_metrics.txt ${id}_is_metrics.txt
 
