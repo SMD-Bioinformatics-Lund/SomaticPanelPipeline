@@ -1,0 +1,10 @@
+name: CMD-twist
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+
+dependencies:
+    - bioconda::cnvkit=0.9.9
+    - openssl=1.0
+    - bioconda::tabix=1.11
