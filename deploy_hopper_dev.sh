@@ -1,11 +1,14 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-PIPELINE_DEST="/fs1/viktor/SomaticPanelPipeline/"
+PIPELINE_DEST="/fs1/viktor/SomaticPanelPipeline_dsl2/"
 DEST_HOST="rs-fs1.lunarc.lu.se"
 
 
 # Copy pipeline script
-scp $DIR/main.nf $DEST_HOST:$PIPELINE_DEST
+scp -r $DIR/workflows $DEST_HOST:$PIPELINE_DEST
+scp -r $DIR/subworkflows $DEST_HOST:$PIPELINE_DEST
+scp -r $DIR/modules $DEST_HOST:$PIPELINE_DEST
+
 
 # Copy configuration file
 scp $DIR/configs/nextflow.hopper.config $DEST_HOST:$PIPELINE_DEST/nextflow.config
