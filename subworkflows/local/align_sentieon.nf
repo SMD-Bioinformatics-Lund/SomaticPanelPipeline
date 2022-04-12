@@ -12,7 +12,8 @@ workflow ALIGN_SENTIEON {
 
     main:
         BWA_UMI ( fastq_input )
-        MARKDUP (BWA_UMI.out.bam_umi)
+        MARKDUP ( BWA_UMI.out.bam_umi )
+        BQSR_UMI (  )
 
 
     emit:
