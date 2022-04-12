@@ -1,0 +1,14 @@
+{
+    "name": "SomaticPanelPipeline",
+    "homePage": "https://github.com/Clinical-Genomics-Lund/SomaticPanelPipeline",
+    "repos": {
+        "nf-core/modules": {
+            "freebayes": {
+                "git_sha": "eb04a0f1f69a687b596109efb80f28c17b667eba"
+            },
+            "cnvkit/batch": {
+                "git_sha": "e745e167c1020928ef20ea1397b6b4d230681b4d"
+            }
+        }
+    }
+}
