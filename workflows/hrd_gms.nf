@@ -5,7 +5,11 @@ nextflow.enable.dsl = 2
 
 
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
+include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
+include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
+include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 
+println(params.genome_file)
 genome_file = file(params.genome_file)
 
 OUTDIR = params.outdir+'/'+params.subdir
@@ -45,7 +49,7 @@ Channel
 Channel
     .fromPath("${params.regions_bed}")
     .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
-    .splitText( by: 200, file: 'bedpart.bed' )
+    .splitText( by: 1000, file: 'bedpart.bed' )
     .set { beds }
 
 Channel
@@ -58,6 +62,17 @@ Channel
 workflow SOLID_GMS {
 
 	ALIGN_SENTIEON ( fastq )
+	.set { ch_mapped }
+	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds )
+	.set { ch_vcf }
+	CNV_CALLING ( 
+		ch_mapped.bam_umi, 
+		ch_vcf.concat_vcfs
+	)
+	.set { ch_cnvcalled }
+	BIOMARKERS ( ch_cnvcalled.baflogr )
+
+
 }
 
 workflow {
