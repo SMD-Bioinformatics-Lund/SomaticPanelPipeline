@@ -1,5 +1,6 @@
 process CNVKIT {
 	publishDir "${params.outdir}/${params.subdir}/cnvkit", mode: 'copy', overwrite: true, pattern: '*.cnvkit'
+	publishDir "${params.outdir}/${params.subdir}/cnvkit/segments", mode: 'copy', overwrite: true, pattern: '*.call.cns'
 	publishDir "${params.outdir}/${params.subdir}/cnvkit/HRD", mode: 'copy', overwrite: true, pattern: '*.HRD'
 	publishDir "${params.outdir}/${params.subdir}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
 	cpus 1
@@ -15,9 +16,9 @@ process CNVKIT {
 
 	output:
 		tuple val(gr), val(id), val(type), file("${gr}.${id}_logr_ballele.cnvkit"), emit: baflogr
-		tuple file("${id}.HRD"), emit: cnvkit_hrd
-		tuple file("${gr}.${id}.cnvkit_overview.png")
-
+		tuple val(gr), val(id), val(type), file("${id}.HRD"), emit: cnvkit_hrd
+		tuple val(gr), val(id), val(type), file("${gr}.${id}.cnvkit_overview.png")
+		tuple val(gr), val(id), val(type), file("${gr}.${id}.call.cns"), emit: cnvkitsegment
 	when:
 		params.cnvkit
 

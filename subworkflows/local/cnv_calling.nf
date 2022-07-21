@@ -14,5 +14,6 @@ workflow CNV_CALLING {
 
     emit:
         baflogr = CNVKIT.out.baflogr
+        cnvkitsegment = CNVKIT.out.cnvkitsegment
 
 }

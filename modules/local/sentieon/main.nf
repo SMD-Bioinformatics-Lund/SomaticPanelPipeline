@@ -1,5 +1,5 @@
 process BWA_UMI {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true, pattern: "*.bam*"
+	publishDir "${params.outdir}/${params.subdir}/bam", mode: 'copy', overwrite: true, pattern: "*.bam*"
 	cpus params.cpu_all
 	memory '128 GB'
 	time '2h'
@@ -49,7 +49,7 @@ process BWA_UMI {
 }
 
 process MARKDUP {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
+	publishDir "${params.outdir}/${params.subdir}/bam", mode: 'copy', overwrite: true
 	cpus params.cpu_many
 	memory '64 GB'
 	time '1h'
@@ -98,7 +98,7 @@ process BQSR_UMI {
 process SENTIEON_QC {
 	cpus params.cpu_many
 	memory '32 GB'
-	publishDir "${OUTDIR}/QC", mode: 'copy', overwrite: 'true', pattern: '*.QC*'
+	publishDir "${params.outdir}/${params.subdir}/QC", mode: 'copy', overwrite: 'true', pattern: '*.QC*'
 	time '1h'
 	tag "$id"
 	scratch true
@@ -107,7 +107,7 @@ process SENTIEON_QC {
     container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
-		tuple (group), (id), (type), file(bam), file(bai), file(dedup)
+		tuple val(group), val(id), val(type), file(bam), file(bai), file(dedup)
 
 	output:
 		tuple val(group), val(id), val(type), file(bam), file(bai), file("${id}_is_metrics.txt"), emit: dedup_bam

@@ -63,14 +63,17 @@ workflow SOLID_GMS {
 
 	ALIGN_SENTIEON ( fastq )
 	.set { ch_mapped }
-	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds )
+	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
 	.set { ch_vcf }
 	CNV_CALLING ( 
 		ch_mapped.bam_umi, 
 		ch_vcf.concat_vcfs
 	)
 	.set { ch_cnvcalled }
-	BIOMARKERS ( ch_cnvcalled.baflogr )
+	BIOMARKERS ( 
+		ch_cnvcalled.baflogr,
+		ch_cnvcalled.cnvkitsegment
+	)
 
 
 }
