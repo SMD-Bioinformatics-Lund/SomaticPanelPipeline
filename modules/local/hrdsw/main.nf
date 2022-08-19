@@ -7,7 +7,13 @@ process CNVKIT2OVAHRDSCAR {
 		tuple val(group), val(id), val(type), file(segments)
 
 	output:
-		tuple val(group), val(id), val(type), val("cnvkit"), file("${id}.cnvkit.ovaHRDscar.txt"), emit: ovaHRDscar_segments
+		tuple val(group), val(id), val(type), val(caller), file("${id}.cnvkit.ovaHRDscar.txt"), emit: ovaHRDscar_segments
+
+	script:
+		caller = "cnvkit"
+		if (segments =~ /purity/) {
+			caller = "cnvkitpurity"
+		}
 
 	"""
 	cnvkit2HRD.pl $segments $id > ${id}.cnvkit.ovaHRDscar.txt
@@ -20,13 +26,18 @@ process CNVKIT2SCARHRD {
 	tag "$id"
 
 	input:
-		tuple val(group), val(id), val(type), file(segments), val(ploidy)
+		tuple val(group), val(id), val(type), file(segments) //val(ploidy)
 
 	output:
-		tuple val(group), val(id), val(type), val("cnvkit"), file("${id}.cnvkit.scarHRD.txt"), emit: scarHRD_segments
+		tuple val(group), val(id), val(type), val(caller), file("${id}.cnvkit.scarHRD.txt"), emit: scarHRD_segments
 
 	script:
-		ploidyv = ploidy.getText().trim()
+		//ploidyv = ploidy.getText().trim()
+		ploidyv = "NA"
+		caller = "cnvkit"
+		if (segments =~ /purity/) {
+			caller = "cnvkitpurity"
+		}
 
 	"""
 	cnvkit2HRD.pl $segments $id $ploidyv > ${id}.cnvkit.scarHRD.txt
@@ -39,13 +50,14 @@ process ASCAT2SCARHRD {
 	tag "$id"
 
 	input:
-		tuple val(group), val(id), val(type), file(logr), file(baf), val(ploidy)
+		tuple val(group), val(id), val(type), file(logr), file(baf) //val(ploidy)
 
 	output:
 		tuple val(group), val(id), val(type), val("ascat"), file("${id}.ascat.scarHRD.txt"), emit: scarHRD_segments
 
 	script:
-		ploidyv = ploidy.getText().trim()
+		//ploidyv = ploidy.getText().trim()
+		ploidyv = "NA"
 
 	"""
 	ascat2HRD.pl $logr $baf $id $ploidyv > ${id}.ascat.scarHRD.txt

@@ -18,14 +18,15 @@ workflow BIOMARKERS {
     take: 
         baflogr
         cnvkitsegments
+        cnvkitsegment_purity
 
     main:
         CNVKIT2ASCAT ( baflogr )
-        ASCAT_252 ( CNVKIT2ASCAT.out.ascat_input )
+        //ASCAT_252 ( CNVKIT2ASCAT.out.ascat_input )
         ASCAT_30 ( CNVKIT2ASCAT.out.ascat_input )
-        CNVKIT2OVAHRDSCAR ( cnvkitsegments )
-        CNVKIT2SCARHRD ( cnvkitsegments.join(ASCAT_30.out.ploidy, by:[0,1]) )
-        ASCAT2SCARHRD ( ASCAT_30.out.baflogr.join(ASCAT_30.out.ploidy, by:[0,1]) )
+        CNVKIT2OVAHRDSCAR ( cnvkitsegments.mix(cnvkitsegment_purity) )
+        CNVKIT2SCARHRD ( cnvkitsegments.mix(cnvkitsegment_purity) ) //.join(ASCAT_30.out.ploidy, by:[0,1])
+        ASCAT2SCARHRD ( ASCAT_30.out.baflogr ) //.join(ASCAT_30.out.ploidy, by:[0,1])
         ASCAT2OVAHRDSCAR ( ASCAT_30.out.baflogr )
         SCARHRD ( ASCAT2SCARHRD.out.scarHRD_segments.mix(CNVKIT2SCARHRD.out.scarHRD_segments) )
         OVAHRDSCAR ( ASCAT2OVAHRDSCAR.out.ovaHRDscar_segments.mix(CNVKIT2OVAHRDSCAR.out.ovaHRDscar_segments) )

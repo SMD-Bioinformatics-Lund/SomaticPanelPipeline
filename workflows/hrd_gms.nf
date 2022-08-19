@@ -30,8 +30,8 @@ Channel
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.type, row.clarity_sample_id, row.clarity_pool_id) }
-    .set { meta_coyote }
+    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("purity") ? row.purity : false)) }
+    .set { meta_purity }
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
@@ -67,12 +67,14 @@ workflow SOLID_GMS {
 	.set { ch_vcf }
 	CNV_CALLING ( 
 		ch_mapped.bam_umi, 
-		ch_vcf.concat_vcfs
+		ch_vcf.concat_vcfs,
+		meta_purity
 	)
 	.set { ch_cnvcalled }
 	BIOMARKERS ( 
 		ch_cnvcalled.baflogr,
-		ch_cnvcalled.cnvkitsegment
+		ch_cnvcalled.cnvkitsegment,
+		ch_cnvcalled.cnvkitsegment_purity
 	)
 
 

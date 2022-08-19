@@ -61,6 +61,7 @@ process ASCAT_30 {
 		tuple val(group), val(id), val(type), file("${id}.results.txt"), emit: ascat30_purplo
 		tuple val(group), val(id), val(type), file("${id}.LogR.PCFed.txt"), file("${id}.BAF.PCFed.txt"), emit: baflogr
 		tuple val(group), val(id), file("${id}.ploidy"), emit: ploidy
+		tuple val(group), val(id), file("${id}.purity"), emit: purity
 
 	"""
 	Rscript /fs1/viktor/SomaticPanelPipeline_dsl2/workflows/bin/run_ascat_3.0.R
@@ -68,6 +69,7 @@ process ASCAT_30 {
 	cp HRD/${id}_HRD_Telli.txt .
 	mv ASCAT_summary_results_gamma0.9_penalty20.txt ${id}.results.txt
 	grep -v ^Sample ${id}.results.txt | cut -f 4 > ${id}.ploidy
+	grep -v ^Sample ${id}.results.txt | cut -f 2 > ${id}.purity
 	"""
 
 }
