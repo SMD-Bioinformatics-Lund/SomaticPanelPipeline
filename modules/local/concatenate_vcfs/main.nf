@@ -25,14 +25,16 @@ process AGGREGATE_VCFS {
 
 	input:
 		tuple val(group), val(vc), file(vcfs), val(id), val(type), val(FFPE)
+		//row.group, row.id, row.type, (row.containsKey("ffpe") ? row.ffpe
 
 	output:
-		tuple val(group), file("${group}.agg.vcf"), emit: vcf_done
+		tuple val(group), file("${group}.agg.vcf"), emit: vcf_concat
 
 	script:
 		sample_order = id[0]
 		if( id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+			println(id[tumor_idx])
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 			sample_order = id[tumor_idx]+","+id[normal_idx]
 		}

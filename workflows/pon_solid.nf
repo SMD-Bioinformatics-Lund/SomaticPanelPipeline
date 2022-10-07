@@ -6,8 +6,8 @@ nextflow.enable.dsl = 2
 
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
-include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
-include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
+
+
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -59,30 +59,17 @@ Channel
 	.set{ gatk_ref}
 
 
-workflow SOLID_GMS {
+workflow SOLID_PON {
 
 	ALIGN_SENTIEON ( fastq )
 	.set { ch_mapped }
 	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
 	.set { ch_vcf }
-	CNV_CALLING ( 
-		ch_mapped.bam_umi, 
-		ch_vcf.germline_variants,
-		meta_purity,
-		ch_vcf.concat_vcfs
-	)
-	.set { ch_cnvcalled }
-	BIOMARKERS ( 
-		ch_cnvcalled.baflogr,
-		ch_cnvcalled.cnvkitsegment,
-		ch_cnvcalled.cnvkitsegment_purity
-	)
-
 
 }
 
 workflow {
-	SOLID_GMS()
+	SOLID_PON()
 }
 
 
