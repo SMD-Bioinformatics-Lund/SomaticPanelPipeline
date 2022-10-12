@@ -61,7 +61,7 @@ Channel
 
 workflow SOLID_PON {
 
-	ALIGN_SENTIEON ( fastq )
+	ALIGN_SENTIEON ( fastq.view() )
 	.set { ch_mapped }
 	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
 	.set { ch_vcf }

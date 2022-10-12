@@ -45,6 +45,7 @@ process CNVKIT2SCARHRD {
 }
 
 process ASCAT2SCARHRD {
+	publishDir "${params.outdir}/${params.subdir}/ASCAT3.0/segments", mode: 'copy', overwrite: true, pattern: '*.txt'
  	cpus 1
 	time '1h'
 	tag "$id"
@@ -65,6 +66,7 @@ process ASCAT2SCARHRD {
 }
 
 process ASCAT2OVAHRDSCAR {
+	publishDir "${params.outdir}/${params.subdir}/ASCAT3.0/segments", mode: 'copy', overwrite: true, pattern: '*.txt'
  	cpus 1
 	time '1h'
 	tag "$id"
