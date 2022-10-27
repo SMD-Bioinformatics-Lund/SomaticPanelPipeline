@@ -45,9 +45,9 @@ while ( my $var = $vcf->next_var() ) {
     # Check if variant is in one of the selected genes
     my $in_relevant_gene = 0;
     for my $tx ( @{ $var->{INFO}->{CSQ} } ) {
-	if( $GENES{ $tx->{SYMBOL} } or $GENES{'ALL_GENES'} ) {
-	    $in_relevant_gene = 1;
-	}
+        if( $GENES{ $tx->{SYMBOL} } or $GENES{'ALL_GENES'} ) {
+            $in_relevant_gene = 1;
+        }
     }
 
 	 
@@ -56,35 +56,34 @@ while ( my $var = $vcf->next_var() ) {
     my $not_germline = 0;
     
     for my $gt ( @{$var->{GT}}) {
-
-	# If normal samples. Set GERMLINE filter if VAF > $MIN_VAF_NORMAL and in relevant gene
-	if( $nid and $gt->{_sample_id} eq $nid ) {
-	    $germline = 1 if( $gt->{VAF} > $MIN_VAF_NORMAL and $gt->{DP} > $MIN_DP and $in_relevant_gene);
-	    $not_germline = 1 if $gt->{VAF} < $MAX_VAF_NORMAL and $gt->{DP} > $MIN_DP;
-	}
+	    # If normal samples. Set GERMLINE filter if VAF > $MIN_VAF_NORMAL and in relevant gene
+        if( $nid and $gt->{_sample_id} eq $nid ) {
+            $germline = 1 if( $gt->{VAF} > $MIN_VAF_NORMAL and $gt->{DP} > $MIN_DP and $in_relevant_gene);
+            $not_germline = 1 if $gt->{VAF} < $MAX_VAF_NORMAL and $gt->{DP} > $MIN_DP;
+        }
 	    
-	# If tumor samples. Set GERMLINE_RISK filter if VAF > $MIN_VAF_TUMOR
-	if( $tid and $gt->{_sample_id} eq $tid ) {
-	    $germline_risk = 1 if( $gt->{VAF} > $MIN_VAF_TUMOR and $gt->{DP} > $MIN_DP );
-	}
+        # If tumor samples. Set GERMLINE_RISK filter if VAF > $MIN_VAF_TUMOR
+        if( $tid and $gt->{_sample_id} eq $tid ) {
+            $germline_risk = 1 if( $gt->{VAF} > $MIN_VAF_TUMOR and $gt->{DP} > $MIN_DP );
+        }
     }
 
 
     # Add GERMLINE filter and remove FAIL_NVAF for confirmed relevant germlines
-    if( $germline ) {
-	my @new_filters = ("GERMLINE");
-	foreach( split(';', $var->{FILTER}) ) {
-	    push @new_filters, $_ unless $_ eq "FAIL_NVAF"; 
-	}
-	$var->{FILTER} = join(";", @new_filters);
+    if ( $germline ) {
+        my @new_filters = ("GERMLINE");
+        foreach( split(';', $var->{FILTER}) ) {
+            push @new_filters, $_ unless $_ eq "FAIL_NVAF"; 
+        }
+        $var->{FILTER} = join(";", @new_filters);
     }
     
 
     # Add GERMLINE_RISK filter to suspected germline variants in tumor only
-    elsif( $germline_risk and !$nid ) {
-	my @filters = split ';', $var->{FILTER};
-	push @filters, "GERMLINE_RISK";
-	$var->{FILTER} = join(";", @filters);
+    elsif ( $germline_risk and !$nid ) {
+        my @filters = split ';', $var->{FILTER};
+        push @filters, "GERMLINE_RISK";
+        $var->{FILTER} = join(";", @filters);
     }
 
     vcfstr($var);
