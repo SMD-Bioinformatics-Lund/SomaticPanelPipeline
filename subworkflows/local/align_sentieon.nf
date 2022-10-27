@@ -16,10 +16,10 @@ workflow ALIGN_SENTIEON {
         BQSR_UMI ( BWA_UMI.out.bam_umi )
         SENTIEON_QC ( MARKDUP.out.bam_qc )
 
-
     emit:
         //bam = MARKDUP.out.bam_bqsr
         bam_umi = BQSR_UMI.out.bam_varcall
+        qc_out = SENTIEON_QC.out.qc_cdm
 
 
 

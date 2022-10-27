@@ -17,14 +17,15 @@ workflow SNV_CALLING {
 
     main:
         // Variantcallers //
+        // split by bed-file to speed up calling //
         FREEBAYES ( bam_umi, beds)
         VARDICT ( bam_umi, beds)
-        // Prepare vcf parts for concatenation
+        // Prepare vcf parts for concatenation //
         vcfparts_freebayes = FREEBAYES.out.vcfparts_freebayes.groupTuple(by:[0,1])
         vcfparts_vardict   = VARDICT.out.vcfparts_vardict.groupTuple(by:[0,1])
         //vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict).mix(vcfparts_tnscope)
         vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict)
-        // Join vcfs split by bedparts
+        // Join vcfs split by bedparts //
         CONCATENATE_VCFS { vcfs_to_concat }
         // Aggregate all callers to one VCF
         AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.groupTuple().join(meta.groupTuple()) }

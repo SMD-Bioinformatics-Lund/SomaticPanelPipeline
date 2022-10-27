@@ -8,6 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
+include { QC                            } from '../subworkflows/local/qc'
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -33,6 +34,11 @@ Channel
     .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("purity") ? row.purity : false)) }
     .set { meta_purity }
 
+Channel
+    .fromPath(params.csv).splitCsv(header:true)
+    .map{ row-> tuple(row.id, row.clarity_sample_id, row.sequencing_run, row.sequencing_machine, row.read1, row.read2) }
+    .set{ meta_qc }
+
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -54,19 +60,10 @@ workflow SOLID_GMS {
 	.set { ch_mapped }
 	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
 	.set { ch_vcf }
-	CNV_CALLING ( 
-		ch_mapped.bam_umi, 
-		ch_vcf.germline_variants,
-		meta_purity,
-		ch_vcf.concat_vcfs
-	)
-	.set { ch_cnvcalled }
-	BIOMARKERS ( 
-		ch_cnvcalled.baflogr,
-		ch_cnvcalled.cnvkitsegment,
-		ch_cnvcalled.cnvkitsegment_purity
-	)
-
+    QC ( 
+        ch_mapped.qc_out,
+        meta_qc
+    )
 
 }
 

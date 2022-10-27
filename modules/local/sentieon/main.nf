@@ -131,3 +131,4 @@ process SENTIEON_QC {
 	qc_sentieon.pl ${id}_${type} panel > ${id}_${type}.QC
 	"""
 }
+
