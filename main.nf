@@ -1063,8 +1063,7 @@ process umi_confirm {
 
 process contamination {
 	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.png"
-	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.dist"
-	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.genotypes"
+	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.txt"
 	publishDir "${params.crondir}/contamination", mode: 'copy', overwrite: true, pattern: "*.contamination"
 	container = "/fs1/resources/containers/perl-gd.sif"
 	//errorStrategy 'ignore'
@@ -1076,7 +1075,7 @@ process contamination {
 		set group, file(vcf), id, type, r1, r2 from vcf_contamination.join(meta_contamination.groupTuple()).view()
 
 	output:
-		set group, file("*.dist"), file("*.png"), file("*.genotypes") into result_files
+		set group, file("*.txt"), file("*.png") into result_files
 		set group, file("*.contamination") into contamination_cdm
 
 	script:

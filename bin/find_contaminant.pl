@@ -134,6 +134,7 @@ my %distri = %$distri;
 ## if no bins, no variants, no contamination
 if ($num_bins == 0) {
 	print "0.0\n";
+	system("touch $id.png");
 	exit;
 }
 
@@ -257,7 +258,7 @@ sub find_homozygous_peak {
 sub print_genotypes {
 	my ($vars,$type) = @_;
 	my @vars = @$vars;
-	my $dist_file = "$id.genotypes";
+	my $dist_file = "$id.genotypes.txt";
 	open (GENOTYPES, '>>', $dist_file);
 	foreach my $var (@vars) {
 		my @tmp = split("\t",$var);
@@ -310,7 +311,7 @@ sub get_distibution {
 
 sub find_heterozygous_peak {
 	my ($num_bins,$num_vars_bin) = @_;
-	my $dist_file = "$id.dist";
+	my $dist_file = "$id.dist.txt";
 	open (DIST, '>', $dist_file);
 	my $mean_bincount = $num_vars_bin/$num_bins;
 	my $highpoint = 0;
