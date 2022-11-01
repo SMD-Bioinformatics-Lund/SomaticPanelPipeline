@@ -66,6 +66,11 @@ Channel
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
+    .map{ row-> tuple(row.group, row.id, row.type, row.read1, row.read2) }
+    .set{ meta_contamination }
+
+Channel
+    .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.id, row.type, row.clarity_sample_id, row.clarity_pool_id) }
     .set { meta_const }
 
@@ -960,7 +965,7 @@ process annotate_vep {
 		set group, file(vcf) from vcf_vep
     
 	output:
-		set group, file("${group}.agg.pon.vep.vcf") into vcf_germline
+		set group, file("${group}.agg.pon.vep.vcf") into vcf_germline, vcf_contamination
 
 	"""
 	vep -i ${vcf} -o ${group}.agg.pon.vep.vcf \\
@@ -1056,6 +1061,58 @@ process umi_confirm {
 		}
 }
 
+process contamination {
+	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.png"
+	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.dist"
+	publishDir "${OUTDIR}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.genotypes"
+	publishDir "${params.crondir}/contamination", mode: 'copy', overwrite: true, pattern: "*.contamination"
+	container = "/fs1/resources/containers/perl-gd.sif"
+	//errorStrategy 'ignore'
+	cpus 1
+	time '10m'
+	tag "$group"
+
+	input:
+		set group, file(vcf), id, type, r1, r2 from vcf_contamination.join(meta_contamination.groupTuple()).view()
+
+	output:
+		set group, file("*.dist"), file("*.png"), file("*.genotypes") into result_files
+		set group, file("*.contamination") into contamination_cdm
+
+	script:
+		if(id.size() >= 2) { 
+			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+			normal_id = id[normal_idx]
+			tumor_id = id[tumor_idx]
+			parts_normal = r1[normal_idx].split('/')
+			parts_tumor = r1[tumor_idx].split('/')
+			idx_normal =  parts_normal.findIndexOf {it ==~ /......_......_...._........../}
+			rundir_normal = parts_normal[0..idx_normal].join("/")
+			idx_tumor =  parts_normal.findIndexOf {it ==~ /......_......_...._........../}
+			rundir_tumor = parts_tumor[0..idx_tumor].join("/")
+			"""
+			find_contaminant.pl --vcf $vcf --case-id $tumor_id --assay ${params.cdm} --detect-level 0.01 > ${tumor_id}.value
+			echo "--overwrite --sample-id $tumor_id --run-folder $rundir_tumor --assay ${params.cdm} --contamination" > ${tumor_id}.1
+			paste -d " " ${tumor_id}.1 ${tumor_id}.value > ${tumor_id}.contamination
+			find_contaminant.pl --vcf $vcf --case-id $tumor_id --assay ${params.cdm} --detect-level 0.01 --normal > ${normal_id}.value
+			echo "--overwrite --sample-id $normal_id --run-folder $rundir_normal --assay ${params.cdm} --contamination" > ${normal_id}.1
+			paste -d " " ${normal_id}.1 ${normal_id}.value > ${normal_id}.contamination
+			"""
+		}
+		else {
+			id = id[0]
+			parts = r1[0].split('/')
+			idx =  parts.findIndexOf {it ==~ /......_......_...._........../}
+			rundir = parts[0..idx].join("/")
+			"""
+			find_contaminant.pl --vcf $vcf --case-id $id --assay ${params.cdm} --detect-level 0.01 > ${id}.value
+			echo "--overwrite --sample-id $id --run-folder $rundir --assay ${params.cdm} --contamination" > ${id}.1
+			paste -d " " ${id}.1 ${id}.value > ${id}.contamination
+			"""
+		}
+		
+}
 
 process coyote {
 	publishDir "${params.crondir}/coyote", mode: 'copy', overwrite: true
