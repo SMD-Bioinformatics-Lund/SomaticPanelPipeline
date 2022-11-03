@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 2.2.0
+### feature
+- added find_contaminant.pl. Calculates contamination value from VEP-annotated VCF. Loadable by middleman into CDM
+
 ### 2.1.2
 ### Bugfix
 - cnvkit 0/0 genotypes wrongly was presented as 0/1
