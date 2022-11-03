@@ -133,7 +133,8 @@ my %distri = %$distri;
 
 ## if no bins, no variants, no contamination
 if ($num_bins == 0) {
-	print "$id\t0\n";
+	print "0.0\n";
+	system("touch $id.png");
 	exit;
 }
 
@@ -144,7 +145,7 @@ my ($af_at_highpoint,$bin_at_highpoint) = find_heterozygous_peak($num_bins,$num_
 ## this is likely the contamination score for the sample, try to find homozygous peak (should be a peak around 2x the AF-average of hetero peak)
 ## print the genotypes of the heterozygous loci and, if found, the homozygous loci too
 if ($af_at_highpoint) {
-	print $id."\t".$af_at_highpoint."\n";
+	print $af_at_highpoint."\n";
 	## try to find homozygous peak, starting from hetero highpoint
 	my ($bin_at_homo_highpoint,$homo_highpoint,$af_at_homo) = find_homozygous_peak($bin_at_highpoint,$af_at_highpoint);
 	print_genotypes($distri{$bin_at_highpoint}{VARS},"hetero");
@@ -154,7 +155,7 @@ if ($af_at_highpoint) {
 	
 }
 else {
-	print $id."\t0\n";
+	print "0.0\n";
 }
 
 
@@ -257,7 +258,7 @@ sub find_homozygous_peak {
 sub print_genotypes {
 	my ($vars,$type) = @_;
 	my @vars = @$vars;
-	my $dist_file = "$id.genotypes";
+	my $dist_file = "$id.genotypes.txt";
 	open (GENOTYPES, '>>', $dist_file);
 	foreach my $var (@vars) {
 		my @tmp = split("\t",$var);
@@ -310,7 +311,7 @@ sub get_distibution {
 
 sub find_heterozygous_peak {
 	my ($num_bins,$num_vars_bin) = @_;
-	my $dist_file = "$id.dist";
+	my $dist_file = "$id.dist.txt";
 	open (DIST, '>', $dist_file);
 	my $mean_bincount = $num_vars_bin/$num_bins;
 	my $highpoint = 0;
