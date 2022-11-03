@@ -8,12 +8,14 @@ include { PON_FILTER               } from '../../modules/local/filters/main'
 include { ANNOTATE_VEP             } from '../../modules/local/filters/main'
 include { MARK_GERMLINES           } from '../../modules/local/filters/main'
 include { FILTER_FOR_CNV           } from '../../modules/local/filters/main'
+include { CONTAMINATION            } from '../../modules/local/concatenate_vcfs/main'
 
 workflow SNV_CALLING {
     take: 
         bam_umi
         beds
         meta
+        meta_contamination
 
     main:
         // Variantcallers //
@@ -35,6 +37,8 @@ workflow SNV_CALLING {
         MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep.join(meta.groupTuple()) }
         // filter for CNVkit //
         FILTER_FOR_CNV { ANNOTATE_VEP.out.vcf_vep.join(CONCATENATE_VCFS.out.concatenated_vcfs.filter { item -> item[1] == 'freebayes' })  }
+        // contamination values from VCF //
+        CONTAMINATION { ANNOTATE_VEP.out.vcf_vep.join(meta_contamination.groupTuple()) }
 
     emit:
         concat_vcfs = CONCATENATE_VCFS.out.concatenated_vcfs

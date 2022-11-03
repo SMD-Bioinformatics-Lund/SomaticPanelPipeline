@@ -6,7 +6,7 @@ process QC_TO_CDM {
 	memory '50 MB'
 
 	input:
-		tuple val(id), val(type), file(qc), val(clarity_sample_id), val(sequencing_run), val(sequencing_machine), val(r1), val(r2)
+		tuple val(id), val(type), file(qc), val(clarity_sample_id), val(sequencing_run), val(r1), val(r2)
 
 	output:
 		tuple val(id), file("${id}.cdm"), emit: cdm_done
@@ -20,6 +20,6 @@ process QC_TO_CDM {
 		rundir = parts[0..idx].join("/")
 
 	"""
-	echo "--run-folder $rundir --sample-id $id --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/${id}_${type}.QC" --lims-id $clarity_sample_id --sequencing_run $sequencing_run --sequencing_machine $sequencing_machine > ${id}.cdm
+	echo "--run-folder $rundir --sample-id $id --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/${id}_${type}.QC --lims-id $clarity_sample_id" > ${id}.cdm
 	"""
 }

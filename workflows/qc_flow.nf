@@ -36,9 +36,13 @@ Channel
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.id, row.clarity_sample_id, row.sequencing_run, row.sequencing_machine, row.read1, row.read2) }
+    .map{ row-> tuple(row.id, row.clarity_sample_id, row.sequencing_run, row.read1, row.read2) }
     .set{ meta_qc }
 
+Channel
+    .fromPath(params.csv).splitCsv(header:true)
+    .map{ row-> tuple(row.group, row.id, row.type, row.sequencing_run) }
+    .set{ meta_contamination }
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -58,7 +62,12 @@ workflow SOLID_GMS {
 
 	ALIGN_SENTIEON ( fastq )
 	.set { ch_mapped }
-	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
+	SNV_CALLING ( 
+		ch_mapped.bam_umi.groupTuple(),
+		beds,
+		meta,
+		meta_contamination
+	)
 	.set { ch_vcf }
     QC ( 
         ch_mapped.qc_out,
