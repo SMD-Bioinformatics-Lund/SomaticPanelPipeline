@@ -1088,7 +1088,7 @@ process contamination {
 			parts_tumor = r1[tumor_idx].split('/')
 			idx_normal =  parts_normal.findIndexOf {it ==~ /......_......_...._........../}
 			rundir_normal = parts_normal[0..idx_normal].join("/")
-			idx_tumor =  parts_normal.findIndexOf {it ==~ /......_......_...._........../}
+			idx_tumor =  parts_tumor.findIndexOf {it ==~ /......_......_...._........../}
 			rundir_tumor = parts_tumor[0..idx_tumor].join("/")
 			"""
 			find_contaminant.pl --vcf $vcf --case-id $tumor_id --assay ${params.cdm} --detect-level 0.01 > ${tumor_id}.value
