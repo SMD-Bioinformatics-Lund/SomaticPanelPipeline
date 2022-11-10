@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 2.2.1
+### Bugfix
+- wrong path for tumor in contamination, used normal-path instead
+
 ### 2.2.0
 ### feature
 - added find_contaminant.pl. Calculates contamination value from VEP-annotated VCF. Loadable by middleman into CDM
