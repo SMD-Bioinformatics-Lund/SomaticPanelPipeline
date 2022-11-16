@@ -24,6 +24,35 @@ process PON_FILTER {
         
 }
 
+process FFPE_PON_FILTER {
+	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
+	cpus 1
+	time '1h'
+	tag "$group"
+	memory '32 GB'
+
+	when:
+		params.assay == "solid"
+
+	input:
+		tuple val(group), file(vcf), val(id), val(type), val(tissue)
+		
+	output:
+		tuple val(group), file("${group}.agg.pon.ponffpe.vcf"), emit: vcf_pon_ffpe
+
+	script:
+        def pons = []
+        if( params.freebayes ) { pons.push("freebayes="+params.PON_freebayes) }
+        if( params.vardict )   { pons.push("vardict="+params.PON_vardict) }
+        if( params.tnscope )   { pons.push("tnscope="+params.PON_tnscope) }
+        def pons_str = pons.join(",")
+        tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+        """
+        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${id[tumor_idx]} > ${group}.agg.pon.ponffpe.vcf
+        """
+        
+}
+
 process ANNOTATE_VEP {
 	container = params.vepcon
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
@@ -49,6 +78,7 @@ process ANNOTATE_VEP {
 	--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
 	--custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
 	--cache \\
+	${params.custom_vep} \\
 	"""
 }
 
