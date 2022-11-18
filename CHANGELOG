@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 2.3.0
+### feature
+- added subpanel/diagnosis from csv into coyote-import. Enables displaying in coyote for diagnosis in list_samples.html
+
 ### 2.2.1
 ### Bugfix
 - wrong path for tumor in contamination, used normal-path instead
