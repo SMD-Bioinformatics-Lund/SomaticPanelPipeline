@@ -56,7 +56,7 @@ Channel
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.type, row.clarity_sample_id, row.clarity_pool_id) }
+    .map{ row-> tuple(row.group, row.type, row.clarity_sample_id, row.clarity_pool_id, row.diagnosis) }
     .set { meta_coyote }
 
 Channel
@@ -1120,7 +1120,7 @@ process coyote {
 	tag "$group"
 
 	input:
-		set group, file(vcf),  type, lims_id, pool_id, id, cnv_type, \
+		set group, file(vcf),  type, lims_id, pool_id, diagnosis, id, cnv_type, \
 			file(cnvplot), tissue_c, lowcov_type, file(lowcov) from \
 			vcf_coyote.join(meta_coyote.groupTuple()).join(cnvplot_coyote.join(meta_cnvplot, by:[0,1,2]).groupTuple()).join(lowcov_coyote.groupTuple())
 
@@ -1148,6 +1148,7 @@ process coyote {
 		--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
+		--subpanel ${diagnosis[tumor_idx]} \\
 		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
                 --build 38 \\
                 --gens ${group} \\
