@@ -70,7 +70,8 @@ workflow SOLID_GMS {
 	.set { ch_mapped }
 	QC ( 
         ch_mapped.qc_out,
-        meta_qc
+        meta_qc,
+		ch_mapped.bam_lowcov
     )
 	.set { ch_qc }
 	SNV_CALLING ( 
@@ -82,8 +83,8 @@ workflow SOLID_GMS {
 	.set { ch_vcf }
 	ADD_TO_DB (
 		ch_vcf.finished_vcf,
-		meta_coyote,
-		ch_qc.lowcov
+		meta_coyote.groupTuple(),
+		ch_qc.lowcov.groupTuple()
 	)
 
 
