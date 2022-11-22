@@ -34,7 +34,6 @@ process LOWCOV {
 	input:
 		tuple val(group), val(id), val(type), file(bam), file(bai), file(dedup) //from bam_lowcov
 
-
 	output:
 		tuple val(group), val(id), val(type), file("${id}.lowcov.bed"), emit: lowcov_regions
 
