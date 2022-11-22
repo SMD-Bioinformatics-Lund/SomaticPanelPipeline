@@ -45,5 +45,6 @@ workflow SNV_CALLING {
     emit:
         concat_vcfs = CONCATENATE_VCFS.out.concatenated_vcfs
         germline_variants = FILTER_FOR_CNV.out.vcf_only_germline
+        finished_vcf = MARK_GERMLINES.out.vcf_germline
 
 }

@@ -23,3 +23,24 @@ process QC_TO_CDM {
 	echo "--run-folder $rundir --sample-id $id --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/${id}_${type}.QC --lims-id $clarity_sample_id" > ${id}.cdm
 	"""
 }
+
+process LOWCOV {
+	cpus 1
+	memory '5 GB'
+	publishDir "${params.outdir}/${params.subdir}/QC", mode: 'copy', overwrite: 'true'
+	time '1h'
+	tag "$id"
+
+	input:
+		tuple val(group), val(id), val(type), file(bam), file(bai), file(dedup) //from bam_lowcov
+
+
+	output:
+		tuple val(group), val(id), val(type), file("${id}.lowcov.bed"), emit: lowcov_regions
+
+	"""
+    source activate sambamba
+	panel_depth.pl $bam ${params.regions_proteincoding} > lowcov.bed
+	overlapping_genes.pl lowcov.bed ${params.gene_regions} > ${id}.lowcov.bed
+	"""
+}

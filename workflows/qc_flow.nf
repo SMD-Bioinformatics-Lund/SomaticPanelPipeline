@@ -9,6 +9,7 @@ include { SNV_CALLING                   } from '../subworkflows/local/snv_callin
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { QC                            } from '../subworkflows/local/qc'
+include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -41,6 +42,11 @@ Channel
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
+    .map{ row-> tuple(row.group, row.id, row.type, row.clarity_sample_id, row.clarity_pool_id , row.diagnosis ) }
+    .set{ meta_coyote }
+
+Channel
+    .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.id, row.type, row.sequencing_run) }
     .set{ meta_contamination }
 
@@ -62,6 +68,11 @@ workflow SOLID_GMS {
 
 	ALIGN_SENTIEON ( fastq )
 	.set { ch_mapped }
+	QC ( 
+        ch_mapped.qc_out,
+        meta_qc
+    )
+	.set { ch_qc }
 	SNV_CALLING ( 
 		ch_mapped.bam_umi.groupTuple(),
 		beds,
@@ -69,10 +80,12 @@ workflow SOLID_GMS {
 		meta_contamination
 	)
 	.set { ch_vcf }
-    QC ( 
-        ch_mapped.qc_out,
-        meta_qc
-    )
+	ADD_TO_DB (
+		ch_vcf.finished_vcf,
+		meta_coyote,
+		ch_qc.lowcov
+	)
+
 
 }
 
