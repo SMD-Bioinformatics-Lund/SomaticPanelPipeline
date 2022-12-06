@@ -16,7 +16,6 @@ workflow SNV_CALLING {
         bam_umi
         beds
         meta
-        meta_contamination
 
     main:
         // Variantcallers //
@@ -31,16 +30,16 @@ workflow SNV_CALLING {
         // Join vcfs split by bedparts //
         CONCATENATE_VCFS { vcfs_to_concat }
         // Aggregate all callers to one VCF
-        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.groupTuple().join(meta.groupTuple()) }
+        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.groupTuple().join(meta.groupTuple()).view() }
         // Filter with PoN, annotate with VEP, mark germlines
-        PON_FILTER { AGGREGATE_VCFS.out.vcf_concat.join(meta.groupTuple()) }
-        FFPE_PON_FILTER { PON_FILTER.out.vcf_pon.join(meta.groupTuple()) }
-        ANNOTATE_VEP { FFPE_PON_FILTER.out.vcf_pon_ffpe }
-        MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep.join(meta.groupTuple()) }
+        PON_FILTER { AGGREGATE_VCFS.out.vcf_concat }
+        FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should be be FFPE annotated
+        ANNOTATE_VEP { FFPE_PON_FILTER.out.vcf_pon_ffpe } 
+        MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep }
         // filter for CNVkit //
         FILTER_FOR_CNV { ANNOTATE_VEP.out.vcf_vep.join(CONCATENATE_VCFS.out.concatenated_vcfs.filter { item -> item[1] == 'freebayes' })  }
         // contamination values from VCF //
-        CONTAMINATION { ANNOTATE_VEP.out.vcf_vep.join(meta_contamination.groupTuple()) }
+        CONTAMINATION { ANNOTATE_VEP.out.vcf_vep }
 
     emit:
         concat_vcfs = CONCATENATE_VCFS.out.concatenated_vcfs

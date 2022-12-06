@@ -9,6 +9,7 @@ include { SENTIEON_QC            } from '../../modules/local/sentieon/main'
 workflow ALIGN_SENTIEON {
     take: 
         fastq_input
+        meta
 
     main:
         BWA_UMI ( fastq_input )

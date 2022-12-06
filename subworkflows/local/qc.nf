@@ -6,12 +6,11 @@ include { LOWCOV               } from '../../modules/local/qc/main'
 workflow QC {
     take: 
         qc
-        meta_QC
         bam_lowcov
 
     main:
 
-        QC_TO_CDM ( qc.join(meta_QC) )
+        QC_TO_CDM ( qc )
         LOWCOV ( bam_lowcov )
 
     emit:

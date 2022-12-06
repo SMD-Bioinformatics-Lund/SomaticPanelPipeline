@@ -10,10 +10,15 @@ process CONCATENATE_VCFS {
 	output:
 		tuple val(group), val(vc), file("${group}_${vc}.vcf.gz"), emit: concatenated_vcfs
 
+	script:
 	"""
 	vcf-concat $vcfs | vcf-sort -c | gzip -c > ${vc}.concat.vcf.gz
 	vt decompose ${vc}.concat.vcf.gz -o ${vc}.decomposed.vcf.gz
 	vt normalize ${vc}.decomposed.vcf.gz -r $params.genome_file | vt uniq - -o ${group}_${vc}.vcf.gz
+	"""
+	stub:
+	"""
+	touch ${group}_${vc}.vcf.gz
 	"""
 }
 
@@ -24,19 +29,18 @@ process AGGREGATE_VCFS {
 	tag "$group"
 
 	input:
-		tuple val(group), val(vc), file(vcfs), val(id), val(type), val(FFPE)
+		tuple val(group), val(vc), file(vcfs), val(meta)
 		//row.group, row.id, row.type, (row.containsKey("ffpe") ? row.ffpe
 
 	output:
-		tuple val(group), file("${group}.agg.vcf"), emit: vcf_concat
+		tuple val(group), val(meta), file("${group}.agg.vcf"), emit: vcf_concat
 
 	script:
-		sample_order = id[0]
-		if( id.size() >= 2 ) {
+		sample_order = meta.id[0]
+		if( meta.id.size() >= 2 ) {
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
-			println(id[tumor_idx])
 			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
-			sample_order = id[tumor_idx]+","+id[normal_idx]
+			sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
 		}
 		if (params.single_cnvcaller) {
 			"""
@@ -49,6 +53,21 @@ process AGGREGATE_VCFS {
 			vcf-concat ${group}.agg.tmp.vcf $cnvs | vcf-sort -c > ${group}.agg.vcf
 			"""
 		}
+	stub:
+	if( meta.id.size() >= 2 ) {
+		tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+		normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+		sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
+		"""
+		echo tumor:${meta.id[tumor_idx]} normal:${meta.id[normal_idx]}
+		touch ${group}.agg.vcf
+		"""
+	}
+	else {
+		"""
+		touch ${group}.agg.vcf
+		"""
+	}
 
 }
 
@@ -63,32 +82,50 @@ process CONTAMINATION {
 	tag "$group"
 
 	input:
-		tuple val(group), file(vcf), val(id), val(type), val(sequencing_run)
+		tuple val(group), val(meta), file(vcf)
 
 	output:
 		tuple val(group), file("*.txt"), file("*.png"), emit: contamination_result_files
 		tuple val(group), file("*.contamination"), emit: contamination_cdm
 
 	script:
-		if(id.size() >= 2) { 
-			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
-			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+		if(meta.id.size() >= 2) { 
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 			"""
-			find_contaminant.pl --vcf $vcf --case-id ${id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 > ${id[tumor_idx]}.value
-			echo "--overwrite --sample-id ${id[tumor_idx]} --run-folder ${sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${tumor_id}.1
-			paste -d " " ${id[tumor_idx]}.1 ${id[tumor_idx]}.value > ${id[tumor_idx]}.contamination
-			find_contaminant.pl --vcf $vcf --case-id ${id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 --normal > ${id[normal_idx]}.value
-			echo "--overwrite --sample-id ${id[normal_idx]} --run-folder ${sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${id[normal_idx]}.1
-			paste -d " " ${id[normal_idx]}.1 ${id[normal_idx]}.value > ${id[normal_idx]}.contamination
+			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[tumor_idx]}.value
+			echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
+			paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contamination
+			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 --normal > ${meta.id[normal_idx]}.value
+			echo "--overwrite --sample-id ${meta.id[normal_idx]} --run-folder ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
+			paste -d " " ${meta.id[normal_idx]}.1 ${meta.id[normal_idx]}.value > ${meta.id[normal_idx]}.contamination
 			"""
 		}
 		else {
 			"""
-			find_contaminant.pl --vcf $vcf --case-id ${id[0]} --assay ${params.cdm} --detect-level 0.01 > ${id[0]}.value
-			echo "--overwrite --sample-id ${id[0]} --run-folder ${sequencing_run[0]} --assay ${params.cdm} --contamination" > ${id[0]}.1
-			paste -d " " ${id[0]}.1 ${id[0]}.value > ${id[0]}.contamination
+			find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[0]}.value
+			echo "--overwrite --sample-id ${meta.id[0]} --run-folder ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
+			paste -d " " ${meta.id[0]}.1 ${meta.id[0]}.value > ${meta.id[0]}.contamination
 			"""
 		}
+	stub:
+		if(meta.id.size() >= 2) { 
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+			"""
+			touch test.png
+			touch test.txt
+			touch ${meta.id[tumor_idx]}.contamination
+			touch ${meta.id[normal_idx]}.contamination
+			"""
+		}
+		else {
+			"""
+			touch test.png
+			touch test.txt
+			touch ${meta.id[0]}.contamination
+			"""
+		}	
 
 
 }

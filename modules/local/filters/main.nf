@@ -6,10 +6,10 @@ process PON_FILTER {
 	memory '32 GB'
 
 	input:
-		tuple val(group), file(vcf), val(id), val(type), val(tissue) // vcf_pon.join(meta_pon.groupTuple())
+		tuple val(group), val(meta), file(vcf) 
 		
 	output:
-		tuple val(group), file("${group}.agg.pon.vcf"), emit: vcf_pon
+		tuple val(group), val(meta), file("${group}.agg.pon.vcf"), emit: vcf_pon
 
 	script:
         def pons = []
@@ -17,10 +17,16 @@ process PON_FILTER {
         if( params.vardict )   { pons.push("vardict="+params.PON_vardict) }
         if( params.tnscope )   { pons.push("tnscope="+params.PON_tnscope) }
         def pons_str = pons.join(",")
-        tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+        tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${id[tumor_idx]} > ${group}.agg.pon.vcf
+        filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${group}.agg.pon.vcf
         """
+	stub:
+		tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+		"""
+		echo ${meta.id[tumor_idx]}
+		touch ${group}.agg.pon.vcf
+		"""
         
 }
 
@@ -35,10 +41,10 @@ process FFPE_PON_FILTER {
 		params.assay == "solid"
 
 	input:
-		tuple val(group), file(vcf), val(id), val(type), val(tissue)
+		tuple val(group), val(meta), file(vcf)
 		
 	output:
-		tuple val(group), file("${group}.agg.pon.ponffpe.vcf"), emit: vcf_pon_ffpe
+		tuple val(group), val(meta), file("${group}.agg.pon.ponffpe.vcf"), emit: vcf_pon_ffpe
 
 	script:
         def pons = []
@@ -46,10 +52,16 @@ process FFPE_PON_FILTER {
         if( params.vardict )   { pons.push("vardict="+params.PON_vardict) }
         if( params.tnscope )   { pons.push("tnscope="+params.PON_tnscope) }
         def pons_str = pons.join(",")
-        tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+        tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${id[tumor_idx]} > ${group}.agg.pon.ponffpe.vcf
+        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${group}.agg.pon.ponffpe.vcf
         """
+	stub:
+		tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+		"""
+		echo ${meta.id[tumor_idx]}
+		touch ${group}.agg.pon.ponffpe.vcf
+		"""
         
 }
 
@@ -61,25 +73,31 @@ process ANNOTATE_VEP {
 	tag "$group"
     
 	input:
-		tuple val(group), file(vcf)
+		tuple val(group), val(meta), file(vcf)
     
 	output:
-		tuple val(group), file("${group}.agg.pon.vep.vcf"), emit: vcf_vep
+		tuple val(group), val(meta), file("${group}.agg.pon.vep.vcf"), emit: vcf_vep
 
+	script:
+		"""
+		vep -i ${vcf} -o ${group}.agg.pon.vep.vcf \\
+		--offline --merged --everything --vcf --no_stats \\
+		--fork ${task.cpus} \\
+		--force_overwrite \\
+		--plugin CADD $params.CADD --plugin LoFtool \\
+		--fasta $params.VEP_FASTA \\
+		--dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
+		--distance 200 \\
+		--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
+		--custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
+		--cache \\
+		${params.custom_vep} \\
 	"""
-	vep -i ${vcf} -o ${group}.agg.pon.vep.vcf \\
-	--offline --merged --everything --vcf --no_stats \\
-	--fork ${task.cpus} \\
-	--force_overwrite \\
-	--plugin CADD $params.CADD --plugin LoFtool \\
-	--fasta $params.VEP_FASTA \\
-	--dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
-	--distance 200 \\
-	--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
-	--custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
-	--cache \\
-	${params.custom_vep} \\
-	"""
+	stub:
+		"""
+		echo ${params.custom_vep} $params.VEP_CACHE
+		touch ${group}.agg.pon.vep.vcf
+		"""
 }
 
 process MARK_GERMLINES {
@@ -89,26 +107,41 @@ process MARK_GERMLINES {
 	tag "$group"
 
 	input:
-		tuple val(group), file(vcf), val(id), val(type), val(tissue) // from vcf_germline.join(meta_germline.groupTuple())
+		tuple val(group), val(meta), file(vcf) // from vcf_germline.join(meta_germline.groupTuple())
 
 		
 	output:
-		tuple val(group), file("${group}.agg.pon.vep.markgerm.vcf"), emit: vcf_germline
+		tuple val(group), val(meta), file("${group}.agg.pon.vep.markgerm.vcf"), emit: vcf_germline
 
 
 	script:
-		if( id.size() >= 2 ) {
-			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
-			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 			"""
 			fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
-			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${id[tumor_idx]} --normal-id ${id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
 		else if( id.size() == 1 ) {
 			"""
 			fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
 			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+			"""
+		}
+	stub:
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+			"""
+			echo --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]}
+			touch ${group}.agg.pon.vep.markgerm.vcf
+			"""
+		}
+		else if( meta.id.size() == 1 ) {
+			"""
+			echo ${meta.id[0]}
+			touch ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
 }
@@ -120,7 +153,7 @@ process FILTER_FOR_CNV {
 	tag "$group"
 
     input:
-		tuple val(group), file(vcf), val(vc), file(vcf_unfilt)
+		tuple val(group), val(meta), file(vcf), val(vc), file(vcf_unfilt)
 
 	output:
 		tuple val(group), file("${group}_vardict.germlines.vcf.gz"), file("${group}_vardict.germlines.vcf.gz.tbi"), emit: vcf_only_germline
@@ -132,6 +165,10 @@ process FILTER_FOR_CNV {
         bgzip ${group}_vardict.germlines.vcf
         tabix ${group}_vardict.germlines.vcf.gz
         """
-
+	stub:
+		"""
+		echo $vcf $vcf_unfilt
+		touch ${group}_vardict.germlines.vcf.gz ${group}_vardict.germlines.vcf.gz.tbi
+		"""
 
 }
