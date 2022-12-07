@@ -38,8 +38,8 @@ process AGGREGATE_VCFS {
 	script:
 		sample_order = meta.id[0]
 		if( meta.id.size() >= 2 ) {
-			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
-			normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 			sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
 		}
 		if (params.single_cnvcaller) {
@@ -94,7 +94,7 @@ process CONTAMINATION {
 			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 			"""
 			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[tumor_idx]}.value
-			echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
+			echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[tumor_idx]}.1
 			paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contamination
 			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 --normal > ${meta.id[normal_idx]}.value
 			echo "--overwrite --sample-id ${meta.id[normal_idx]} --run-folder ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1

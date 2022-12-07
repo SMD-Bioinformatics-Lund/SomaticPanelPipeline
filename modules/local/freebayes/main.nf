@@ -30,7 +30,7 @@ process FREEBAYES {
 			filter_freebayes_somatic.pl freebayes_${bed}.filt1.vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > freebayes_${bed}.vcf
 			"""
 		}
-		else if( id.size() == 1 ) {
+		else if( meta.id.size() == 1 ) {
 			"""
 			freebayes -f $params.genome_file -t $bed --pooled-continuous --pooled-discrete --min-repeat-entropy 1 -F 0.03 $bams > freebayes_${bed}.vcf.raw
 			vcffilter -F LowCov -f "DP > $dp" -f "QA > 1500" freebayes_${bed}.vcf.raw | vcffilter -F LowFrq -o -f "AB > 0.05" -f "AB = 0" | vcfglxgt > freebayes_${bed}.filt1.vcf

@@ -123,10 +123,10 @@ process MARK_GERMLINES {
 			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
-		else if( id.size() == 1 ) {
+		else if( meta.id.size() == 1 ) {
 			"""
 			fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
-			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
 	stub:

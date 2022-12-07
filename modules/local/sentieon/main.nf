@@ -73,14 +73,14 @@ process MARKDUP {
 		tuple val(group), val(meta), file("${meta.id}.${meta.type}.dedup.bam"), file("${meta.id}.${meta.type}.dedup.bam.bai"), file("dedup_metrics.txt"), emit: bam_qc
 
 	script:
-	"""
-	sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector --fun score_info score.gz
-	sentieon driver -t ${task.cpus} -i $bam --algo Dedup --score_info score.gz --metrics dedup_metrics.txt ${meta.id}.${meta.type}.dedup.bam
-	"""
+		"""
+		sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector --fun score_info score.gz
+		sentieon driver -t ${task.cpus} -i $bam --algo Dedup --score_info score.gz --metrics dedup_metrics.txt ${meta.id}.${meta.type}.dedup.bam
+		"""
 	stub:
-	"""
-	touch ${meta.id}.${meta.type}.dedup.bam ${meta.id}.${meta.type}.dedup.bam.bai dedup_metrics.txt
-	"""
+		"""
+		touch ${meta.id}.${meta.type}.dedup.bam ${meta.id}.${meta.type}.dedup.bam.bai dedup_metrics.txt
+		"""
 }
 
 process BQSR_UMI {
@@ -101,13 +101,13 @@ process BQSR_UMI {
 	when:
 		params.umi
 	script:
-	"""
-	sentieon driver -t ${task.cpus} -r $params.genome_file -i $bam --algo QualCal ${meta.id}.bqsr.table
-	"""
+		"""
+		sentieon driver -t ${task.cpus} -r $params.genome_file -i $bam --algo QualCal ${meta.id}.bqsr.table
+		"""
 	stub:
-	"""
-	touch ${meta.id}.bqsr.table
-	"""
+		"""
+		touch ${meta.id}.bqsr.table
+		"""
 }
 
 process SENTIEON_QC {
@@ -131,25 +131,25 @@ process SENTIEON_QC {
 		file("*.txt")
 
 	script:
-	"""
-	sentieon driver \\
-		--interval $params.regions_bed_qc -r $params.genome_file -t ${task.cpus} -i ${bam} \\
-		--algo MeanQualityByCycle mq_metrics.txt --algo QualDistribution qd_metrics.txt \\
-		--algo GCBias --summary gc_summary.txt gc_metrics.txt --algo AlignmentStat aln_metrics.txt \\
-		--algo InsertSizeMetricAlgo is_metrics.txt \\
-		--algo CoverageMetrics --cov_thresh 1 --cov_thresh 10 --cov_thresh 30 --cov_thresh 100 --cov_thresh 250 --cov_thresh 500 cov_metrics.txt
-	sentieon driver \\
-		-r $params.genome_file -t ${task.cpus} -i ${bam} \\
-		--algo HsMetricAlgo --targets_list $params.interval_list_qc --baits_list $params.interval_list_qc hs_metrics.txt
+		"""
+		sentieon driver \\
+			--interval $params.regions_bed_qc -r $params.genome_file -t ${task.cpus} -i ${bam} \\
+			--algo MeanQualityByCycle mq_metrics.txt --algo QualDistribution qd_metrics.txt \\
+			--algo GCBias --summary gc_summary.txt gc_metrics.txt --algo AlignmentStat aln_metrics.txt \\
+			--algo InsertSizeMetricAlgo is_metrics.txt \\
+			--algo CoverageMetrics --cov_thresh 1 --cov_thresh 10 --cov_thresh 30 --cov_thresh 100 --cov_thresh 250 --cov_thresh 500 cov_metrics.txt
+		sentieon driver \\
+			-r $params.genome_file -t ${task.cpus} -i ${bam} \\
+			--algo HsMetricAlgo --targets_list $params.interval_list_qc --baits_list $params.interval_list_qc hs_metrics.txt
 
-	cp is_metrics.txt ${meta.id}_is_metrics.txt
+		cp is_metrics.txt ${meta.id}_is_metrics.txt
 
-	qc_sentieon.pl ${meta.id}_${meta.type} panel > ${meta.id}_${meta.type}.QC
-	"""
+		qc_sentieon.pl ${meta.id}_${meta.type} panel > ${meta.id}_${meta.type}.QC
+		"""
 	stub:
-	"""
-	touch ${meta.id}_is_metrics.txt
-	touch ${meta.id}_${meta.type}.QC
-	"""
+		"""
+		touch ${meta.id}_is_metrics.txt
+		touch ${meta.id}_${meta.type}.QC
+		"""
 }
 

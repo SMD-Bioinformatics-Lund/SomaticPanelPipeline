@@ -9,7 +9,7 @@ workflow ADD_TO_DB {
 
     main:
 
-        COYOTE { vcf.join(lowcov).view() }
+        COYOTE { vcf.join(lowcov) }
 
     emit:
         coyotedone = COYOTE.out.coyote_import
