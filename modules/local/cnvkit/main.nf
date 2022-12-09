@@ -107,7 +107,8 @@ process CNVKIT_PLOT {
 
 	script:
 		"""
-		cnvkit.py scatter -s *sort.cn{s,r} -o ${group}.${meta.id}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
+		echo $cnr $cns
+		cnvkit.py scatter -s *.cn{s,r} -o ${group}.${meta.id}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
 		"""
 	stub:
 		"""
@@ -154,7 +155,7 @@ process CNVKIT_CALL {
 	container = '/fs1/resources/containers/cnvkit099.sif'
 	
 	input:
-		tuple val(group), val(meta), file(cns), file(vcf), file(tbi)
+		tuple val(group), val(meta), file(cns), file(cnr), file(vcf), file(tbi)
 
 	output:
 		tuple val(group), val(meta), file("${group}.${meta.id}.call*.cns"), emit: cnvkitsegment

@@ -34,7 +34,7 @@ workflow CNV_CALLING {
         }
         // call, plot and export segments ::: cnvkit
         CNVKIT_PLOT ( batch_plot_cns.join(batch_plot_cnr, by:[0,1]).join(germline_variants) )
-        CNVKIT_CALL ( batch_plot_cns.join(germline_variants) )
+        CNVKIT_CALL ( batch_plot_cns.join(batch_plot_cnr, by:[0,1]).join(germline_variants) )
         CNVKIT_GENS ( batch_plot_cnr.join(germline_variants) )
         ///////////////////////////////////////////////////////////////////////////////////////
 
