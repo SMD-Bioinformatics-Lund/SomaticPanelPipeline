@@ -30,7 +30,7 @@ workflow SNV_CALLING {
         // Join vcfs split by bedparts //
         CONCATENATE_VCFS { vcfs_to_concat }
         // Aggregate all callers to one VCF
-        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.groupTuple().join(meta.groupTuple()).view() }
+        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.groupTuple().join(meta.groupTuple()) }
         // Filter with PoN, annotate with VEP, mark germlines
         PON_FILTER { AGGREGATE_VCFS.out.vcf_concat }
         FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should be be FFPE annotated
