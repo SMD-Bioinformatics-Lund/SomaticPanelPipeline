@@ -16,10 +16,8 @@ println(params.genome_file)
 csv = file(params.csv)
 println(csv)
 
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, row.clarity_sample_id, row.clarity_pool_id , row.diagnosis ) }
-    .set{ meta_coyote }
+cnvkit_reference_exons   = params.cnvkit_reference_exons      ? Channel.fromPath(params.cnvkit_reference_exons).map {it -> [[id:it[0].simpleName], it]}.collect(): ( ch_references.cnvkit_reference_exons                ?: Channel.empty() )
+cnvkit_reference_backbone   = params.cnvkit_reference_backbone      ? Channel.fromPath(params.cnvkit_reference_backbone).map {it -> [[id:it[0].simpleName], it]}.collect(): ( ch_references.cnvkit_reference_backbone                ?: Channel.empty() )
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -43,9 +41,9 @@ workflow SOLID_GMS {
 		CHECK_INPUT.out.fastq,
 		CHECK_INPUT.out.meta
 	)
-	.set { ch_mapped }
+	.set { ch_mapped } 
 	QC ( 
-        ch_mapped.qc_out,
+        ch_mapped.qc_out, 
 		ch_mapped.bam_lowcov
     )
 	.set { ch_qc }
@@ -55,6 +53,12 @@ workflow SOLID_GMS {
 		CHECK_INPUT.out.meta
 	)
 	.set { ch_vcf }
+	CNV_CALLING ( 
+		ch_mapped.bam_umi, 
+		ch_vcf.germline_variants,
+		CHECK_INPUT.out.meta
+	)
+	.set { ch_cnvcalled }
 	ADD_TO_DB (
 		ch_vcf.finished_vcf,
 		ch_qc.lowcov.filter { item -> item[1] == 'T' }

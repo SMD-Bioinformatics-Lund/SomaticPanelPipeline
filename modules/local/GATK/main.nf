@@ -4,23 +4,30 @@ process GATKCOV_BAF {
     container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
 
 	input:
-        tuple val(group), val(id), val(type), file(bam), file(bai), file(bqsr)
+        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
 
 	output:
-        tuple val(group), val(id), val(type), file("${id}.allelicCounts.tsv"), emit: gatk_baf
+        tuple val(group), val(meta), file("${meta.id}.allelicCounts.tsv"), emit: gatk_baf
     
-	"""
-	export THEANO_FLAGS="base_compiledir=."
-    export MKL_NUM_THREADS=${task.cpus}
-    export OMP_NUM_THREADS=${task.cpus}
-	set +u
-	source activate gatk
-	gatk --java-options "-Xmx50g" CollectAllelicCounts \\
-		-L $params.GATK_GNOMAD \\
-		-I $bam \\
-		-R $params.genome_file \\
-		-O ${id}.allelicCounts.tsv
-	"""
+	script:
+		
+		"""
+		export THEANO_FLAGS="base_compiledir=."
+		export MKL_NUM_THREADS=${task.cpus}
+		export OMP_NUM_THREADS=${task.cpus}
+		set +u
+		source activate gatk
+		gatk --java-options "-Xmx50g" CollectAllelicCounts \\
+			-L $params.GATK_GNOMAD \\
+			-I $bam \\
+			-R $params.genome_file \\
+			-O ${meta.id}.allelicCounts.tsv
+		"""
+	stub:
+		"""
+		touch ${meta.id}.allelicCounts.tsv
+		"""
+
 
 }
 
@@ -31,32 +38,36 @@ process GATKCOV_COUNT {
 	publishDir "${params.outdir}/${params.subdir}/gatkcov", mode: 'copy', overwrite: true 
 
 	input:
-		tuple val(group), val(id), val(type), file(bam), file(bai), file(bqsr)
+		tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
 
 	output:
-		tuple val(group), val(id), val(type), file("${id}.standardizedCR.tsv"), file("${id}.denoisedCR.tsv"), emit: gatk_count
+		tuple val(group), val(meta), file("${meta.id}.standardizedCR.tsv"), file("${meta.id}.denoisedCR.tsv"), emit: gatk_count
 
 	script:
 
-	"""
-	export THEANO_FLAGS="base_compiledir=."
-	export MKL_NUM_THREADS=${task.cpus}
-	export OMP_NUM_THREADS=${task.cpus}
-	set +u
-	source activate gatk
-	gatk CollectReadCounts \\
-		-I ${bam} -L $params.gatk_intervals \\
-		--interval-merging-rule OVERLAPPING_ONLY -O ${bam}.hdf5
-	gatk --java-options '-Xmx50g' DenoiseReadCounts \\
-		-I ${bam}.hdf5 --count-panel-of-normals $params.GATK_pon \\
-		--standardized-copy-ratios ${id}.standardizedCR.tsv \\
-		--denoised-copy-ratios ${id}.denoisedCR.tsv
-	gatk PlotDenoisedCopyRatios \\
-		--standardized-copy-ratios ${id}.standardizedCR.tsv \\
-		--denoised-copy-ratios ${id}.denoisedCR.tsv \\
-		--sequence-dictionary $params.GENOMEDICT \\
-		--minimum-contig-length 46709983 --output . --output-prefix ${id}
-    """
+		"""
+		export THEANO_FLAGS="base_compiledir=."
+		export MKL_NUM_THREADS=${task.cpus}
+		export OMP_NUM_THREADS=${task.cpus}
+		set +u
+		source activate gatk
+		gatk CollectReadCounts \\
+			-I ${bam} -L $params.gatk_intervals \\
+			--interval-merging-rule OVERLAPPING_ONLY -O ${bam}.hdf5
+		gatk --java-options '-Xmx50g' DenoiseReadCounts \\
+			-I ${bam}.hdf5 --count-panel-of-normals $params.GATK_pon \\
+			--standardized-copy-ratios ${meta.id}.standardizedCR.tsv \\
+			--denoised-copy-ratios ${meta.id}.denoisedCR.tsv
+		gatk PlotDenoisedCopyRatios \\
+			--standardized-copy-ratios ${meta.id}.standardizedCR.tsv \\
+			--denoised-copy-ratios ${meta.id}.denoisedCR.tsv \\
+			--sequence-dictionary $params.GENOMEDICT \\
+			--minimum-contig-length 46709983 --output . --output-prefix ${meta.id}
+		"""
+	stub:
+		"""
+		touch ${meta.id}.standardizedCR.tsv ${meta.id}.denoisedCR.tsv
+		"""	
 }
 
 process GATKCOV_CALL {
@@ -66,7 +77,7 @@ process GATKCOV_CALL {
 	container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
 
 	input:
-		tuple val(group), val(id), val(type), file(allele), file(stdCR), file(denoised)
+		tuple val(group), val(meta), file(allele), file(stdCR), file(denoised)
 
 	output:
 		
@@ -77,29 +88,33 @@ process GATKCOV_CALL {
 
 	// --normal-allelic-counts ${id[normal_idx]}.allelicCounts.tsv \\
 	// add to modelsegments when paired? //
-	"""
-	export THEANO_FLAGS="base_compiledir=."
-	export MKL_NUM_THREADS=${task.cpus}
-	export OMP_NUM_THREADS=${task.cpus}
-	set +u
-	source activate gatk
-	gatk --java-options "-Xmx40g" ModelSegments \\
-		--denoised-copy-ratios $denoised \\
-		--allelic-counts $allele \\
-		--minimum-total-allele-count-normal 20 \\
-		--output . \\
-		--output-prefix ${id}
-	gatk CallCopyRatioSegments \\
-		--input ${id}.cr.seg \\
-		--output ${id}.called.seg
-	gatk PlotModeledSegments \\
-		--denoised-copy-ratios $denoised \\
-		--allelic-counts ${id}.hets.tsv \\
-		--segments ${id}.modelFinal.seg \\
-		--sequence-dictionary $params.GENOMEDICT \\
-		--minimum-contig-length 46709983 \\
-		--output . \\
-		--output-prefix ${id}
-	"""
+		"""
+		export THEANO_FLAGS="base_compiledir=."
+		export MKL_NUM_THREADS=${task.cpus}
+		export OMP_NUM_THREADS=${task.cpus}
+		set +u
+		source activate gatk
+		gatk --java-options "-Xmx40g" ModelSegments \\
+			--denoised-copy-ratios $denoised \\
+			--allelic-counts $allele \\
+			--minimum-total-allele-count-normal 20 \\
+			--output . \\
+			--output-prefix ${meta.id}
+		gatk CallCopyRatioSegments \\
+			--input ${meta.id}.cr.seg \\
+			--output ${meta.id}.called.seg
+		gatk PlotModeledSegments \\
+			--denoised-copy-ratios $denoised \\
+			--allelic-counts ${meta.id}.hets.tsv \\
+			--segments ${meta.id}.modelFinal.seg \\
+			--sequence-dictionary $params.GENOMEDICT \\
+			--minimum-contig-length 46709983 \\
+			--output . \\
+			--output-prefix ${meta.id}
+		"""
+	stub:
+		"""
+		touch hello
+		"""
 }
 
