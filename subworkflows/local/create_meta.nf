@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 // might need to add a check to csv? //
-include { CSV_CHECK } from '../../modules/local/check_input/main'
+include { CSV_CHECK      } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
     take:
@@ -15,7 +15,6 @@ workflow CHECK_INPUT {
         meta      = csvmap.map { create_samples_channel(it) }
 
     emit:
-       // case_info       // channel: [ case_id ]
         fastq           // channel: [ val(meta), [ reads ] ]
         meta         // channel: [ sample_id, sex, phenotype, paternal_id, maternal_id, case_id ]
 
@@ -35,7 +34,16 @@ def create_fastq_channel(LinkedHashMap row) {
     meta.sequencing_run     = row.sequencing_run
     meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
     meta.clarity_pool_id    = row.clarity_pool_id
-
+    sub = false
+    if (meta.reads && params.sample) {  
+        if (meta.reads.toInteger() > params.sample_val) {
+            sub = params.sample_val / meta.reads.toInteger()
+        }
+        else {
+            sub = false
+        }
+    }
+    meta.sub = sub
     // add path(s) of the fastq file(s) to the meta map
     def fastq_meta = []
     fastq_meta = [row.group, meta, file(row.read1), file(row.read2) ]
