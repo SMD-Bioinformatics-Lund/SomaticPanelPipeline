@@ -10,6 +10,7 @@ include { CNV_CALLING                   } from '../subworkflows/local/cnv_callin
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
+include { SAMPLE                        } from '../subworkflows/local/sample'
 
 println(params.genome_file)
 
@@ -35,10 +36,15 @@ Channel
 
 workflow SOLID_GMS {
 
-
+	// Checks input, creates meta-channel and decides whether data should be downsampled //
 	CHECK_INPUT ( Channel.fromPath(csv) )
+
+	// Downsample if meta.sub == value and not false //
+	SAMPLE ( CHECK_INPUT.out.fastq )  
+	.set{ ch_trim }
+	// Do alignment if downsample was false and mix with SAMPLE subworkflow output
 	ALIGN_SENTIEON ( 
-		CHECK_INPUT.out.fastq,
+		ch_trim.fastq_trim,
 		CHECK_INPUT.out.meta
 	)
 	.set { ch_mapped } 
