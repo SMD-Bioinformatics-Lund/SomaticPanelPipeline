@@ -15,13 +15,21 @@ process BWA_UMI {
 		tuple val(group), val(meta), file(r1), file(r2)
 
 	output:
-		tuple val(group), val(meta), file("${meta.id}.${meta.type}.bwa.umi.sort.bam"), file("${meta.id}.${meta.type}.bwa.umi.sort.bam.bai"), emit: bam_umi
-		tuple val(group), val(meta), file("${meta.id}.${meta.type}.bwa.sort.bam"), file("${meta.id}.${meta.type}.bwa.sort.bam.bai"), emit: bam_umi_markdup
+		tuple val(group), val(meta), file("${out_umi}"), file("${out_umi}.bai"), emit: bam_umi
+		tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"), emit: bam_umi_markdup
 
 	when:
 		params.umi
 
 	script:
+		out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
+		out_umi = meta.id+"."+meta.type+".bwa.umi.sort.bam"
+		if (meta.sub) {
+			submbp = params.sample_val / 1000000
+			submbp = submbp + "M"
+			out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.sort.bam"
+			out_umi = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
+		}
 		"""
 
 		export skip_coord_end=true
@@ -42,15 +50,23 @@ process BWA_UMI {
 			-o ${meta.id}.${meta.type}.bwa.umi.sort.bam \\
 			--sam2bam --umi_post_process
 
-		sentieon util sort -i noumi.sam -o ${meta.id}.${meta.type}.bwa.sort.bam --sam2bam
+		sentieon util sort -i noumi.sam -o ${out_bam} --sam2bam
 		rm noumi.sam
 
 		touch dedup_metrics.txt
 		"""
 	stub:
+		out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
+		out_umi = meta.id+"."+meta.type+".bwa.umi.sort.bam"
+		if (meta.sub) {
+			submbp = params.sample_val / 1000000
+			submbp = submbp + "M"
+			out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.sort.bam"
+			out_umi = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
+		}
 		"""
-		touch ${meta.id}.${meta.type}.bwa.sort.bam ${meta.id}.${meta.type}.bwa.sort.bam.bai
-		touch ${meta.id}.${meta.type}.bwa.umi.sort.bam ${meta.id}.${meta.type}.bwa.umi.sort.bam.bai
+		touch ${out_bam} ${out_bam}.bai
+		touch ${out_umi} ${out_umi}.bai
 		"""
 }
 
@@ -69,17 +85,29 @@ process MARKDUP {
 		tuple val(group), val(meta), file(bam), file(bai)
 
 	output:
-		tuple val(group), val(meta), file("${meta.id}.${meta.type}.dedup.bam"), file("${meta.id}.${meta.type}.dedup.bam.bai"), emit: bam_bqsr
-		tuple val(group), val(meta), file("${meta.id}.${meta.type}.dedup.bam"), file("${meta.id}.${meta.type}.dedup.bam.bai"), file("dedup_metrics.txt"), emit: bam_qc
+		tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"), emit: bam_bqsr
+		tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"), file("dedup_metrics.txt"), emit: bam_qc
 
 	script:
+		out_bam = meta.id+"."+meta.type+".dedup.bam"
+		if (meta.sub) {
+			submbp = params.sample_val / 1000000
+			submbp = submbp + "M"
+			out_bam = meta.id+"."+meta.type+"."+submbp+".dedup.bam"
+		}
 		"""
 		sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector --fun score_info score.gz
-		sentieon driver -t ${task.cpus} -i $bam --algo Dedup --score_info score.gz --metrics dedup_metrics.txt ${meta.id}.${meta.type}.dedup.bam
+		sentieon driver -t ${task.cpus} -i $bam --algo Dedup --score_info score.gz --metrics dedup_metrics.txt $out_bam
 		"""
 	stub:
+		out_bam = meta.id+"."+meta.type+".dedup.bam"
+		if (meta.sub) {
+			submbp = params.sample_val / 1000000
+			submbp = submbp + "M"
+			out_bam = meta.id+"."+meta.type+"."+submbp+".dedup.bam"
+		}
 		"""
-		touch ${meta.id}.${meta.type}.dedup.bam ${meta.id}.${meta.type}.dedup.bam.bai dedup_metrics.txt
+		touch ${out_bam} ${out_bam}.bai dedup_metrics.txt
 		"""
 }
 
