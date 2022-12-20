@@ -9,7 +9,7 @@ process BWA_UMI {
 	scratch true
 	stageInMode 'copy'
 	stageOutMode 'copy'
-    container = "/fs1/resources/containers/sentieon_202112.sif"
+	container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
 		tuple val(group), val(meta), file(r1), file(r2)
@@ -63,8 +63,8 @@ process MARKDUP {
 	scratch true
 	stageInMode 'copy'
 	stageOutMode 'copy'
-    container = "/fs1/resources/containers/sentieon_202112.sif"
-    
+	container = "/fs1/resources/containers/sentieon_202112.sif"
+	
 	input:
 		tuple val(group), val(meta), file(bam), file(bai)
 
@@ -91,7 +91,7 @@ process BQSR_UMI {
 	scratch true
 	stageInMode 'copy'
 	stageOutMode 'copy'
-    container = "/fs1/resources/containers/sentieon_202112.sif"
+	container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
 		tuple val(group), val(meta), file(bam), file(bai)
@@ -119,7 +119,7 @@ process SENTIEON_QC {
 	scratch true
 	stageInMode 'copy'
 	stageOutMode 'copy'
-    container = "/fs1/resources/containers/sentieon_202112.sif"
+	container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
 		tuple val(group), val(meta), file(bam), file(bai), file(dedup)
