@@ -64,10 +64,11 @@ process CNVKIT_BATCH {
 	input:
 		tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
 		val(reference)
+		val(part)
 
 	output:
-		tuple val(group), val(meta), file("${group}.${meta.id}.cns"), emit: cnvkit_cns
-		tuple val(group), val(meta), file("${group}.${meta.id}.cnr"), emit: cnvkit_cnr
+		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.cns"), val(part), emit: cnvkit_cns
+		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.cnr"), val(part), emit: cnvkit_cnr
 		
 
 	when:
@@ -76,12 +77,12 @@ process CNVKIT_BATCH {
 	script:
 		"""
 		cnvkit.py batch $bam -r $reference -d results/
-		cp results/*sort.cnr ${group}.${meta.id}.cnr
-		cp results/*sort.cns ${group}.${meta.id}.cns
+		cp results/*sort.cnr ${group}.${meta.id}.${part}.cnr
+		cp results/*sort.cns ${group}.${meta.id}.${part}.cns
 		"""
 	stub:
 		"""
-		touch ${group}.${meta.id}.cns ${group}.${meta.id}.cnr
+		touch ${group}.${meta.id}.${part}.cns ${group}.${meta.id}.${part}.cnr
 		echo $reference
 		"""
 }
@@ -97,10 +98,10 @@ process CNVKIT_PLOT {
 	container = '/fs1/resources/containers/cnvkit099.sif'
 	
 	input:
-		tuple val(group), val(meta), file(cns), file(cnr), file(vcf), file(tbi)
+		tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
 
 	output:
-		tuple val(group), val(meta), file("${group}.${meta.id}.cnvkit_overview.png")
+		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.cnvkit_overview.png")
 
 	when:
 		params.cnvkit
@@ -108,27 +109,26 @@ process CNVKIT_PLOT {
 	script:
 		"""
 		echo $cnr $cns
-		cnvkit.py scatter -s *.cn{s,r} -o ${group}.${meta.id}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
+		cnvkit.py scatter -s *.cn{s,r} -o ${group}.${meta.id}.${part}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
 		"""
 	stub:
 		"""
-		touch ${group}.${meta.id}.cnvkit_overview.png
+		touch ${group}.${meta.id}.${part}.cnvkit_overview.png
 		"""
 }
 
 process CNVKIT_GENS {
-	publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
+	//publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
 	cpus 1
 	time '1h'
 	tag "${meta.id}"
 	container = '/fs1/resources/containers/cnvkit099.sif'
 	
 	input:
-		tuple val(group), val(meta), file(cnr), file(vcf), file(tbi)
+		tuple val(group), val(meta), file(cnr), val(part), file(vcf), file(tbi)
 
 	output:
-		tuple val(group), file("${meta.id}.baf.bed.gz"), file("${meta.id}.cov.bed.gz"), emit: cnvkit_gens
-		tuple val(group), file("${meta.id}.gens"), emit: cnvkit_gens_loaddb
+		tuple val(group), val(meta), file("${meta.id}.${part}.baf.bed.gz"), file("${meta.id}.${part}.cov.bed.gz"), emit: cnvkit_gens
 		
 	when:
 		params.cnvkit
@@ -138,8 +138,9 @@ process CNVKIT_GENS {
 		set +eu
 		source activate py2
 		set -eu
-		generate_gens_data_from_cnvkit.pl ${group}.${meta.id}.cnr $vcf ${meta.id}
-		echo "gens load sample --sample-id ${meta.id} --genome-build 38 --baf ${params.gens_accessdir}/${meta.id}.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.cov.bed.gz" > ${meta.id}.gens
+		generate_gens_data_from_cnvkit.pl $cnr $vcf ${meta.id}
+		mv ${meta.id}.baf.bed.gz ${meta.id}.${part}.baf.bed.gz
+		mv ${meta.id}.cov.bed.gz ${meta.id}.${part}.cov.bed.gz
 		"""
 	stub:
 		"""
@@ -155,19 +156,19 @@ process CNVKIT_CALL {
 	container = '/fs1/resources/containers/cnvkit099.sif'
 	
 	input:
-		tuple val(group), val(meta), file(cns), file(cnr), file(vcf), file(tbi)
+		tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
 
 	output:
-		tuple val(group), val(meta), file("${group}.${meta.id}.call*.cns"), emit: cnvkitsegment
+		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
 		tuple val(group), val(meta), file("${group}.${meta.id}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
 		
 	when:
 		params.cnvkit
 
 	script:
-		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.call.cns"
+		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns"
 		if (meta.purity) {
-			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.call.purity.cns"
+			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns"
 		}
 		"""
 		set +eu
@@ -183,6 +184,52 @@ process CNVKIT_CALL {
 		}
 		"""
 		echo $call
-		touch ${group}.${meta.id}.call.purity.cns ${group}.${meta.id}_logr_ballele.cnvkit
+		touch ${group}.${meta.id}.${part}.call.purity.cns ${group}.${meta.id}.${part}_logr_ballele.cnvkit
 		"""
+}
+
+process MERGE_GENS {
+	publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
+	publishDir "${params.outdir}/cron/gens", mode: 'copy', overwrite: true, pattern: '*.gens'
+	
+	input:
+		tuple val(group), val(meta), file(baf), file(cov)
+
+	output:
+		tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), file("${meta.id}.gens")
+
+	shell:
+		'''
+		if !{params.cnvkit_split} == true
+		then
+		for i in $( ls *.cov.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.cov.bed ; done
+		bedtools sort -i !{meta.id}.base.cov.bed > !{meta.id}.base.cov.bed.sort
+		sed 's/^/o_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+		sed 's/^/a_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+		sed 's/^/b_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+		sed 's/^/c_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+		sed 's/^/d_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+		bedtools sort -i !{meta.id}.merged.cov.bed > !{meta.id}.merged.sorted.cov.bed
+		bgzip !{meta.id}.merged.sorted.cov.bed
+		tabix !{meta.id}.merged.sorted.cov.bed.gz
+		for i in $( ls *.baf.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.baf.bed ; done
+		bedtools sort -i !{meta.id}.base.baf.bed > !{meta.id}.base.baf.bed.sort
+		sed 's/^/o_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+		sed 's/^/a_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+		sed 's/^/b_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+		sed 's/^/c_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+		sed 's/^/d_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+		bedtools sort -i !{meta.id}.merged.baf.bed > !{meta.id}.merged.sorted.baf.bed
+		bgzip !{meta.id}.merged.sorted.baf.bed
+		tabix !{meta.id}.merged.sorted.baf.bed.gz
+		echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
+		else
+		echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.cov.bed.gz" > !{meta.id}.gens
+		fi
+		'''
+	stub:
+		"""
+		touch ${meta.id}.merged.sorted.cov.bed.gz ${meta.id}.merged.sorted.baf.bed.gz ${meta.id}.gens
+		"""
+
 }

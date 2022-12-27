@@ -80,7 +80,8 @@ process GATKCOV_CALL {
 		tuple val(group), val(meta), file(allele), file(stdCR), file(denoised)
 
 	output:
-		
+		tuple val(group), val(meta), file("${meta.id}.called.seg"), emit: gatcov_called
+		tuple val(group), val(meta), file("${meta.id}.modeled.png"), emit: gatcov_plot
 
 	script:
 		// tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T'  }
@@ -114,7 +115,8 @@ process GATKCOV_CALL {
 		"""
 	stub:
 		"""
-		touch hello
+		touch ${meta.id}.called.seg
+		touch ${meta.id}.modeled.png
 		"""
 }
 
