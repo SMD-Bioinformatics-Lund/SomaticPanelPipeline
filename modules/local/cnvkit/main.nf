@@ -101,14 +101,13 @@ process CNVKIT_PLOT {
 		tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
 
 	output:
-		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.cnvkit_overview.png")
+		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.cnvkit_overview.png"), emit: cnvkitplot
 
 	when:
 		params.cnvkit
 
 	script:
 		"""
-		echo $cnr $cns
 		cnvkit.py scatter -s *.cn{s,r} -o ${group}.${meta.id}.${part}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
 		"""
 	stub:
@@ -150,6 +149,7 @@ process CNVKIT_GENS {
 
 process CNVKIT_CALL {
 	publishDir "${params.outdir}/${params.subdir}/cnvkit/segments/", mode: 'copy', overwrite: true, pattern: '*call*.cns'
+	publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: true, pattern: '*.vcf'
 	cpus 1
 	time '1h'
 	tag "${meta.id}"
@@ -161,30 +161,36 @@ process CNVKIT_CALL {
 	output:
 		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
 		tuple val(group), val(meta), file("${group}.${meta.id}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
+		tuple val(group), val(meta), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
 		
 	when:
 		params.cnvkit
 
 	script:
 		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns"
+		callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
 		if (meta.purity) {
 			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns"
+			callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
 		}
 		"""
 		set +eu
 		source activate py2
 		set -eu
 		$call
+		$callvcf
 		cnvkit.py export nexus-ogt -o ${group}.${meta.id}_logr_ballele.cnvkit ${cnr} ${vcf}
 		"""
 	stub:
-		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.call.cns"
+		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns \\ cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
 		if (meta.purity) {
-			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.call.purity.cns"
+			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns \\ cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
 		}
 		"""
 		echo $call
-		touch ${group}.${meta.id}.${part}.call.purity.cns ${group}.${meta.id}.${part}_logr_ballele.cnvkit
+		touch ${group}.${meta.id}.${part}.call.purity.cns
+		touch ${group}.${meta.id}.${part}_logr_ballele.cnvkit 
+		touch ${group}.${meta.id}.${meta.type}.${part}.vcf
 		"""
 }
 

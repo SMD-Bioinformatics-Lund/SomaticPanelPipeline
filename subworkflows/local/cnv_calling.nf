@@ -11,13 +11,15 @@ include { CNVKIT_BATCH as CNVKIT_EXONS         } from '../../modules/local/cnvki
 include { GATKCOV_BAF                          } from '../../modules/local/GATK/main'
 include { GATKCOV_COUNT                        } from '../../modules/local/GATK/main'
 include { GATKCOV_CALL                         } from '../../modules/local/GATK/main'
+include { MANTA                                } from '../../modules/local/manta/main'
 
 
 workflow CNV_CALLING {
 	take: 
-		bam_umi              // val(group), val(meta), file(bam), file(bai), file(bqsr)
+		bam_umi              // val(group), val(meta), file(bam), file(bai), file(bqsr) umi deduped bam
 		germline_variants    // val(group), file(vcf), file(tbi)
 		meta                 // map: (csv meta info)
+		bam_markdup          // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
 
 	main:
 		////////////////////////// CNVKIT ////////////////////////////////////////////////////
@@ -31,16 +33,18 @@ workflow CNV_CALLING {
 			CNVKIT_CALL ( batch_plot_cns.join(batch_plot_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
 			CNVKIT_GENS ( batch_plot_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
+			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
 		}
 		else {
 			CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
 			CNVKIT_EXONS ( bam_umi, params.cnvkit_reference_exons, "exons" )
 			CNVKIT_BACKBONE ( bam_umi, params.cnvkit_reference_backbone, "backbone" )
 			// call, plot and export segments ::: cnvkit
-			CNVKIT_PLOT ( CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
+			CNVKIT_PLOT ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
 			CNVKIT_CALL ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
 			CNVKIT_GENS ( CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
+			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -50,13 +54,13 @@ workflow CNV_CALLING {
 		GATKCOV_COUNT ( bam_umi )
 		GATKCOV_CALL { GATKCOV_BAF.out.gatk_baf.join(GATKCOV_COUNT.out.gatk_count, by:[0,1]) } // maybe add normal allelic if paired.
 		///////////////////////////////////////////////////////////////////////////////////////
+
+		/////////////////////////// MANTA /////////////////////////////////////////////////////
+		MANTA ( bam_markdup.groupTuple().view() )
 		
-		//CNVKIT { bam_umi.join(meta, by:[0,1,2]).join(germline_variants) }
-		//CNVKIT { bam_umi.join(meta, by:[0,1,2]).join(concat_vcf.filter { item -> item[1] == 'freebayes' } ).view() }
+
 	emit:
-		// baflogr = CNVKIT_.out.baflogr
-		// cnvkit_cns = CNVKIT_BATCH.out.cnvkit_cns
-		// cnvkitsegment_purity = CNVKIT.out.cnvkitsegment_purity
+		cnvkit_plot = cnvkitplot
 		test = GATKCOV_BAF.out.gatk_baf
 
 }
