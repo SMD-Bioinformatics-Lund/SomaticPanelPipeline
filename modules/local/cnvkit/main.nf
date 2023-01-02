@@ -143,7 +143,7 @@ process CNVKIT_GENS {
 		"""
 	stub:
 		"""
-		touch ${meta.id}.baf.bed.gz ${meta.id}.cov.bed.gz ${meta.id}.gens
+		touch ${meta.id}.${part}.baf.bed.gz ${meta.id}.${part}.cov.bed.gz ${meta.id}.gens
 		"""
 }
 
@@ -160,7 +160,7 @@ process CNVKIT_CALL {
 
 	output:
 		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
-		tuple val(group), val(meta), file("${group}.${meta.id}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
+		tuple val(group), val(meta), file("${group}.${meta.id}.${part}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
 		tuple val(group), val(meta), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
 		
 	when:
@@ -179,7 +179,7 @@ process CNVKIT_CALL {
 		set -eu
 		$call
 		$callvcf
-		cnvkit.py export nexus-ogt -o ${group}.${meta.id}_logr_ballele.cnvkit ${cnr} ${vcf}
+		cnvkit.py export nexus-ogt -o ${group}.${meta.id}.${part}_logr_ballele.cnvkit ${cnr} ${vcf}
 		"""
 	stub:
 		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns \\ cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"

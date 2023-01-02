@@ -1,31 +1,31 @@
 process MANTA {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: true, pattern: '*.vcf'
 	cpus 16
 	time '10h'
 	tag "$group"
-//	scratch true
+	scratch true
 	memory '10GB'
-	// stageInMode 'copy'
-	// stageOutMode 'copy'
+	stageInMode 'copy'
+	stageOutMode 'copy'
 	
 	input:
 		tuple val(group), val(meta), file(bam), file(bai)
 
 	output:
-		tuple val(group), file("${group}_manta.vcf"), emit: manta_vcf
+		tuple val(group), file("${meta.id[tumor_idx]}_manta.vcf"), emit: manta_vcf_tumor
+		tuple val(group), file("${meta.id[normal_idx]}_manta.vcf"), optional: true, emit: manta_vcf_normal
 
 	when:
 		params.manta
 	
 	script:
+		tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+		normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+		normal = bam[normal_idx]
+		normal_id = meta.id[normal_idx]
+		tumor = bam[tumor_idx]
+		tumor_id = meta.id[tumor_idx]
 		if(meta.id.size() == 2) { 
-			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-			normal = bam[normal_idx]
-			normal_id = meta.id[normal_idx]
-			tumor = bam[tumor_idx]
-			tumor_id = meta.id[tumor_idx]
-
 			"""
             set +eu
             source activate py2
@@ -39,9 +39,10 @@ process MANTA {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-			#filter_manta_paired.pl results/variants/somaticSV.vcf.gz > ${group}_manta.vcf
-			mv results/variants/somaticSV.vcf.gz ${group}_manta.vcf.gz
-			gunzip ${group}_manta.vcf.gz
+			mv results/variants/somaticSV.vcf.gz ${meta.id[tumor_idx]}_manta.vcf.gz
+			mv results/variants/diploidSV.vcf.gz ${meta.id[normal_idx]}_manta.vcf.gz
+			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
+			gunzip ${meta.id[normal_idx]}_manta.vcf.gz
 			"""
 		}
 		else {
@@ -57,9 +58,28 @@ process MANTA {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-			#filter_manta.pl results/variants/tumorSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/tumorSV.vcf.gz ${group}_manta.vcf.gz
-			gunzip ${group}_manta.vcf.gz
+			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
 			"""
 		}
+	stub:
+		tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+		normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+		normal = bam[normal_idx]
+		normal_id = meta.id[normal_idx]
+		tumor = bam[tumor_idx]
+		tumor_id = meta.id[tumor_idx]
+		if(meta.id.size() == 2) {
+
+			"""
+			touch ${meta.id[tumor_idx]}_manta.vcf
+			touch ${meta.id[normal_idx]}_manta.vcf
+			"""
+		}
+		else {
+			"""
+			touch ${meta.id[tumor_idx]}_manta.vcf
+			"""
+		}
+
 }

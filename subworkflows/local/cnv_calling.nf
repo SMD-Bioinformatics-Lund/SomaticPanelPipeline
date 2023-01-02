@@ -11,7 +11,15 @@ include { CNVKIT_BATCH as CNVKIT_EXONS         } from '../../modules/local/cnvki
 include { GATKCOV_BAF                          } from '../../modules/local/GATK/main'
 include { GATKCOV_COUNT                        } from '../../modules/local/GATK/main'
 include { GATKCOV_CALL                         } from '../../modules/local/GATK/main'
+include { GATK2VCF                             } from '../../modules/local/GATK/main'
+include { GATK_COUNT_GERMLINE                  } from '../../modules/local/GATK/main'
+include { GATK_CALL_PLOIDY                     } from '../../modules/local/GATK/main'
+include { GATK_CALL_GERMLINE_CNV               } from '../../modules/local/GATK/main'
+include { FILTER_MERGE_GATK                    } from '../../modules/local/GATK/main'
+include { POSTPROCESS                          } from '../../modules/local/GATK/main'
 include { MANTA                                } from '../../modules/local/manta/main'
+include { SVDB_MERGE_PANEL as JOIN_TUMOR       } from '../../modules/local/svdb/main'
+include { SVDB_MERGE_PANEL as JOIN_NORMAL      } from '../../modules/local/svdb/main'
 
 
 workflow CNV_CALLING {
@@ -20,9 +28,10 @@ workflow CNV_CALLING {
 		germline_variants    // val(group), file(vcf), file(tbi)
 		meta                 // map: (csv meta info)
 		bam_markdup          // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
+		gatk_ref             // val(interger), val(part_of_genome) used for germline gatk-calling
 
 	main:
-		////////////////////////// CNVKIT ////////////////////////////////////////////////////
+		////////////////////////// CNVKIT /////////////////////////////////////////////////////
 		// if backbone + exon pool differs in pool ratio do backbone and exons separatly
 		if (!params.cnvkit_split) {
 			CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
@@ -40,8 +49,9 @@ workflow CNV_CALLING {
 			CNVKIT_EXONS ( bam_umi, params.cnvkit_reference_exons, "exons" )
 			CNVKIT_BACKBONE ( bam_umi, params.cnvkit_reference_backbone, "backbone" )
 			// call, plot and export segments ::: cnvkit
-			CNVKIT_PLOT ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
-			CNVKIT_CALL ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
+			CNVKIT_PLOT ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
+			//CNVKIT_CALL ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
+			CNVKIT_CALL ( CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
 			CNVKIT_GENS ( CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
@@ -50,14 +60,29 @@ workflow CNV_CALLING {
 		///////////////////////////////////////////////////////////////////////////////////////
 
 		//////////////////////////// GATK SEGMENT CALLING /////////////////////////////////////
+		// Do calling somatic CNV calling, use normal allelic counts for somatic as well     //
+		///////////////////////////////////////////////////////////////////////////////////////
 		GATKCOV_BAF ( bam_umi )
 		GATKCOV_COUNT ( bam_umi )
-		GATKCOV_CALL { GATKCOV_BAF.out.gatk_baf.join(GATKCOV_COUNT.out.gatk_count, by:[0,1]) } // maybe add normal allelic if paired.
-		///////////////////////////////////////////////////////////////////////////////////////
-
+		GATKCOV_CALL { GATKCOV_BAF.out.gatk_baf.join(GATKCOV_COUNT.out.gatk_count,by:[0,1]).groupTuple() }
+		GATK2VCF ( GATKCOV_CALL.out.gatcov_called.join(meta.filter( it -> it[1].type == "T" )) )
+		// Do germline calling for normal
+		GATK_COUNT_GERMLINE ( bam_umi.filter { it -> it[1].type == "N" })
+		GATK_CALL_PLOIDY ( GATK_COUNT_GERMLINE.out.count_germline )
+		GATK_CALL_GERMLINE_CNV( GATK_COUNT_GERMLINE.out.count_germline.join(GATK_CALL_PLOIDY.out.gatk_ploidy,by:[0,1]).groupTuple(by:[0,1]).combine(gatk_ref) )
+		CALLED = GATK_CALL_GERMLINE_CNV.out.gatk_call_germline.groupTuple(by:[0,1])
+		PLOIDY = GATK_CALL_PLOIDY.out.gatk_ploidy.groupTuple(by:[0,1])
+		POSTPROCESS ( CALLED.join(PLOIDY,by:[0,1]).combine(gatk_ref.groupTuple(by:[3])))
+		FILTER_MERGE_GATK ( POSTPROCESS.out.gatk_germline_segmentsvcf )
 		/////////////////////////// MANTA /////////////////////////////////////////////////////
-		MANTA ( bam_markdup.groupTuple().view() )
-		
+		MANTA ( bam_markdup.groupTuple() )
+
+		// Join germline vcf
+
+		// Join tumor vcf
+		GATK = GATK2VCF.out.tumor_vcf.view()
+		MANTA = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }.view()
+		JOIN_TUMOR (  GATK.mix(MANTA).groupTuple(by:[0,1]) )
 
 	emit:
 		cnvkit_plot = cnvkitplot

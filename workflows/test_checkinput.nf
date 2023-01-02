@@ -63,7 +63,8 @@ workflow SOLID_GMS {
 		ch_mapped.bam_umi, 
 		ch_vcf.germline_variants,
 		CHECK_INPUT.out.meta,
-		ch_mapped.bam_dedup
+		ch_mapped.bam_dedup,
+		gatk_ref
 	)
 	.set { ch_cnvcalled }
 	ADD_TO_DB (
