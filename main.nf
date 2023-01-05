@@ -1133,6 +1133,7 @@ process coyote {
 
 	script:
 		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+		normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
 		tumor_idx_cnv = cnv_type.findIndexOf{ it == 'tumor' || it == 'T' }
 		normal_idx_cnv = cnv_type.findIndexOf{ it == 'normal' || it == 'N' }
 		cnv_index = tumor_idx_cnv
