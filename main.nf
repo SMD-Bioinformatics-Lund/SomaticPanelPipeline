@@ -1138,8 +1138,12 @@ process coyote {
 		cnv_index = tumor_idx_cnv
 		tumor_idx_lowcov = lowcov_type.findIndexOf{ it == 'tumor' || it == 'T' }
 		process_group = group
+		diag = diagnosis[tumor_idx]
 		if( id.size() >= 2 ) {
 			process_group = group + 'p'
+			if (diagnosis[tumor_idx] == "Riktad") {
+				diag = diagnosis[normal_idx]
+			}
 		}
 
 
@@ -1148,7 +1152,7 @@ process coyote {
 		--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 		--cnv /access/${params.subdir}/plots/${cnvplot[cnv_index]} \\
 		--clarity-sample-id ${lims_id[tumor_idx]} \\
-		--subpanel ${diagnosis[tumor_idx]} \\
+		--subpanel ${diag} \\
 		--lowcov /access/${params.subdir}/QC/${lowcov[tumor_idx_lowcov]} \\
                 --build 38 \\
                 --gens ${group} \\
