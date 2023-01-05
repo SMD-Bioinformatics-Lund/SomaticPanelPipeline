@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 2.3.1
+### enhancement/bugfix
+- diagnosis/subpanel would always take tumor-value. If "Riktad" diagnosis and paired, assign normal-sample diagnosis as this is the correct paired analysis diagnosis
+
 ### 2.3.0
 ### feature
 - added subpanel/diagnosis from csv into coyote-import. Enables displaying in coyote for diagnosis in list_samples.html
