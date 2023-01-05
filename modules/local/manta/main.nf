@@ -58,7 +58,7 @@ process MANTA {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-			mv results/variants/tumorSV.vcf.gz ${group}_manta.vcf.gz
+			mv results/variants/tumorSV.vcf.gz ${meta.id[tumor_idx]}_manta.vcf.gz
 			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
 			"""
 		}

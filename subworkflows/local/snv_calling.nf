@@ -33,7 +33,7 @@ workflow SNV_CALLING {
         AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.groupTuple().join(meta.groupTuple()) }
         // Filter with PoN, annotate with VEP, mark germlines
         PON_FILTER { AGGREGATE_VCFS.out.vcf_concat }
-        FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should be be FFPE annotated
+        FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should not be be FFPE annotated
         ANNOTATE_VEP { FFPE_PON_FILTER.out.vcf_pon_ffpe } 
         MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep }
         // filter for CNVkit //

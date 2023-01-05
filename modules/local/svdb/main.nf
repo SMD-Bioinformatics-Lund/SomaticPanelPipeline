@@ -4,15 +4,15 @@ process SVDB_MERGE_PANEL {
 	publishDir "${params.outdir}/${params.subdir}/svvcf/merged/", mode: 'copy', overwrite: 'true'
 	time '10m'
 	memory '1 GB'
-	// scratch true
-	// stageInMode 'copy'
-	// stageOutMode 'copy'
+	scratch true
+	stageInMode 'copy'
+	stageOutMode 'copy'
 
 	input:
 		tuple val(group), val(meta), file(vcfs)
 
 	output:
-		tuple val(group), val(meta), file("${meta.id}.merged.vcf")
+		tuple val(group), val(meta), file("${meta.id}.merged.vcf"), emit: merged_vcf
 
 	script:  
         // for each sv-caller add idx, find vcf and find priority, add in priority order! //
@@ -39,8 +39,6 @@ process SVDB_MERGE_PANEL {
         tmpp = [mantap, dellyp, gatkp, cnvkitp]
         tmpp = tmpp - null
         priority = tmpp.join(',')
-        // vcfs_svdb = cool
-        // priority = cool
     
         """
         svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf

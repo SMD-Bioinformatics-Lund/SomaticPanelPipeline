@@ -53,7 +53,7 @@ process GATKCOV_COUNT {
 		set +u
 		source activate gatk
 		gatk CollectReadCounts \\
-			-I ${bam} -L $params.gatk_intervals \\
+			-I ${bam} -L $params.gatk_intervals_full \\
 			--interval-merging-rule OVERLAPPING_ONLY -O ${bam}.hdf5
 		gatk --java-options '-Xmx50g' DenoiseReadCounts \\
 			-I ${bam}.hdf5 --count-panel-of-normals $params.GATK_pon \\
@@ -308,7 +308,7 @@ process FILTER_MERGE_GATK {
 		tuple val(group), val(meta), file(gatk)
 
 	output:
-		tuple val(group), val(meta), file("${meta.id}.gatk.filtered.merged.vcf")
+		tuple val(group), file("${meta.id}.gatk.filtered.merged.vcf"), emit: gatk_normal_vcf
 
 	script:
 		"""

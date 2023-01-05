@@ -76,11 +76,13 @@ process ANNOTATE_VEP {
 		tuple val(group), val(meta), file(vcf)
     
 	output:
-		tuple val(group), val(meta), file("${group}.agg.pon.vep.vcf"), emit: vcf_vep
+		tuple val(group), val(meta), file("${out}"), emit: vcf_vep
 
 	script:
+		out = vcf.getBaseName()
+		out = out + ".vep.vcf"
 		"""
-		vep -i ${vcf} -o ${group}.agg.pon.vep.vcf \\
+		vep -i ${vcf} -o ${out} \\
 		--offline --merged --everything --vcf --no_stats \\
 		--fork ${task.cpus} \\
 		--force_overwrite \\
@@ -94,9 +96,11 @@ process ANNOTATE_VEP {
 		${params.custom_vep} \\
 	"""
 	stub:
+		out = vcf.getBaseName()
+		out = out + ".vep.vcf"
 		"""
 		echo ${params.custom_vep} $params.VEP_CACHE
-		touch ${group}.agg.pon.vep.vcf
+		touch ${out}
 		"""
 }
 

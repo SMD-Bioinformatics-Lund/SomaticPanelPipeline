@@ -43,6 +43,7 @@ workflow CNV_CALLING {
 			CNVKIT_GENS ( batch_plot_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
+			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
 		}
 		else {
 			CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
@@ -51,10 +52,11 @@ workflow CNV_CALLING {
 			// call, plot and export segments ::: cnvkit
 			CNVKIT_PLOT ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
 			//CNVKIT_CALL ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
-			CNVKIT_CALL ( CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
+			CNVKIT_CALL ( CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
 			CNVKIT_GENS ( CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
+			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment.filter { it -> it[2] == "backbone" }
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -78,14 +80,19 @@ workflow CNV_CALLING {
 		MANTA ( bam_markdup.groupTuple() )
 
 		// Join germline vcf
-
+		MANTA_NORMAL = MANTA.out.manta_vcf_normal.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		GATK_NORMAL = FILTER_MERGE_GATK.out.gatk_normal_vcf.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] )}
+		JOIN_NORMAL ( GATK_NORMAL.mix(MANTA_NORMAL).groupTuple(by:[0,1]) )
 		// Join tumor vcf
-		GATK = GATK2VCF.out.tumor_vcf.view()
-		MANTA = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }.view()
-		JOIN_TUMOR (  GATK.mix(MANTA).groupTuple(by:[0,1]) )
+		GATK_TUMOR = GATK2VCF.out.tumor_vcf
+		MANTA_TUMOR = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		JOIN_TUMOR ( GATK_TUMOR.mix(MANTA_TUMOR).groupTuple(by:[0,1]) )
+		
 
 	emit:
 		cnvkit_plot = cnvkitplot
-		test = GATKCOV_BAF.out.gatk_baf
+		cnvkit_hrd = cnvkit_hrd
+		tumor_vcf = JOIN_TUMOR.out.merged_vcf
+		normal_vcf = JOIN_NORMAL.out.merged_vcf
 
 }

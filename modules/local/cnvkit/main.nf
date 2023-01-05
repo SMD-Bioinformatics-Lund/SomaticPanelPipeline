@@ -159,9 +159,9 @@ process CNVKIT_CALL {
 		tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
 
 	output:
-		tuple val(group), val(meta), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
-		tuple val(group), val(meta), file("${group}.${meta.id}.${part}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
-		tuple val(group), val(meta), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
+		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
+		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
+		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
 		
 	when:
 		params.cnvkit

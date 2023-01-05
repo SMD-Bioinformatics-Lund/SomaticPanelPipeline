@@ -11,6 +11,7 @@ include { BIOMARKERS                    } from '../subworkflows/local/biomarkers
 include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { SAMPLE                        } from '../subworkflows/local/sample'
+include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 
 println(params.genome_file)
 
@@ -67,6 +68,11 @@ workflow SOLID_GMS {
 		gatk_ref
 	)
 	.set { ch_cnvcalled }
+	CNV_ANNOTATE (
+		ch_cnvcalled.tumor_vcf,
+		ch_cnvcalled.normal_vcf,
+		CHECK_INPUT.out.meta
+	)
 	ADD_TO_DB (
 		ch_vcf.finished_vcf,
 		ch_qc.lowcov.filter { item -> item[1] == 'T' }
