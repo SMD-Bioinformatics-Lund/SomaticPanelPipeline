@@ -202,7 +202,7 @@ process MERGE_GENS {
 		tuple val(group), val(meta), file(baf), file(cov)
 
 	output:
-		tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), file("${meta.id}.gens")
+		tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), file("${meta.id}.gens"), emit: dbload
 
 	shell:
 		'''

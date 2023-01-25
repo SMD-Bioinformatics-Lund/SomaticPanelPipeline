@@ -73,9 +73,12 @@ workflow SOLID_GMS {
 		ch_cnvcalled.normal_vcf,
 		CHECK_INPUT.out.meta
 	)
+	.set { ch_cnv }
 	ADD_TO_DB (
 		ch_vcf.finished_vcf,
-		ch_qc.lowcov.filter { item -> item[1] == 'T' }
+		ch_qc.lowcov.filter { item -> item[1] == 'T' },
+		ch_cnv.segments,
+		ch_cnvcalled.gens
 	)
 
 

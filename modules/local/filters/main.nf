@@ -69,7 +69,7 @@ process ANNOTATE_VEP {
 	container = params.vepcon
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
 	cpus params.cpu_many
-	time '1h'
+	time '3h'
 	tag "$group"
     
 	input:
@@ -173,6 +173,59 @@ process FILTER_FOR_CNV {
 		"""
 		echo $vcf $vcf_unfilt
 		touch ${group}_vardict.germlines.vcf.gz ${group}_vardict.germlines.vcf.gz.tbi
+		"""
+
+}
+
+process COYOTE_SEGMENTS {
+	publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
+	cpus 1
+	time '20m'
+	tag "${meta.id}"
+
+	input:
+		tuple val(group), val(meta), file(vcf)
+	
+	output:
+		tuple val(group), val(meta), file("${meta.id}.cn-segments.panel.bed"), emit: filtered
+		tuple val(group), val(meta), file("${meta.id}.cn-segments.bed"), emit: raw
+
+	script:
+		normal = ""
+		if ( meta.type == 'normal' || meta.type == 'N'  ) {
+			normal = "--normal"
+		}
+		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
+		"""
+		coyote_segmentator.pl --vcf $vcf --panel $panel --id ${meta.id} $normal
+		"""
+	stub:
+		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
+		"""
+		touch ${meta.id}.cn-segments.panel.bed ${meta.id}.cn-segments.bed
+		echo $panel
+		"""
+}
+
+process MERGE_SEGMENTS {
+	publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
+	cpus 1
+	time '20m'
+	tag "$group"
+
+	input:
+		tuple val(group), val(meta), file(segments)
+
+	output:
+		tuple val(group), file("${group}.cn-segments.panel.merged.bed"), emit: merged
+
+	script:
+		"""
+		cat $segments > ${group}.cn-segments.panel.merged.bed
+		"""
+	stub:
+		"""
+		touch ${group}.cn-segments.panel.merged.bed
 		"""
 
 }

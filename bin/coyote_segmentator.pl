@@ -17,7 +17,7 @@ use Data::Dumper;
 
 # Get command line options
 my %opt = ();
-GetOptions( \%opt, 'vcf=s', 'id=s', 'panel=s');
+GetOptions( \%opt, 'vcf=s', 'id=s', 'panel=s', 'normal');
 my $genes = read_panel($opt{'panel'});
 my %genes_panel = %$genes;
 read_vcf($opt{'vcf'},\%genes_panel);
@@ -29,8 +29,8 @@ sub read_vcf {
     my $vcf = vcf2->new('file'=>$fn );
     my $callers = callers($vcf->{header_str});
     my @callers = @$callers;
-    my $filtered_bed = $opt{'id'}.".panel.cnv.bed";
-    my $unfiltered_bed = $opt{'id'}.".cnv.bed";
+    my $filtered_bed = $opt{'id'}.".cn-segments.panel.bed";
+    my $unfiltered_bed = $opt{'id'}.".cn-segments.bed";
     unlink( $filtered_bed );
     unlink( $unfiltered_bed );
     system(" touch $filtered_bed ");
@@ -94,12 +94,18 @@ sub read_vcf {
         }
         ## print panel-filtered bed
         if ($match > 0) {
-            print FILTERED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$intresting."\t".$callers."\t"."$PR:$SR"."\n";
-            #print $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$intresting."\n";
+            print FILTERED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$intresting."\t".$callers."\t"."$PR:$SR";
+            if ($opt{'normal'}) {
+                print FILTERED "\tNORMAL";
+            }
+            print FILTERED "\n";
         }
         ## print unfiltered bed
-        print UNFILTERED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$callers."\t"."$PR:$SR"."\n";
-        
+        print UNFILTERED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$callers."\t"."$PR:$SR";
+        if ($opt{'normal'}) {
+            print UNFILTERED "\tNORMAL";
+        }
+        print UNFILTERED "\n";
 
     }
 }

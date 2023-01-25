@@ -6,10 +6,12 @@ workflow ADD_TO_DB {
     take: 
         vcf
         lowcov
+        segments
+        gens
 
     main:
 
-        COYOTE { vcf.join(lowcov) }
+        COYOTE { vcf.join(lowcov).join(segments) }
 
     emit:
         coyotedone = COYOTE.out.coyote_import

@@ -94,5 +94,6 @@ workflow CNV_CALLING {
 		cnvkit_hrd = cnvkit_hrd
 		tumor_vcf = JOIN_TUMOR.out.merged_vcf
 		normal_vcf = JOIN_NORMAL.out.merged_vcf
+		gens = MERGE_GENS.out.dbload
 
 }
