@@ -4,9 +4,9 @@ process SVDB_MERGE_PANEL {
 	publishDir "${params.outdir}/${params.subdir}/svvcf/merged/", mode: 'copy', overwrite: 'true'
 	time '10m'
 	memory '1 GB'
-	scratch true
-	stageInMode 'copy'
-	stageOutMode 'copy'
+	// scratch true
+	// stageInMode 'copy'
+	// stageOutMode 'copy'
 
 	input:
 		tuple val(group), val(meta), file(vcfs)

@@ -12,13 +12,13 @@ workflow CNV_ANNOTATE {
 		meta               // map: (csv meta info)
 
 	main:
-        ANNOTATE_VEP ( tumor.mix(normal) )
+        //ANNOTATE_VEP ( tumor.mix(normal) )
 		// choose panel, combine with out from vep //
-		COYOTE_SEGMENTS ( ANNOTATE_VEP.out.vcf_vep )
+		COYOTE_SEGMENTS ( tumor.mix(normal) )
 		MERGE_SEGMENTS ( COYOTE_SEGMENTS.out.filtered.groupTuple().view() )
 
 	emit:
-        annotated = ANNOTATE_VEP.out.vcf_vep
+        //annotated = ANNOTATE_VEP.out.vcf_vep
 		segments = MERGE_SEGMENTS.out.merged
 
 }

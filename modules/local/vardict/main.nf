@@ -1,6 +1,6 @@
 process VARDICT {
 	cpus 1
-	time '2h'
+	time '5h'
 	tag "$group"
 	memory '15GB'
 

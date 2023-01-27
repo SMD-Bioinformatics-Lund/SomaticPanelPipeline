@@ -78,8 +78,13 @@ for line in seg_in:
         elif gatk_call == "-":
             svtype = "DEL"
             variant.append("<%s>" % svtype)
+        elif cn > 2.5:
+            svtype = "DUP"
+            variant.append("<%s>" % svtype)
+        elif cn < 1.5:
+            svtype = "DEL"
+            variant.append("<%s>" % svtype)
         else:
-            svtype = "."
             continue
         
         ## INFO-FIELD

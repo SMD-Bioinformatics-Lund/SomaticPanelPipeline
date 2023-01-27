@@ -101,7 +101,10 @@ sub merge {
 	    @agg = @data;
 	}
     }
-    
+    if (scalar(@agg) == 0 ) {
+		@vars = ();
+		return \@header, \@vars;
+	}
     my $var = join("\t", @agg[0..6]);
     $var .= "\t";
     my @info_fields;

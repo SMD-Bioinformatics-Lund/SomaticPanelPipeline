@@ -16,27 +16,21 @@ use Data::Dumper;
 ####                                                                #####
 
 # Get command line options
+my $rand = int rand 1000000000;
 my %opt = ();
-GetOptions( \%opt, 'vcf=s', 'id=s', 'panel=s', 'normal');
+GetOptions( \%opt, 'vcf=s', 'id=s', 'panel=s', 'normal', 'genes=s');
 my $genes = read_panel($opt{'panel'});
 my %genes_panel = %$genes;
-read_vcf($opt{'vcf'},\%genes_panel);
+my $bedtools = read_vcf($opt{'vcf'});
 
-
+annotate_genes($bedtools, $opt{"genes"},\%genes_panel);
 sub read_vcf {
     my $fn = shift;
-    my $genes_panel = shift;
     my $vcf = vcf2->new('file'=>$fn );
     my $callers = callers($vcf->{header_str});
     my @callers = @$callers;
-    my $filtered_bed = $opt{'id'}.".cn-segments.panel.bed";
-    my $unfiltered_bed = $opt{'id'}.".cn-segments.bed";
-    unlink( $filtered_bed );
-    unlink( $unfiltered_bed );
-    system(" touch $filtered_bed ");
-    system(" touch $unfiltered_bed ");
-    open (FILTERED, '>>', $filtered_bed);
-    open (UNFILTERED, '>>', $unfiltered_bed);
+    my $bedtools = "tmp.bed";
+    open (BED, ">>", $bedtools);
     while ( my $var = $vcf->next_var() ) {
         my $chrom = $var->{CHROM};
         my $start = $var->{POS};
@@ -83,31 +77,20 @@ sub read_vcf {
         elsif ($type eq "DUP" || $type eq "INS") {
             $type = "+";
         }
-        ## genes ##
-        my $genes = genes($var->{INFO}->{CSQ});
-        my ($match,$intresting) = get_panel_genes($genes,$genes_panel);
-        
+
         ## ADD PR AND SR for manta-variants
         my ($PR,$SR) = (0,0);
         if ($callers =~ /manta/ ) {
             ($PR,$SR) = manta_variant($var,$opt{'id'});
         }
-        ## print panel-filtered bed
-        if ($match > 0) {
-            print FILTERED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$intresting."\t".$callers."\t"."$PR:$SR";
-            if ($opt{'normal'}) {
-                print FILTERED "\tNORMAL";
-            }
-            print FILTERED "\n";
-        }
-        ## print unfiltered bed
-        print UNFILTERED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$genes."\t".$callers."\t"."$PR:$SR";
-        if ($opt{'normal'}) {
-            print UNFILTERED "\tNORMAL";
-        }
-        print UNFILTERED "\n";
+       
+
+        print BED $chrom."\t".$start."\t".$end."\t".$probes."\t".$fold."\t".$type."\t".$callers."\t"."$PR:$SR\n";
+
+        
 
     }
+    return $bedtools;
 }
 
 sub genes {
@@ -185,4 +168,76 @@ sub manta_variant {
         }
     }
     return $PR,$SR;
+}
+
+sub annotate_genes {
+    my ($bed, $genes, $genes_panel)  = @_;
+    my $rnd = int rand 1000000000;
+    my $tmp_infile = "input.$rnd.bed";
+    my @overlap = `bedtools intersect -a $bed -b $genes -loj`;
+    unlink ("tmp.bed");
+    my $prev_reg;
+    my @genes;
+    my $prev_bed_str;
+
+    my $filtered_bed = $opt{'id'}.".cn-segments.panel.bed";
+    my $unfiltered_bed = $opt{'id'}.".cn-segments.bed";
+    unlink( $filtered_bed );
+    unlink( $unfiltered_bed );
+    system(" touch $filtered_bed ");
+    system(" touch $unfiltered_bed ");
+    open (FILTERED, '>>', $filtered_bed);
+    open (UNFILTERED, '>>', $unfiltered_bed);
+            
+    foreach my $line (@overlap) {
+        chomp $line;
+        
+        my @f = split /\t/, $line;
+
+        my $reg = "$f[0]\t$f[1]\t$f[2]\t";
+        my $bed_str = "$f[0]\t$f[1]\t$f[2]\t$f[3]\t$f[4]\t$f[5]\t$f[6]\t$f[7]";
+        
+        if( $prev_reg and $reg ne $prev_reg ) {
+            #print $prev_bed_str."\t".join(",", @genes)."\n";
+            my $genes = join(',',@genes);
+            my ($match,$intresting) = get_panel_genes($genes,$genes_panel);
+            my @bed_str = split("\t",$bed_str);
+            if ($match > 0) { 
+                print FILTERED join("\t",@bed_str[0..5]);
+                print FILTERED "\t".$genes."\t".$intresting."\t";
+                print FILTERED join("\t",@bed_str[6..7]);
+                if ($opt{'normal'}) {
+                    print FILTERED "\tNORMAL";
+                }
+                print FILTERED "\n";
+            }
+            print UNFILTERED join("\t",@bed_str[0..5]);
+            print UNFILTERED "\t".$genes."\t";
+            print UNFILTERED join("\t",@bed_str[6..7]);
+            print UNFILTERED "\n";
+            @genes = ();
+        }
+        push @genes, $f[-1];
+        
+        $prev_reg = $reg;
+        $prev_bed_str = $bed_str;
+    }
+    ### PRINT LAST VARIANT, ugly code try to reduce when you have time
+    $genes = join(',',@genes);
+    my ($match,$intresting) = get_panel_genes($genes,$genes_panel);
+    my @bed_str = split("\t",$prev_bed_str);
+    if ($match > 0) {
+        
+        print FILTERED join("\t",@bed_str[0..5]);
+        print FILTERED "\t".$genes."\t".$intresting."\t";
+        print FILTERED join("\t",@bed_str[6..7]);
+        if ($opt{'normal'}) {
+            print FILTERED "\tNORMAL";
+        }
+        print FILTERED "\n";
+    }
+    print UNFILTERED join("\t",@bed_str[0..5]);
+    print UNFILTERED "\t".$genes."\t";
+    print UNFILTERED join("\t",@bed_str[6..7]);
+    print UNFILTERED "\n";
 }

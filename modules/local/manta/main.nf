@@ -3,19 +3,17 @@ process MANTA {
 	cpus 16
 	time '10h'
 	tag "$group"
-	//scratch true
+	scratch true
 	memory '10GB'
-	//stageInMode 'copy'
-//	stageOutMode 'copy'
+	stageInMode 'copy'
+	stageOutMode 'copy'
 	
 	input:
 		tuple val(group), val(meta), file(bam), file(bai)
 
 	output:
 		tuple val(group), file("${meta.id[tumor_idx]}_manta.vcf"), emit: manta_vcf_tumor
-		tuple val(group), file("${meta.id[tumor_idx]}_bnd_manta.vcf"), emit: manta_vcf_bnd_tumor
 		tuple val(group), file("${meta.id[normal_idx]}_manta.vcf"), optional: true, emit: manta_vcf_normal
-		tuple val(group), file("${meta.id[normal_idx]}_bnd_manta.vcf"), optional: true, emit: manta_vcf_bnd_normal
 		
 
 	when:
@@ -42,14 +40,12 @@ process MANTA {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-			gunzip results/variants/somaticSV.vcf.gz
-			gunzip results/variants/diploidSV.vcf.gz
-			grep -v BND results/variants/somaticSV.vcf > ${meta.id[tumor_idx]}_manta.vcf
-			grep ^# results/variants/somaticSV.vcf > ${meta.id[tumor_idx]}_bnd_manta.vcf
-			grep -v ^# results/variants/somaticSV.vcf | grep BND >> ${meta.id[tumor_idx]}_bnd_manta.vcf
-			grep -v BND results/variants/diploidSV.vcf > ${meta.id[normal_idx]}_manta.vcf
-			grep ^# results/variants/diploidSV.vcf > ${meta.id[normal_idx]}_bnd_manta.vcf
-			grep -v ^# results/variants/diploidSV.vcf | grep BND >> ${meta.id[normal_idx]}_bnd_manta.vcf
+			mv results/variants/somaticSV.vcf.gz ${meta.id[tumor_idx]}_manta.vcf.gz
+			mv results/variants/diploidSV.vcf.gz ${meta.id[normal_idx]}_manta.vcf.gz
+			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
+			gunzip ${meta.id[normal_idx]}_manta.vcf.gz
+			grep -v BND ${meta.id[tumor_idx]}_manta.vcf > ${meta.id[tumor_idx]}_manta_bndless.vcf
+			grep -v BND ${meta.id[normal_idx]}_manta.vcf > ${meta.id[normal_idx]}_manta_bndless.vcf
 			"""
 		}
 		else {
@@ -65,10 +61,9 @@ process MANTA {
 				--generateEvidenceBam \\
 				--runDir .
 			python runWorkflow.py -m local -j ${task.cpus}
-			gunzip results/variants/tumorSV.vcf.gz
-			grep -v BND results/variants/tumorSV.vcf > ${meta.id[tumor_idx]}_manta.vcf
-			grep ^# results/variants/tumorSV.vcf > ${meta.id[tumor_idx]}_bnd_manta.vcf
-			grep -v ^# results/variants/tumorSV.vcf | grep BND >> ${meta.id[tumor_idx]}_bnd_manta.vcf
+			mv results/variants/tumorSV.vcf.gz ${meta.id[tumor_idx]}_manta.vcf.gz
+			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
+			grep -v BND ${meta.id[tumor_idx]}_manta.vcf > ${meta.id[tumor_idx]}_manta_bndless.vcf
 			"""
 		}
 	stub:
