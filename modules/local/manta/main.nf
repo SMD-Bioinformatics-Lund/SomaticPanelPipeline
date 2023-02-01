@@ -78,13 +78,12 @@ process MANTA {
 		if(meta.id.size() == 2) {
 
 			"""
-			touch ${meta.id[tumor_idx]}_manta.vcf
-			touch ${meta.id[normal_idx]}_manta.vcf
+			touch ${meta.id[tumor_idx]}_manta.vcf ${meta.id[tumor_idx]}_manta_filtered.vcf ${meta.id[normal_idx]}_manta.vcf ${meta.id[normal_idx]}_manta_filtered.vcf
 			"""
 		}
 		else {
 			"""
-			touch ${meta.id[tumor_idx]}_manta.vcf
+			touch ${meta.id[tumor_idx]}_manta.vcf ${meta.id[tumor_idx]}_manta_filtered.vcf
 			"""
 		}
 

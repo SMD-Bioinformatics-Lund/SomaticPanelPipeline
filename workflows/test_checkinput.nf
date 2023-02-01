@@ -78,7 +78,8 @@ workflow SOLID_GMS {
 		ch_vcf.finished_vcf,
 		ch_qc.lowcov.filter { item -> item[1] == 'T' },
 		ch_cnv.segments,
-		ch_cnvcalled.gens
+		ch_cnvcalled.gens,
+		ch_cnvcalled.gatcov_plot
 	)
 
 

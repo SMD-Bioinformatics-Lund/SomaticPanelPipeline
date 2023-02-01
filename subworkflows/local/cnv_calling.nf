@@ -90,6 +90,7 @@ workflow CNV_CALLING {
 		
 
 	emit:
+		gatcov_plot = GATKCOV_CALL.out.gatcov_plot
 		cnvkit_plot = cnvkitplot
 		cnvkit_hrd = cnvkit_hrd
 		tumor_vcf = JOIN_TUMOR.out.merged_vcf

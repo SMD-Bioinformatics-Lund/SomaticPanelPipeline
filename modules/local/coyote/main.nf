@@ -5,7 +5,7 @@ process COYOTE {
 	tag "$group"
 
 	input:
-		tuple val(group), val(meta), file(vcf), val(lowcov_type), file(lowcov), file(segments)
+		tuple val(group), val(meta), file(vcf), val(lowcov_type), file(lowcov), file(segments), file(plot)
 
 	output:
 		tuple val(group), file("${process_group}.coyote"), emit: coyote_import
@@ -33,6 +33,7 @@ process COYOTE {
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
 			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}  \\
 			--cnv /access/${params.subdir}/cnv/$segments \\
+			--cnvprofile /access/${params.subdir}/plots/$plot \\
 			--purity ${meta.purity[tumor_idx]}" > ${process_group}.coyote
 		"""
 	stub:
@@ -54,6 +55,7 @@ process COYOTE {
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
 			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
 			--cnv /access/${params.subdir}/cnv/$segments \\
+			--cnvprofile /access/${params.subdir}/plots/$plot \\
 			--purity ${meta.purity[tumor_idx]}" > ${process_group}.coyote
 		"""
 }
