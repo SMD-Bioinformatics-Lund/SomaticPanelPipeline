@@ -197,7 +197,7 @@ process COYOTE_SEGMENTS {
 		}
 		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
 		"""
-		coyote_segmentator.pl --vcf $vcf --panel $panel --id ${meta.id} $normal --genes /fs1/resources/ref/hg38/gtf/gencode.v33.annotation.genes.proteincoding.bed
+		coyote_segmentator.pl --vcf $vcf --panel /fs1/resources/ref/hg38/solid/solid.cna,$panel --id ${meta.id} $normal --genes /fs1/resources/ref/hg38/gtf/gencode.v33.annotation.genes.proteincoding.bed
 		"""
 	stub:
 		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"

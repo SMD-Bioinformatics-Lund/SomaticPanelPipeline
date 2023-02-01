@@ -19,8 +19,14 @@ use Data::Dumper;
 my $rand = int rand 1000000000;
 my %opt = ();
 GetOptions( \%opt, 'vcf=s', 'id=s', 'panel=s', 'normal', 'genes=s');
-my $genes = read_panel($opt{'panel'});
-my %genes_panel = %$genes;
+
+my %genes_panel;
+my @panels = split(',',$opt{'panel'});
+## read panels in order separated by comma. The base panel + specific. 
+## Overlapping genes will have the information from the last in the list
+foreach my $panel (@panels) { 
+    read_panel($panel);
+}
 my $bedtools = read_vcf($opt{'vcf'});
 
 annotate_genes($bedtools, $opt{"genes"},\%genes_panel);
@@ -113,7 +119,7 @@ sub genes {
 sub read_panel {
     my $fn = shift;
     open(PANEL, $fn) or die $!;
-    my %genes_panel;
+
     while(<PANEL>) {
         chomp;
         my @line = split("\t");
@@ -123,7 +129,7 @@ sub read_panel {
         $genes_panel{$gene}{TYPE} = $type;
         $genes_panel{$gene}{QUESTION} = $question;
     }
-    return \%genes_panel;
+
 }
 
 sub get_panel_genes {
