@@ -229,3 +229,47 @@ process MERGE_SEGMENTS {
 		"""
 
 }
+
+process FILTER_MANTA {
+	publishDir "${params.outdir}/${params.subdir}/svvcf", mode: 'copy', overwrite: true
+	cpus 1
+	time '20m'
+	tag "$group"
+
+	input:
+		tuple val(group), val(meta), file(vcf)
+
+	output:
+		tuple val(group), file("${id}_manta_filtered.vcf"), emit: filtered
+		tuple val(group), file("${id}_manta_bnd_filtered.vcf"), emit: bnd_filtered
+
+	script:
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			id = meta.id[tumor_idx]
+			"""
+			filter_manta.pl --vcf $vcf --id $id --af 0.05
+			"""
+		}
+		else {
+			id = meta.id[0]
+			"""
+			filter_manta.pl --vcf $vcf --id $id --af 0.05
+			"""
+		}
+
+	stub:
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			id = meta.id[tumor_idx]
+			"""
+			touch ${id}_manta_bnd_filtered.vcf ${id}_manta_filtered.vcf
+			"""
+		}
+		else {
+			id = meta.id[0]
+			"""
+			touch ${id}_manta_bnd_filtered.vcf ${id}_manta_filtered.vcf
+			"""
+		}
+}

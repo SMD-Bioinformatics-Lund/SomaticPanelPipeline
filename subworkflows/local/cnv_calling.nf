@@ -80,12 +80,12 @@ workflow CNV_CALLING {
 		MANTA ( bam_markdup.groupTuple() )
 
 		// Join germline vcf
-		MANTA_NORMAL = MANTA.out.manta_vcf_normal.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		MANTA_NORMAL = MANTA.out.manta_vcf_normal_filtered.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
 		GATK_NORMAL = FILTER_MERGE_GATK.out.gatk_normal_vcf.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] )}
 		JOIN_NORMAL ( GATK_NORMAL.mix(MANTA_NORMAL).groupTuple(by:[0,1]) )
 		// Join tumor vcf
 		GATK_TUMOR = GATK2VCF.out.tumor_vcf
-		MANTA_TUMOR = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		MANTA_TUMOR = MANTA.out.manta_vcf_tumor_filtered.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
 		JOIN_TUMOR ( GATK_TUMOR.mix(MANTA_TUMOR).groupTuple(by:[0,1]) )
 		
 

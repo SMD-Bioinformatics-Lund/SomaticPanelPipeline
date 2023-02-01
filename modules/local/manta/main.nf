@@ -13,7 +13,9 @@ process MANTA {
 
 	output:
 		tuple val(group), file("${meta.id[tumor_idx]}_manta.vcf"), emit: manta_vcf_tumor
+		tuple val(group), file("${meta.id[tumor_idx]}_manta_filtered.vcf"), emit: manta_vcf_tumor_filtered
 		tuple val(group), file("${meta.id[normal_idx]}_manta.vcf"), optional: true, emit: manta_vcf_normal
+		tuple val(group), file("${meta.id[normal_idx]}_manta_filtered.vcf"), optional: true, emit: manta_vcf_normal_filtered
 		
 
 	when:
@@ -44,8 +46,8 @@ process MANTA {
 			mv results/variants/diploidSV.vcf.gz ${meta.id[normal_idx]}_manta.vcf.gz
 			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
 			gunzip ${meta.id[normal_idx]}_manta.vcf.gz
-			grep -v BND ${meta.id[tumor_idx]}_manta.vcf > ${meta.id[tumor_idx]}_manta_bndless.vcf
-			grep -v BND ${meta.id[normal_idx]}_manta.vcf > ${meta.id[normal_idx]}_manta_bndless.vcf
+			filter_manta.pl --vcf ${meta.id[tumor_idx]}_manta.vcf --id $tumor_id --af 0.05
+			filter_manta.pl --vcf ${meta.id[normal_idx]}_manta.vcf --id $normal_id --af 0.05
 			"""
 		}
 		else {
@@ -63,7 +65,7 @@ process MANTA {
 			python runWorkflow.py -m local -j ${task.cpus}
 			mv results/variants/tumorSV.vcf.gz ${meta.id[tumor_idx]}_manta.vcf.gz
 			gunzip ${meta.id[tumor_idx]}_manta.vcf.gz
-			grep -v BND ${meta.id[tumor_idx]}_manta.vcf > ${meta.id[tumor_idx]}_manta_bndless.vcf
+			filter_manta.pl --vcf ${meta.id[tumor_idx]}_manta.vcf --id $tumor_id --af 0.05
 			"""
 		}
 	stub:

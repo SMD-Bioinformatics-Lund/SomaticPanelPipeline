@@ -191,20 +191,17 @@ sub annotate_genes {
             
     foreach my $line (@overlap) {
         chomp $line;
-        
         my @f = split /\t/, $line;
 
         my $reg = "$f[0]\t$f[1]\t$f[2]\t";
         my $bed_str = "$f[0]\t$f[1]\t$f[2]\t$f[3]\t$f[4]\t$f[5]\t$f[6]\t$f[7]";
-        
         if( $prev_reg and $reg ne $prev_reg ) {
-            #print $prev_bed_str."\t".join(",", @genes)."\n";
-            my $genes = join(',',@genes);
-            my ($match,$intresting) = get_panel_genes($genes,$genes_panel);
-            my @bed_str = split("\t",$bed_str);
+            my $gene_conc = join(',',@genes);
+            my ($match,$intresting) = get_panel_genes($gene_conc,$genes_panel);
+            my @bed_str = split("\t",$prev_bed_str);
             if ($match > 0) { 
                 print FILTERED join("\t",@bed_str[0..5]);
-                print FILTERED "\t".$genes."\t".$intresting."\t";
+                print FILTERED "\t".$gene_conc."\t".$intresting."\t";
                 print FILTERED join("\t",@bed_str[6..7]);
                 if ($opt{'normal'}) {
                     print FILTERED "\tNORMAL";
@@ -223,13 +220,13 @@ sub annotate_genes {
         $prev_bed_str = $bed_str;
     }
     ### PRINT LAST VARIANT, ugly code try to reduce when you have time
-    $genes = join(',',@genes);
-    my ($match,$intresting) = get_panel_genes($genes,$genes_panel);
+    my $gene_conc = join(',',@genes);
+    my ($match,$intresting) = get_panel_genes($gene_conc,$genes_panel);
     my @bed_str = split("\t",$prev_bed_str);
     if ($match > 0) {
         
         print FILTERED join("\t",@bed_str[0..5]);
-        print FILTERED "\t".$genes."\t".$intresting."\t";
+        print FILTERED "\t".$gene_conc."\t".$intresting."\t";
         print FILTERED join("\t",@bed_str[6..7]);
         if ($opt{'normal'}) {
             print FILTERED "\tNORMAL";

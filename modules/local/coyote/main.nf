@@ -22,9 +22,9 @@ process COYOTE {
 			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
 		}
 
-
+//echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
 		"""
-		echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
+		echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group \\
 			--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--lowcov /access/${params.subdir}/QC/${lowcov} \\
@@ -32,7 +32,7 @@ process COYOTE {
 			--gens ${group} \\
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
 			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}" > ${process_group}.coyote \\
-			--cnv $segments \\
+			--cnv /access/${params.subdir}/cnv/$segments \\
 			--purity ${meta.purity[tumor_idx]}
 		"""
 	stub:
@@ -44,9 +44,8 @@ process COYOTE {
 			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
 		}
 
-
-		"""
-		echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
+		"""		
+		echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group \\
 			--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--lowcov /access/${params.subdir}/QC/${lowcov} \\
@@ -54,7 +53,7 @@ process COYOTE {
 			--gens ${group} \\
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
 			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}" > ${process_group}.coyote \\
-			--cnv $segments \\
+			--cnv /access/${params.subdir}/cnv/$segments \\
 			--purity ${meta.purity[tumor_idx]}
 		"""
 }
