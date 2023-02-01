@@ -29,11 +29,11 @@ process COYOTE {
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--lowcov /access/${params.subdir}/QC/${lowcov} \\
 			--build 38 \\
-			--gens ${group} \\
+			--gens ${meta.id[tumor_idx]} \\
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
-			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}" > ${process_group}.coyote \\
+			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}  \\
 			--cnv /access/${params.subdir}/cnv/$segments \\
-			--purity ${meta.purity[tumor_idx]}
+			--purity ${meta.purity[tumor_idx]}" > ${process_group}.coyote
 		"""
 	stub:
 		process_group = group
@@ -50,10 +50,10 @@ process COYOTE {
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--lowcov /access/${params.subdir}/QC/${lowcov} \\
 			--build 38 \\
-			--gens ${group} \\
+			--gens ${meta.id[tumor_idx]} \\
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
-			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}" > ${process_group}.coyote \\
+			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
 			--cnv /access/${params.subdir}/cnv/$segments \\
-			--purity ${meta.purity[tumor_idx]}
+			--purity ${meta.purity[tumor_idx]}" > ${process_group}.coyote
 		"""
 }
