@@ -10,6 +10,7 @@ use List::Util qw( max min sum );
    
 
 my $vcf = vcf2->new('file'=>$ARGV[0] );
+my $MIN_PHRED_QUAL = 20;
 
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
@@ -19,6 +20,7 @@ system("zgrep ^#CHROM $ARGV[0]");
 while ( my $v = $vcf->next_var() ) {
 
     my @status;
+	my $PHRED_QUAL = $v->{QUAL};
     my (%vaf, %dp);
 
     my $is_indel = 0;
@@ -71,6 +73,10 @@ while ( my $v = $vcf->next_var() ) {
     else {
 	push @status, "FAIL_NO_TVAR";
     }
+
+    # Fail if low phred qual score
+    push @status, "FAIL_PHRED_QUAL" if $PHRED_QUAL<$MIN_PHRED_QUAL;
+
 
     if( @status ) {
 	if( $v->{FILTER} eq "PASS" or $v->{FILTER} eq "." ) {

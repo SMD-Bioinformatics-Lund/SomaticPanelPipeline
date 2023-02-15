@@ -47,7 +47,8 @@ println("container: "+container)
 Channel
     .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.id, row.type, file(row.read1), file(row.read2)) }
-    .into { fastq_umi; fastq_noumi; meta_nocnv }
+    // .into { fastq_umi; fastq_noumi; meta_nocnv }
+	.set{ fastp_ch }
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
@@ -57,12 +58,18 @@ Channel
 Channel
     .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.type, row.clarity_sample_id, row.clarity_pool_id, row.diagnosis) }
-    .set { meta_coyote }
+    .set{ meta_coyote }
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.id, row.read1, row.read2) }
     .set{ meta_qc }
+
+
+Channel
+    .fromPath(params.csv).splitCsv(header:true)
+    .map{ row-> tuple(row.group, row.id, row.type, row.read1, row.read2) }
+    .set{ meta_contamination }
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
@@ -72,7 +79,7 @@ Channel
 Channel
     .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.id, row.type, row.clarity_sample_id, row.clarity_pool_id) }
-    .set { meta_const }
+    .set{ meta_const }
 
 
 
@@ -81,9 +88,39 @@ Channel
     .fromPath("${params.regions_bed}")
     .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
     .splitText( by: 200, file: 'bedpart.bed' )
-    .into { beds_mutect; beds_freebayes; beds_tnscope; beds_vardict }
+    .into{ beds_mutect; beds_freebayes; beds_tnscope; beds_vardict }
 
 
+process fastp {
+
+	container '/fs1/resources/containers/fastp_0_20_0.sif'
+
+	//publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
+	cpus params.cpu_some
+	memory '16 GB'
+	time '4h'
+	errorStrategy 'retry'
+	maxErrors 3
+	tag "$id"
+	scratch true
+	stageInMode 'copy'
+	stageOutMode 'copy'
+
+	input:
+		set group, id, type, file(r1), file(r2) from fastp_ch
+
+	output:
+		set group, id, type, file("${id}.${type}.cleaned_R1.fastq.gz"), file("${id}.${type}.cleaned_R2.fastq.gz") into fastq_umi, fastq_noumi, meta_nocnv
+		set group, id, type, file("${id}.${type}.cleaned.html"), file("${id}.${type}.cleaned.fastp.json") into fastp_stats
+
+	"""
+	fastp -w $params.cpu_some $params.adapter_sequences --detect_adapter_for_pe \\
+	--average_qual 20 --length_required 50 --qualified_quality_phred 20 \\
+	-i $r1 -I $r2 -o ${id}.${type}.cleaned_R1.fastq.gz -O ${id}.${type}.cleaned_R2.fastq.gz \\
+	-h ${id}.${type}.cleaned.html -j ${id}.${type}.cleaned.fastp.json
+
+	"""
+}
 
 process bwa_umi {
 	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true

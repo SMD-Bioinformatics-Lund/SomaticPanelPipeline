@@ -7,6 +7,7 @@ use Data::Dumper;
 use List::Util qw( max min );
 
 my $vcf = vcf2->new('file'=>$ARGV[0] );
+my $MIN_PHRED_QUAL = 20;
 
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
@@ -15,15 +16,16 @@ system("zgrep ^#CHROM $ARGV[0]");
 while ( my $v = $vcf->next_var() ) {
 
     my @filters;
+    my $PHRED_QUAL = $v->{QUAL};
 
 
     my( %likelihood, %gl_idx, %genotype, %altobs, %depth );
-    my $status = "PASS";
+    my $status = "";
     for my $gt (@{$v->{GT}}) {
         my $type = "T";
 
 	# Fail if GT is 0/0 for tumor
-	$status = "FAIL_GT" if $type eq "T" and $gt->{GT} eq "0/0";
+	$status = $status . "FAIL_GT;" if $type eq "T" and $gt->{GT} eq "0/0";
 	
 	my @GL = split /,/, $gt->{GL};
 	my @GT = split /\//, $gt->{GT};
@@ -41,8 +43,16 @@ while ( my $v = $vcf->next_var() ) {
 
     my $TALT = $genotype{T}->[0];
     if( $TALT eq "0" ) {
-	$status = "WARN_NOVAR";
+	$status = $status . "WARN_NOVAR;";
     } 
+
+    # Fail if low phred qual score
+    $status = $status . "FAIL_PHRED_QUAL;" if $PHRED_QUAL<$MIN_PHRED_QUAL;
+
+    if ($status eq "") {
+        $status = 'PASS;';
+    }
+    $status =~ s/;$//;
 
     $v->{FILTER} = $status;
 

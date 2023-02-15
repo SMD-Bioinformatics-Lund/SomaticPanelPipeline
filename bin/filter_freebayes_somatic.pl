@@ -19,20 +19,22 @@ system("zgrep ^#CHROM $ARGV[0]");
 my $SSC_THRES = 30; # Somatic score threshold
 my $LOD_THRES = 10; # Likelihood ratio threshold
 my $MIN_VAF_RATIO = 3;
+my $MIN_PHRED_QUAL = 20;
 
 while ( my $v = $vcf->next_var() ) {
 
     my @filters;
+    my $PHRED_QUAL = $v->{QUAL};
 
 
     my( %likelihood, %gl_idx, %genotype, %altobs, %depth );
-    my $status = "PASS";
+    my $status = "";
     for my $gt (@{$v->{GT}}) {
         my $type = "T";
         $type = "N" if $gt->{_sample_id} eq $N;
 
 	# Fail if GT is 0/0 for tumor
-	$status = "FAIL_GT" if $type eq "T" and $gt->{GT} eq "0/0";
+	$status = $status . "FAIL_GT;" if $type eq "T" and $gt->{GT} eq "0/0";
 	
 	my @GL = split /,/, $gt->{GL};
 	my @GT = split /\//, $gt->{GT};
@@ -58,14 +60,14 @@ while ( my $v = $vcf->next_var() ) {
 
     # Loss of heterozygosity
     if( $genotype{T}->[0] eq $genotype{T}->[1] && ( $genotype{T}->[1] eq $genotype{N}->[0] or $genotype{T}->[1] eq $genotype{N}->[1] ) ) {
-	$status = "LOH";
+	$status = $status . "LOH;";
     }
 
     # Fail if low somatic score
-    $status = "FAIL_QUAL" if $DQUAL<$SSC_THRES;
+    $status = $status . "FAIL_QUAL;" if $DQUAL<$SSC_THRES;
 
     # Fail if low likelyhood ratio hor either sample
-    $status = "FAIL_LOD" if $LOD_NORM<$LOD_THRES || $LOD_TUMOR<$LOD_THRES;
+    $status = $status . "FAIL_LOD;" if $LOD_NORM<$LOD_THRES || $LOD_TUMOR<$LOD_THRES;
 
     my $TALT;
     unless( $genotype{T}->[1] == $genotype{N}->[0] or $genotype{T}->[1] == $genotype{N}->[1] ) {
@@ -73,7 +75,7 @@ while ( my $v = $vcf->next_var() ) {
     }
     else {
 	$TALT = $genotype{T}->[0];
-	$status = "WARN_NOVAR" if $TALT eq "0";
+	$status = $status . "WARN_NOVAR;" if $TALT eq "0";
     }
 
     # Fail if difference between tumor's and normal's VAF is < 3x.
@@ -81,9 +83,18 @@ while ( my $v = $vcf->next_var() ) {
 	my $NVAF = $altobs{N}->[$TALT-1] / $depth{N};
 	my $TVAF = $altobs{T}->[$TALT-1] / $depth{T};
 	if( $NVAF > 0 and ($TVAF/$NVAF < $MIN_VAF_RATIO) ) {
-	    $status = "FAIL_NVAF";
+	    $status = $status . "FAIL_NVAF;";
 	}
     }
+
+    # Fail if low phred qual score
+    $status = $status . "FAIL_PHRED_QUAL;" if $PHRED_QUAL<$MIN_PHRED_QUAL;
+
+    if ($status eq "") {
+        $status = 'PASS;';
+    }
+    $status =~ s/;$//;
+
 
     $v->{FILTER} = $status;
     add_info( $v, "SSC", $DQUAL );    

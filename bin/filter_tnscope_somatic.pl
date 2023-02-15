@@ -16,6 +16,7 @@ my $N = $ARGV[2];
 
 my $MIN_VAF_RATIO = 3;
 my $MIN_VAF_HOMOPOLYMER_RATIO = 5;
+my $MIN_PHRED_QUAL = 20;
 
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
@@ -25,6 +26,7 @@ system("zgrep ^#CHROM $ARGV[0]");
 while ( my $v = $vcf->next_var() ) {
 
     my @status;
+	my $PHRED_QUAL = $v->{QUAL};
     my (%vaf, %dp);
 
     my $is_indel = 0;
@@ -86,6 +88,11 @@ while ( my $v = $vcf->next_var() ) {
     else {
 	push @status, "FAIL_NO_TVAR";
     }
+
+
+    # Fail if low phred qual score
+    push @status, "FAIL_PHRED_QUAL" if $PHRED_QUAL<$MIN_PHRED_QUAL;
+
 
     if( @status ) {
 	if( $v->{FILTER} eq "PASS" or $v->{FILTER} eq "." ) {
