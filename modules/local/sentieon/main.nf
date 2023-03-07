@@ -47,7 +47,7 @@ process BWA_UMI {
 			-t ${task.cpus} \\
 			-p -C $params.genome_file consensus.fastq.gz \\
 		|sentieon util sort -i - \\
-			-o ${meta.id}.${meta.type}.bwa.umi.sort.bam \\
+			-o ${out_umi} \\
 			--sam2bam --umi_post_process
 
 		sentieon util sort -i noumi.sam -o ${out_bam} --sam2bam

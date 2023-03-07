@@ -5,7 +5,7 @@ process COYOTE {
 	tag "$group"
 
 	input:
-		tuple val(group), val(meta), file(vcf), val(lowcov_type), file(lowcov)
+		tuple val(group), val(meta), file(vcf), val(lowcov_type), file(lowcov), file(segments), file(plot)
 
 	output:
 		tuple val(group), file("${process_group}.coyote"), emit: coyote_import
@@ -22,16 +22,19 @@ process COYOTE {
 			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
 		}
 
-
+//echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
 		"""
-		echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
+		echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group \\
 			--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--lowcov /access/${params.subdir}/QC/${lowcov} \\
 			--build 38 \\
-			--gens ${group} \\
+			--gens ${meta.id[tumor_idx]} \\
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
-			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}" > ${process_group}.coyote
+			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}  \\
+			--cnv /access/${params.subdir}/cnv/$segments \\
+			--cnvprofile /access/${params.subdir}/plots/$plot \\
+			--purity ${meta.purity[tumor_idx]}" > ${process_group}.coyote
 		"""
 	stub:
 		process_group = group
@@ -42,15 +45,17 @@ process COYOTE {
 			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
 		}
 
-
-		"""
-		echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
+		"""		
+		echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group \\
 			--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--lowcov /access/${params.subdir}/QC/${lowcov} \\
 			--build 38 \\
-			--gens ${group} \\
+			--gens ${meta.id[tumor_idx]} \\
 			--subpanel ${meta.diagnosis[tumor_idx]} \\
-			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]}" > ${process_group}.coyote
+			--clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
+			--cnv /access/${params.subdir}/cnv/$segments \\
+			--cnvprofile /access/${params.subdir}/plots/$plot \\
+			--purity ${meta.purity[tumor_idx]}" > ${process_group}.coyote
 		"""
 }

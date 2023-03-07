@@ -69,18 +69,20 @@ process ANNOTATE_VEP {
 	container = params.vepcon
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
 	cpus params.cpu_many
-	time '1h'
+	time '3h'
 	tag "$group"
     
 	input:
 		tuple val(group), val(meta), file(vcf)
     
 	output:
-		tuple val(group), val(meta), file("${group}.agg.pon.vep.vcf"), emit: vcf_vep
+		tuple val(group), val(meta), file("${out}"), emit: vcf_vep
 
 	script:
+		out = vcf.getBaseName()
+		out = out + ".vep.vcf"
 		"""
-		vep -i ${vcf} -o ${group}.agg.pon.vep.vcf \\
+		vep -i ${vcf} -o ${out} \\
 		--offline --merged --everything --vcf --no_stats \\
 		--fork ${task.cpus} \\
 		--force_overwrite \\
@@ -94,9 +96,11 @@ process ANNOTATE_VEP {
 		${params.custom_vep} \\
 	"""
 	stub:
+		out = vcf.getBaseName()
+		out = out + ".vep.vcf"
 		"""
 		echo ${params.custom_vep} $params.VEP_CACHE
-		touch ${group}.agg.pon.vep.vcf
+		touch ${out}
 		"""
 }
 
@@ -171,4 +175,101 @@ process FILTER_FOR_CNV {
 		touch ${group}_vardict.germlines.vcf.gz ${group}_vardict.germlines.vcf.gz.tbi
 		"""
 
+}
+
+process COYOTE_SEGMENTS {
+	publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
+	cpus 1
+	time '20m'
+	tag "${meta.id}"
+
+	input:
+		tuple val(group), val(meta), file(vcf)
+	
+	output:
+		tuple val(group), val(meta), file("${meta.id}.cn-segments.panel.bed"), emit: filtered
+		tuple val(group), val(meta), file("${meta.id}.cn-segments.bed"), emit: raw
+
+	script:
+		normal = ""
+		if ( meta.type == 'normal' || meta.type == 'N'  ) {
+			normal = "--normal"
+		}
+		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
+		"""
+		coyote_segmentator.pl --vcf $vcf --panel /fs1/resources/ref/hg38/solid/solid.cna,$panel --id ${meta.id} $normal --genes /fs1/resources/ref/hg38/gtf/gencode.v33.annotation.genes.proteincoding.bed
+		"""
+	stub:
+		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
+		"""
+		touch ${meta.id}.cn-segments.panel.bed ${meta.id}.cn-segments.bed
+		echo $panel
+		"""
+}
+
+process MERGE_SEGMENTS {
+	publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
+	cpus 1
+	time '20m'
+	tag "$group"
+
+	input:
+		tuple val(group), val(meta), file(segments)
+
+	output:
+		tuple val(group), file("${group}.cn-segments.panel.merged.bed"), emit: merged
+
+	script:
+		"""
+		cat $segments > ${group}.cn-segments.panel.merged.bed
+		"""
+	stub:
+		"""
+		touch ${group}.cn-segments.panel.merged.bed
+		"""
+
+}
+
+process FILTER_MANTA {
+	publishDir "${params.outdir}/${params.subdir}/svvcf", mode: 'copy', overwrite: true
+	cpus 1
+	time '20m'
+	tag "$group"
+
+	input:
+		tuple val(group), val(meta), file(vcf)
+
+	output:
+		tuple val(group), file("${id}_manta_filtered.vcf"), emit: filtered
+		tuple val(group), file("${id}_manta_bnd_filtered.vcf"), emit: bnd_filtered
+
+	script:
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			id = meta.id[tumor_idx]
+			"""
+			filter_manta.pl --vcf $vcf --id $id --af 0.05
+			"""
+		}
+		else {
+			id = meta.id[0]
+			"""
+			filter_manta.pl --vcf $vcf --id $id --af 0.05
+			"""
+		}
+
+	stub:
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			id = meta.id[tumor_idx]
+			"""
+			touch ${id}_manta_bnd_filtered.vcf ${id}_manta_filtered.vcf
+			"""
+		}
+		else {
+			id = meta.id[0]
+			"""
+			touch ${id}_manta_bnd_filtered.vcf ${id}_manta_filtered.vcf
+			"""
+		}
 }

@@ -21,6 +21,7 @@ workflow ALIGN_SENTIEON {
         bam_lowcov = MARKDUP.out.bam_qc
         bam_umi = BQSR_UMI.out.bam_varcall
         qc_out = SENTIEON_QC.out.qc_cdm
+        bam_dedup = MARKDUP.out.bam_bqsr
 
 
 
