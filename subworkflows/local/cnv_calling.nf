@@ -40,7 +40,7 @@ workflow CNV_CALLING {
 			// call, plot and export segments ::: cnvkit
 			CNVKIT_PLOT ( batch_plot_cns.join(batch_plot_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
 			CNVKIT_CALL ( batch_plot_cns.join(batch_plot_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
-			CNVKIT_GENS ( batch_plot_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
+			CNVKIT_GENS ( batch_plot_cnr.combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
 			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
