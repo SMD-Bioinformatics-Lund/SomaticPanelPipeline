@@ -12,7 +12,7 @@ my $MIN_VAF_NORMAL = 0.35;
 my $MIN_VAF_TUMOR  = 0.45;
 my $MIN_DP = 100;
 my %genes_per_assay = (
-    'myeloid'=>{'CEBPA'=>1, 'DDX41' =>1, 'RUNX1'=>1, 'GATA2'=>1, 'ETV6'=>1},
+    'myeloid'=>{'CEBPA'=>1, 'DDX41' =>1, 'RUNX1'=>1, 'GATA2'=>1},
     'PARP_inhib'=>{'ALL_GENES'=>1}
     );
 
