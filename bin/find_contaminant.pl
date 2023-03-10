@@ -45,6 +45,10 @@ my %assay_info = (
 	'GMSsolid'=> {
 		'cutoff' => 80,
 		'ADfield' => "VD"
+	},
+	'GMSlymphoid'=> {
+		'cutoff' => 80,
+		'ADfield' => "VD"
 	}
 );
 my %dist_int;

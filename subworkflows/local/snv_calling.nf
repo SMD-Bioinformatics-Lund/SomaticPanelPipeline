@@ -35,9 +35,12 @@ workflow SNV_CALLING {
         PON_FILTER { AGGREGATE_VCFS.out.vcf_concat }
         if (params.assay == "solid") {
             FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should not be be FFPE annotated
+            PON_VEP = FFPE_PON_FILTER.out.vcf_pon_ffpe
         }
-        
-        ANNOTATE_VEP { FFPE_PON_FILTER.out.vcf_pon_ffpe } 
+        else {
+            PON_VEP = PON_FILTER.out.vcf_pon
+        }
+        ANNOTATE_VEP { PON_VEP } 
         MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep }
         // filter for CNVkit //
         FILTER_FOR_CNV { ANNOTATE_VEP.out.vcf_vep.join(CONCATENATE_VCFS.out.concatenated_vcfs.filter { item -> item[1] == 'freebayes' })  }
