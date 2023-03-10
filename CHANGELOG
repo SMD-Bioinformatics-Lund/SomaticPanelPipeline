@@ -1,5 +1,12 @@
 ## Changelog ##
 
+## 2.3.3
+- added more genes to mark for germlines for myeloid profile
+
+### 2.3.2
+### enhancement
+- added four new genes for myeloid profile for mark_germlines.pl
+
 ### 2.3.1
 ### enhancement/bugfix
 - diagnosis/subpanel would always take tumor-value. If "Riktad" diagnosis and paired, assign normal-sample diagnosis as this is the correct paired analysis diagnosis
