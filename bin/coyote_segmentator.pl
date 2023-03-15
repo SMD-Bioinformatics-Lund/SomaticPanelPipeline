@@ -215,7 +215,7 @@ sub annotate_genes {
                 print FILTERED "\n";
             }
             print UNFILTERED join("\t",@bed_str[0..5]);
-            print UNFILTERED "\t".$genes."\t";
+            print UNFILTERED "\t".$gene_conc."\t";
             print UNFILTERED join("\t",@bed_str[6..7]);
             print UNFILTERED "\n";
             @genes = ();
@@ -240,7 +240,7 @@ sub annotate_genes {
         print FILTERED "\n";
     }
     print UNFILTERED join("\t",@bed_str[0..5]);
-    print UNFILTERED "\t".$genes."\t";
+    print UNFILTERED "\t".$gene_conc."\t";
     print UNFILTERED join("\t",@bed_str[6..7]);
     print UNFILTERED "\n";
 }

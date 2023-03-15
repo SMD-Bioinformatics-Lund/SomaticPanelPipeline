@@ -41,9 +41,11 @@ workflow CNV_CALLING {
 			CNVKIT_PLOT ( batch_plot_cns.join(batch_plot_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
 			CNVKIT_CALL ( batch_plot_cns.join(batch_plot_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
 			CNVKIT_GENS ( batch_plot_cnr.combine(germline_variants, by:[0]) )
-			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
+			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
 			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
+			// tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
+			CNVKIT_VCF_TUMOR = CNVKIT_CALL.out.cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
 		}
 		else {
 			CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
@@ -57,6 +59,7 @@ workflow CNV_CALLING {
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
 			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment.filter { it -> it[2] == "backbone" }
+			CNVKIT_VCF_TUMOR = CNVKIT_CALL.out.cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -86,7 +89,7 @@ workflow CNV_CALLING {
 		// Join tumor vcf
 		GATK_TUMOR = GATK2VCF.out.tumor_vcf
 		MANTA_TUMOR = MANTA.out.manta_vcf_tumor_filtered.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
-		JOIN_TUMOR ( GATK_TUMOR.mix(MANTA_TUMOR).groupTuple(by:[0,1]) )
+		JOIN_TUMOR ( GATK_TUMOR.mix(MANTA_TUMOR,CNVKIT_VCF_TUMOR).groupTuple(by:[0,1]) )
 		
 
 	emit:

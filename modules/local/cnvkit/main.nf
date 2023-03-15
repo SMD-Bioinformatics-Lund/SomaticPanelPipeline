@@ -117,7 +117,7 @@ process CNVKIT_PLOT {
 }
 
 process CNVKIT_GENS {
-	//publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
+	publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
 	cpus 1
 	time '1h'
 	tag "${meta.id}"
@@ -161,17 +161,17 @@ process CNVKIT_CALL {
 	output:
 		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
 		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}_logr_ballele.cnvkit"), emit: cnvkit_baflogr
-		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
+		tuple val(group), val(part), file("${meta.id}.${meta.type}.${part}.cnvkit.vcf"), emit: cnvkit_vcf
 		
 	when:
 		params.cnvkit
 
 	script:
 		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns"
-		callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
+		callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${meta.id}.${meta.type}.${part}.cnvkit.vcf"
 		if (meta.purity) {
 			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns"
-			callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
+			callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${meta.id}.${meta.type}.${part}.cnvkit.vcf"
 		}
 		"""
 		set +eu
@@ -190,7 +190,7 @@ process CNVKIT_CALL {
 		echo $call
 		touch ${group}.${meta.id}.${part}.call.purity.cns
 		touch ${group}.${meta.id}.${part}_logr_ballele.cnvkit 
-		touch ${group}.${meta.id}.${meta.type}.${part}.vcf
+		touch ${meta.id}.${meta.type}.${part}.cnvkit.vcf
 		"""
 }
 
@@ -202,7 +202,8 @@ process MERGE_GENS {
 		tuple val(group), val(meta), file(baf), file(cov)
 
 	output:
-		tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), file("${meta.id}.gens"), emit: dbload
+		tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), optional: true, emit: merged_gens
+		tuple val(group), val(meta), file("${meta.id}.gens"), emit: dbload
 
 	shell:
 		'''
