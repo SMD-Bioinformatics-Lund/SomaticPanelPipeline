@@ -72,7 +72,8 @@ process GATKCOV_COUNT {
 }
 
 process GATKCOV_CALL {
-	publishDir "${params.outdir}/${params.subdir}/gatkcov", mode: 'copy', overwrite: true 
+	publishDir "${params.outdir}/${params.subdir}/gatkcov", mode: 'copy', overwrite: true, pattern: '*.seg'
+	publishDir "${params.outdir}/${params.subdir}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
 	cpus 10
 	memory '64 GB'
 	container = '/fs1/resources/containers/gatk_4.1.9.0.sif'

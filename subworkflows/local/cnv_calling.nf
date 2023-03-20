@@ -53,13 +53,18 @@ workflow CNV_CALLING {
 			CNVKIT_BACKBONE ( bam_umi, params.cnvkit_reference_backbone, "backbone" )
 			// call, plot and export segments ::: cnvkit
 			CNVKIT_PLOT ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
-			//CNVKIT_CALL ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]),CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
-			CNVKIT_CALL ( CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3]).mix(CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3])).combine(germline_variants, by:[0]) )
+			CNVKIT_CALL ( CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3])
+						.mix(
+							CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]),
+							CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])
+						)
+						.combine(germline_variants, by:[0]) )
 			CNVKIT_GENS ( CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
 			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment.filter { it -> it[2] == "backbone" }
-			CNVKIT_VCF_TUMOR = CNVKIT_CALL.out.cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
+			cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[1] == "full" }
+			CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
