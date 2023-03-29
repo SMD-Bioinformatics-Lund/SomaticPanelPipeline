@@ -1,6 +1,9 @@
 ## Changelog ##
+### 2.3.4
+### hotfix
+- reduced amount of bam-files published and therefore stored on backup
 
-## 2.3.3
+### 2.3.3
 - added more genes to mark for germlines for myeloid profile
 
 ### 2.3.2

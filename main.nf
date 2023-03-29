@@ -86,7 +86,7 @@ Channel
 
 
 process bwa_umi {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true, pattern '*umi.sort.bam*'
 	cpus params.cpu_all
 	memory '128 GB'
 	time '2h'
@@ -172,7 +172,6 @@ process bwa_align {
 
 
 process markdup {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
 	cpus params.cpu_many
 	memory '64 GB'
 	time '1h'
