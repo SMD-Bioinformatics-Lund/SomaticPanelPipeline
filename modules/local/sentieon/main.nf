@@ -1,5 +1,5 @@
 process BWA_UMI {
-	publishDir "${params.outdir}/${params.subdir}/bam", mode: 'copy', overwrite: true, pattern: "*.bam*"
+	publishDir "${params.outdir}/${params.subdir}/bam", mode: 'copy', overwrite: true, pattern: "*bwa.umi.sort.bam*"
 	cpus params.cpu_all
 	memory '128 GB'
 	time '2h'
@@ -71,7 +71,6 @@ process BWA_UMI {
 }
 
 process MARKDUP {
-	publishDir "${params.outdir}/${params.subdir}/bam", mode: 'copy', overwrite: true
 	cpus params.cpu_many
 	memory '64 GB'
 	time '1h'
