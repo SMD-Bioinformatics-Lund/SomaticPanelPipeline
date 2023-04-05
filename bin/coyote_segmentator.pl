@@ -63,10 +63,10 @@ sub read_vcf {
         }
         else {
             if ($type eq "DEL") {
-                $fold = -0.5;
+                $fold = "DEL";
             }
             elsif ($type eq "DUP" || $type eq "INS") {
-                $fold = 1.5
+                $fold = "AMP"
             }
         }
         ## callers ##

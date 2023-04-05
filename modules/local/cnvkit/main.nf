@@ -157,6 +157,7 @@ process CNVKIT_CALL {
 	
 	input:
 		tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
+		tuple val(tc)
 
 	output:
 		tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns"), emit: cnvkitsegment
@@ -169,7 +170,7 @@ process CNVKIT_CALL {
 	script:
 		call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns"
 		callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${meta.id}.${meta.type}.${part}.cnvkit.vcf"
-		if (meta.purity) {
+		if (meta.purity && tc == "true") {
 			call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns"
 			callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${meta.id}.${meta.type}.${part}.cnvkit.vcf"
 		}

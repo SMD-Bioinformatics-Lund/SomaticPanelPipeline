@@ -5,6 +5,7 @@ include { CNVKIT_BATCH                         } from '../../modules/local/cnvki
 include { CNVKIT_GENS                          } from '../../modules/local/cnvkit/main'
 include { CNVKIT_PLOT                          } from '../../modules/local/cnvkit/main'
 include { CNVKIT_CALL                          } from '../../modules/local/cnvkit/main'
+include { CNVKIT_CALL as CNVKIT_CALL_TC        } from '../../modules/local/cnvkit/main'
 include { MERGE_GENS                           } from '../../modules/local/cnvkit/main'
 include { CNVKIT_BATCH as CNVKIT_BACKBONE      } from '../../modules/local/cnvkit/main'
 include { CNVKIT_BATCH as CNVKIT_EXONS         } from '../../modules/local/cnvkit/main'
@@ -53,16 +54,22 @@ workflow CNV_CALLING {
 			CNVKIT_BACKBONE ( bam_umi, params.cnvkit_reference_backbone, "backbone" )
 			// call, plot and export segments ::: cnvkit
 			CNVKIT_PLOT ( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]) )
+			// call without adjusting for purity //
 			CNVKIT_CALL ( CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3])
 						.mix(
 							CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]),
 							CNVKIT_BATCH.out.cnvkit_cns.join(CNVKIT_BATCH.out.cnvkit_cnr, by:[0,1,3])
 						)
-						.combine(germline_variants, by:[0]) )
+						.combine(germline_variants, by:[0]), "false" )
+			// call but adjust for purity, used for HRD //
+			CNVKIT_CALL_TC( CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]).combine(germline_variants, by:[0]), "true")
+			// gens separatly for the two pools //
 			CNVKIT_GENS ( CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr).combine(germline_variants, by:[0]) )
+			// merge these //
 			MERGE_GENS  ( CNVKIT_GENS.out.cnvkit_gens.groupTuple(by:[0,1]) )
+			// assign correct part full,exon,backbone to relevant upcoming analysis //
 			cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
-			cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment.filter { it -> it[2] == "backbone" }
+			cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment
 			cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[1] == "full" }
 			CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
 		}
