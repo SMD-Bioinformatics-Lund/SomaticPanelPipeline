@@ -46,6 +46,11 @@ println("container: "+container)
 
 Channel
     .fromPath(params.csv).splitCsv(header:true)
+    .map{ row-> row.group }
+    .set { versions_group }
+
+Channel
+    .fromPath(params.csv).splitCsv(header:true)
     .map{ row-> tuple(row.group, row.id, row.type, file(row.read1), file(row.read2)) }
     .into { fastq_umi; fastq_noumi; meta_nocnv }
 
@@ -86,7 +91,7 @@ Channel
 
 
 process bwa_umi {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true, pattern: '*.bam*'
 	cpus params.cpu_all
 	memory '128 GB'
 	time '2h'
@@ -103,12 +108,13 @@ process bwa_umi {
 	output:
 		set group, id, type, file("${id}.${type}.bwa.umi.sort.bam"), file("${id}.${type}.bwa.umi.sort.bam.bai") into bam_umi_bqsr, bam_umi_confirm
 		set group, id, type, file("${id}.${type}.bwa.sort.bam"), file("${id}.${type}.bwa.sort.bam.bai") into bam_umi_markdup
+		path "${task.process}.versions.yaml" into bwa_umi_versions
 
 	when:
 		params.umi
 
+	script:
 	"""
-
 	export skip_coord_end=true
 	
 	sentieon umi extract -d 3M2S+T,3M2S+T $r1 $r2 \\
@@ -131,6 +137,36 @@ process bwa_umi {
 	rm noumi.sam
 
 	touch dedup_metrics.txt
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon UMI:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	#Sentieon BWA-MEM: 
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
+	stub:
+	"""
+	touch "consensus.fastq.gz"
+	touch "${id}.${type}.bwa.umi.sort.bam"
+	touch "${id}.${type}.bwa.umi.sort.bam.bai"
+	touch "${id}.${type}.bwa.sort.bam"
+	touch "${id}.${type}.bwa.sort.bam.bai"
+	touch "dedup_metrics.txt"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon UMI: 
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	#Sentieon BWA-MEM:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
 	"""
 }
 
@@ -146,6 +182,7 @@ process bwa_align {
 
 	output:
 		set group, id, type, file("${id}.${type}.bwa.sort.bam"), file("${id}.${type}.bwa.sort.bam.bai") into bam_markdup
+		path "${task.process}.versions.yaml" into bwa_align_versions
 
 	when:
 		!params.umi
@@ -156,6 +193,13 @@ process bwa_align {
 			"""
 			sentieon bwa mem -M -R '@RG\\tID:${id}\\tSM:${id}\\tPL:illumina' -t ${task.cpus} $genome_file $r1 $r2 \\
 			| sentieon util sort -r $genome_file -o ${id}.${type}.bwa.sort.bam -t ${task.cpus} --sam2bam -i -
+			
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Sentieon BWA-MEM: 
+			##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 
@@ -166,13 +210,53 @@ process bwa_align {
 			| samtools sort -o ${id}.${type}.bwa.sort.bam -
 
 			samtools index ${id}.${type}.bwa.sort.bam
+			
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Sentieon BWA-MEM:
+			##version: \$(echo \$(bwa 2>&1) | sed 's/^.*Version: //; s/Contact:.*\$//')
+			##container: ${task.container}
+			#SAMtools:
+			##version: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
+			##container: ${task.container}
+                        END_VERSIONS
 			"""
 		}
+	stub:
+	
+	if( params.sentieon_bwa ) {
+		"""
+		touch ${id}.${type}.bwa.sort.bam
+		touch ${id}.${type}.bwa.sort.bam.bai
+		
+		cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+		"${task.process}":
+		#Sentieon BWA-MEM:
+		##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+		##container: ${task.container}
+		END_VERSIONS
+		"""
+	} else {
+		"""
+		touch ${id}.${type}.bwa.sort.bam
+		touch ${id}.${type}.bwa.sort.bam.bai
+		
+		cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+		"${task.process}":
+		#Sentieon BWA-MEM:
+		##version: \$(echo \$(bwa 2>&1) | sed 's/^.*Version: //; s/Contact:.*\$//')
+		##container: ${task.container}
+		#SAMtools:
+		##version: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
+		##container: ${task.container}
+		END_VERSIONS
+		"""
+	}
 }
 
 
 process markdup {
-	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/bam", mode: 'copy', overwrite: true, pattern: '*.bam*'
 	cpus params.cpu_many
 	memory '64 GB'
 	time '1h'
@@ -187,10 +271,33 @@ process markdup {
 	output:
 		set group, id, type, file("${id}.${type}.dedup.bam"), file("${id}.${type}.dedup.bam.bai") into bam_bqsr
 		set group, id, type, file("${id}.${type}.dedup.bam"), file("${id}.${type}.dedup.bam.bai"), file("dedup_metrics.txt") into bam_qc, bam_bqsr2, bam_lowcov
+		path "${task.process}.versions.yaml" into markdup_versions
 
+	script:
 	"""
 	sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector --fun score_info score.gz
 	sentieon driver -t ${task.cpus} -i $bam --algo Dedup --score_info score.gz --metrics dedup_metrics.txt ${id}.${type}.dedup.bam
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER: 
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
+	stub:
+	"""
+	touch "${id}.${type}.dedup.bam"
+	touch "${id}.${type}.dedup.bam.bai"
+	touch "dedup_metrics.txt"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
 	"""
 }
 
@@ -211,11 +318,33 @@ process bqsr_umi {
 
 	output:
 		set group, id, type, file(bam), file(bai), file("${id}.bqsr.table") into bam_freebayes, bam_vardict, bam_tnscope, bam_cnvkit, bam_varli
+		path "${task.process}.versions.yaml" into bqsr_umi_versions
+
 	when:
 		params.umi
 
+	script:
 	"""
 	sentieon driver -t ${task.cpus} -r $genome_file -i $bam --algo QualCal ${id}.bqsr.table
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
+	stub:
+	"""
+	touch "${id}.bqsr.table"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
 	"""
 }
 
@@ -239,12 +368,34 @@ process bqsr_to_constitutional {
 	output:
 		set group, id, type, file(bam), file(bai), file("${id}.const.bqsr") into input_const
 		file("${id}.const.csv") into csv_const
+		path "${task.process}.versions.yaml" into bqsr_to_constitutional_versions
 
+	script:
 	"""
 	sentieon driver -t ${task.cpus} -r $genome_file -i $bam --algo QualCal ${id}.const.bqsr
 	cat $params.const_csv_template > ${id}.const.csv
 	echo $cid,$id,proband,oncov1-0-test,M,ovarian-normal,affected,$id,,,$poolid,illumina,${OUTDIR}/bam/$bam,${OUTDIR}/bqsr/${id}.const.bqsr,,screening >> ${id}.const.csv
 	/fs1/bjorn/bnf-scripts/start_nextflow_analysis.pl ${id}.const.csv
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
+	stub:
+	"""
+	touch "${id}.const.bqsr"
+	touch "${id}.const.csv"
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER: 
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
 	"""
 	
 }
@@ -252,7 +403,7 @@ process bqsr_to_constitutional {
 process sentieon_qc {
 	cpus params.cpu_many
 	memory '32 GB'
-	publishDir "${OUTDIR}/QC", mode: 'copy', overwrite: 'true', pattern: '*.QC*'
+	publishDir "${OUTDIR}/QC", mode: 'copy', overwrite: true, pattern: '*.QC*'
 	time '1h'
 	tag "$id"
 	scratch true
@@ -267,7 +418,9 @@ process sentieon_qc {
 		set id, type, file("${id}_${type}.QC") into qc_cdm
 		set group, id, type, file("${id}_${type}.QC") into qc_melt
 		file("*.txt")
+		path "${task.process}.versions.yaml" into sentieon_qc_versions
 
+	script:
 	"""
 	sentieon driver \\
 		--interval $params.regions_bed -r $genome_file -t ${task.cpus} -i ${bam} \\
@@ -282,13 +435,34 @@ process sentieon_qc {
 	cp is_metrics.txt ${id}_is_metrics.txt
 
 	qc_sentieon.pl ${id}_${type} panel > ${id}_${type}.QC
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
 	"""
+
+	stub:
+	"""
+	touch "${id}_is_metrics.txt"
+	touch "${id}_${type}.QC"
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 process lowcov {
 	cpus 1
 	memory '5 GB'
-	publishDir "${OUTDIR}/QC", mode: 'copy', overwrite: 'true'
+	publishDir "${OUTDIR}/QC", mode: 'copy', overwrite: true, pattern: '*.bed'
 	time '1h'
 	tag "$id"
 
@@ -298,18 +472,41 @@ process lowcov {
 
 	output:
 		set group, type, file("${id}.lowcov.bed") into lowcov_coyote
+		path "${task.process}.versions.yaml" into lowcov_versions
 
+	script:
 	"""
-    source activate sambamba
+	source activate sambamba
 	panel_depth.pl $bam $params.regions_proteincoding > lowcov.bed
 	overlapping_genes.pl lowcov.bed $params.gene_regions > ${id}.lowcov.bed
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sambamba:
+	##version: \$(echo \$(sambamba 2>&1) | grep ^sambamba | awk '{print \$2}')
+	##container: ${task.container}
+	END_VERSIONS
 	"""
+
+	stub:
+	"""
+	touch "${id}.lowcov.bed"
+
+	source activate sambamba
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sambamba:
+	##version: \$(echo \$(sambamba 2>&1) | grep ^sambamba | awk '{print \$2}')
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 // Load QC data into CDM (via middleman)
 process qc_to_cdm {
 	cpus 1
-	publishDir "${CRONDIR}/qc", mode: 'copy' , overwrite: 'true'
+	publishDir "${CRONDIR}/qc", mode: 'copy' , overwrite: true, pattern: '*.cdm'
 	tag "$id"
 	time '10m'
 	memory '50 MB'
@@ -331,6 +528,12 @@ process qc_to_cdm {
 	"""
 	echo "--run-folder $rundir --sample-id $id --assay $params.cdm --qc ${OUTDIR}/QC/${id}_${type}.QC" > ${id}.cdm
 	"""
+
+	stub:
+	"""
+	touch "${id}.cdm"
+	"""
+
 }
 
 process qc_values {
@@ -368,6 +571,13 @@ process qc_values {
 		"""
 		echo $INS_SIZE $MEAN_DEPTH $COV_DEV > qc.val
 		"""
+	stub:
+	INS_SIZE = 0
+	MEAN_DEPTH = 0
+	COV_DEV = 0
+	"""
+	echo $INS_SIZE $MEAN_DEPTH $COV_DEV > qc.val
+	"""
 }
 
 process freebayes {
@@ -381,6 +591,7 @@ process freebayes {
 
 	output:
 		set val("freebayes"), group, file("freebayes_${bed}.vcf") into vcfparts_freebayes
+		path "${task.process}.versions.yaml" into freebayes_versions
 
 	when:
 		params.freebayes
@@ -395,6 +606,13 @@ process freebayes {
 			freebayes -f $genome_file -t $bed --pooled-continuous --pooled-discrete --min-repeat-entropy 1 -F 0.03 ${bams[tumor_idx]} ${bams[normal_idx]} > freebayes_${bed}.vcf.raw
 			vcffilter -F LowCov -f "DP > 500" -f "QA > 1500" freebayes_${bed}.vcf.raw | vcffilter -F LowFrq -o -f "AB > 0.05" -f "AB = 0" | vcfglxgt > freebayes_${bed}.filt1.vcf
 			filter_freebayes_somatic.pl freebayes_${bed}.filt1.vcf ${id[tumor_idx]} ${id[normal_idx]} > freebayes_${bed}.vcf
+			
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#freebayes:
+			##version: \$(echo \$(freebayes --version 2>&1) | sed 's/version:\s*v//g' )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 		else if( id.size() == 1 ) {
@@ -402,8 +620,31 @@ process freebayes {
 			freebayes -f $genome_file -t $bed --pooled-continuous --pooled-discrete --min-repeat-entropy 1 -F 0.03 $bams > freebayes_${bed}.vcf.raw
 			vcffilter -F LowCov -f "DP > 500" -f "QA > 1500" freebayes_${bed}.vcf.raw | vcffilter -F LowFrq -o -f "AB > 0.05" -f "AB = 0" | vcfglxgt > freebayes_${bed}.filt1.vcf
 			filter_freebayes_unpaired.pl freebayes_${bed}.filt1.vcf > freebayes_${bed}.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#freebayes:
+			##version: \$(echo \$(freebayes --version 2>&1) | sed 's/version:\s*v//g' )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
+
+	stub:
+		"""
+		touch "freebayes_${bed}.vcf.raw"
+		touch "freebayes_${bed}.filt1.vcf"
+		touch "freebayes_${bed}.vcf"
+
+		cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+		"${task.process}":
+		#freebayes:
+		##version: \$(echo \$(freebayes --version 2>&1) | sed 's/version:\s*v//g' )
+		##container: ${task.container}
+		END_VERSIONS
+		"""
+
+
 }
 
 
@@ -419,6 +660,7 @@ process vardict {
 
 	output:
 		set val("vardict"), group, file("vardict_${bed}.vcf") into vcfparts_vardict
+		path "${task.process}.versions.yaml" into vardict_versions
 
 	when:
 		params.vardict
@@ -434,14 +676,41 @@ process vardict {
 			| testsomatic.R | var2vcf_paired.pl -N "${id[tumor_idx]}|${id[normal_idx]}" -f 0.01 > vardict_${bed}.vcf.raw
 
 			filter_vardict_somatic.pl vardict_${bed}.vcf.raw ${id[tumor_idx]} ${id[normal_idx]} > vardict_${bed}.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#VarDict:
+			##version: \$( realpath \$( command -v vardict-java ) | sed 's/.*java-//;s/-.*//' )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 		else if( id.size() == 1 ) {
 			"""
 			vardict-java -G $genome_file -f 0.03 -N ${id[0]} -b ${bams[0]} -c 1 -S 2 -E 3 -g 4 -U $bed | teststrandbias.R | var2vcf_valid.pl -N ${id[0]} -E -f 0.01 > vardict_${bed}.vcf.raw
 			filter_vardict_unpaired.pl vardict_${bed}.vcf.raw > vardict_${bed}.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#VarDict:
+			##version: \$( realpath \$( command -v vardict-java ) | sed 's/.*java-//;s/-.*//' )
+			##container: ${task.container}
+			END_VERSIONS			
 			"""
 		}
+
+	stub:
+	"""
+	touch "vardict_${bed}.vcf"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#VarDict:
+	##version: \$( realpath \$( command -v vardict-java ) | sed 's/.*java-//;s/-.*//' )
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 
@@ -456,6 +725,7 @@ process tnscope {
 
 	output:
 		set val("tnscope"), group, file("tnscope_${bed}.vcf") into vcfparts_tnscope
+		path "${task.process}.versions.yaml" into tnscope_versions
 
 	when:
 		params.tnscope
@@ -478,6 +748,12 @@ process tnscope {
 
 			filter_tnscope_somatic.pl tnscope_${bed}.vcf.raw ${id[tumor_idx]} ${id[normal_idx]} > tnscope_${bed}.vcf
 
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Sentieon DRIVER:
+			##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 		else {
@@ -491,15 +767,34 @@ process tnscope {
 				tnscope_${bed}.vcf.raw
 
 			filter_tnscope_unpaired.pl tnscope_${bed}.vcf.raw > tnscope_${bed}.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Sentieon DRIVER:
+			##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+			##container: ${task.container}
+			END_VERSIONS
 			""" 
 		}
+
+	stub:
+	"""
+	touch "tnscope_${bed}.vcf"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Sentieon DRIVER:
+	##version: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
 }
 
 
 process pindel {
 	cpus params.cpu_some
 	time '1h'
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	tag "$group"
 
 	input:
@@ -507,6 +802,7 @@ process pindel {
 
 	output:
 		set group, val("pindel"), file("${group}_pindel.vcf") into vcf_pindel
+		path "${task.process}.versions.yaml" into pindel_versions
 
 	when:
 		params.pindel
@@ -531,6 +827,13 @@ process pindel {
 			pindel -f $genome_file -w 0.1 -x 2 -i pindel_config -j $params.pindel_regions_bed -o tmpout -T ${task.cpus}
 			pindel2vcf -P tmpout -r $genome_file -R hg19 -d 2015-01-01 -v ${group}_pindel_unfilt.vcf -is 10 -e 30 -he 0.01
 			filter_pindel_somatic.pl ${group}_pindel_unfilt.vcf ${group}_pindel.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Pindel:
+			##version: \$(pindel | grep '^Pindel version' | uniq | sed 's/Pindel version //; s/, [0-9]\\+.//' )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 		else {
@@ -546,8 +849,28 @@ process pindel {
 			pindel -f $genome_file -w 0.1 -x 2 -i pindel_config -j $params.pindel_regions_bed -o tmpout -T ${task.cpus}
 			pindel2vcf -P tmpout -r $genome_file -R hg19 -d 2015-01-01 -v ${group}_pindel_unfilt.vcf -is 10 -e 30 -he 0.01
 			filter_pindel_somatic.pl ${group}_pindel_unfilt.vcf ${group}_pindel.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Pindel:
+			##version: \$(pindel | grep '^Pindel version' | uniq | sed 's/Pindel version //; s/, [0-9]\\+.//' )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
+
+	stub:
+	"""
+	touch "pindel_config"
+	touch "${group}_pindel.vcf"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Pindel:
+	##version: \$(pindel | grep '^Pindel version' | uniq | sed 's/Pindel version //; s/, [0-9]\\+.//' )
+	##container: ${task.container}
+	END_VERSIONS
+	"""
 
 }
 
@@ -560,7 +883,7 @@ vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict).mix(vcfparts_tnscope)
 
 process concatenate_vcfs {
 	cpus 1
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf.gz*'
 	time '20m'    
 	tag "$group"
 
@@ -569,12 +892,34 @@ process concatenate_vcfs {
 
 	output:
 		set group, vc, file("${group}_${vc}.vcf.gz") into concatenated_vcfs, vcf_cnvkit
+		path "${task.process}.versions.yaml" into concatenate_vcfs_versions
 
+	script:
 	"""
 	vcf-concat $vcfs | vcf-sort -c | gzip -c > ${vc}.concat.vcf.gz
 	vt decompose ${vc}.concat.vcf.gz -o ${vc}.decomposed.vcf.gz
 	vt normalize ${vc}.decomposed.vcf.gz -r $genome_file | vt uniq - -o ${group}_${vc}.vcf.gz
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#VCFtools:
+	##version: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
+	##container: ${task.container}
+	END_VERSIONS
 	"""
+
+	stub:
+	"""
+	touch "${group}_${vc}.vcf.gz"
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#VCFtools:
+	##version: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 
@@ -599,6 +944,7 @@ process cnvkit {
 		file("${gr}.${id}.cns") into cns_notcalled
 		file("*.bed.gz*")
 		file("${id}.gens") into gens_middleman
+		path "${task.process}.versions.yaml" into cnvkit_versions
 	when:
 		params.cnvkit
 
@@ -619,7 +965,39 @@ process cnvkit {
 	cp results/*.cns ${gr}.${id}.cns
 	generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
 	echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz" > ${id}.gens
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#CNVkit:
+	##version: \$(cnvkit.py version | sed -e "s/cnvkit v//g")
+	##container: ${task.container}
+	END_VERSIONS
 	"""
+
+	stub:
+	"""
+	set +eu
+	source activate py2
+	set -eu
+
+	touch "${gr}.${id}.cnvkit_overview.png"
+	touch "${gr}.${id}.call.cns"
+	touch "${gr}.${id}.cnr"
+	touch "${gr}.${id}.filtered"
+	touch "${gr}.${id}.filtered.vcf"
+	touch "${gr}.${id}.cns"
+	touch "${id}.baf.bed.gz"
+	touch "${id}.cov.bed.gz"
+	touch "${id}.gens"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#CNVkit:
+	##version: \$(cnvkit.py version | sed -e "s/cnvkit v//g")
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 // Plot specific gene-regions. CNVkit 0.9.6 and forward introduced a bug in region plot, use 0.9.5 (091 wrong name, container has 0.9.5)
@@ -634,30 +1012,63 @@ process gene_plot {
 
 	output:
 		set gr, id, type, file("${gr}.${id}.cnvkit.png") into cnvplot_coyote
+		path "${task.process}.versions.yaml" into gene_plot_versions
 
 	script:
 
 		if (params.assay == "PARP_inhib") {
 			"""
-            set +eu
-            source activate old-cnvkit
-            set -eu
+			set +eu
+			source activate old-cnvkit
+			set -eu
+
 			cnvkit.py scatter -s $cns $cnr -c 13:32165479-32549672 -o brca2.png --title 'BRCA2'
 			cnvkit.py scatter -s $cns $cnr -c 17:42894294-43350132 -o brca1.png --title 'BRCA1'
 			montage -mode concatenate -tile 1x *.png ${gr}.${id}.cnvkit.png
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#CNVkit:
+			##version: \$(cnvkit.py version | sed -e "s/cnvkit v//g")
+			##container: ${task.container}
+			END_VERSIONS
 			"""		
 		}
 		else {
 			"""
 			mv ${gr}.${id}.cnvkit_overview.png ${gr}.${id}.cnvkit.png
+			
+			touch "${task.process}.versions.yaml"
 			"""
 		}
 
+	stub:
+	if (params.assay == "PARP_inhib") {
+		"""
+		set +eu
+		source activate old-cnvkit
+		set -eu
 
+		touch "${gr}.${id}.cnvkit.png"
+
+		cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+		"${task.process}":
+		#CNVkit:
+		##version: \$(cnvkit.py version | sed -e "s/cnvkit v//g")
+		##container: ${task.container}
+		END_VERSIONS
+		"""
+	} else {
+		"""
+		touch "${gr}.${id}.cnvkit.png"
+
+		touch "${task.process}.versions.yaml"
+		"""
+	}
 }
 
 process melt {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	cpus 2
 	//container = '/fs1/resources/containers/container_twist-brca.sif'
 	memory '50 GB'
@@ -676,7 +1087,9 @@ process melt {
 
 	output:
 		set group, id, type, file("${id}.melt.merged.vcf") into melt_vcf
+		path "${task.process}.versions.yaml" into melt_versions
 
+	script:
 	"""
 	set +eu
 	source activate java8
@@ -695,13 +1108,40 @@ process melt {
 		-e $INS_SIZE
         source deactivate
 	merge_melt.pl $params.meltheader $id
+	
+	set +eu
+	source activate java8
+	set -eu
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#MELT:
+	##version: \$(java -jar /opt/MELT.jar 2>&1 | grep ^MELTv | sed 's/MELTv//' | cut -d' ' -f1)
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
+	stub:
+	"""
+	touch "${id}.melt.merged.vcf"
+	
+	set +eu
+	source activate java8
+	set -eu
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#MELT:
+	##version: \$(java -jar /opt/MELT.jar 2>&1 | grep ^MELTv | sed 's/MELTv//' | cut -d' ' -f1)
+	##container: ${task.container}
+	END_VERSIONS
 	"""
 
 }
 
 // MANTA SINGLE AND PAIRED
 process manta {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	cpus 16
 	time '10h'
 	//container = '/fs1/resources/containers/wgs_2020-03-25.sif'
@@ -716,6 +1156,7 @@ process manta {
 
 	output:
 		set group, file("${group}_manta.vcf") into manta_vcf
+		path "${task.process}.versions.yaml" into manta_versions
 
 	when:
 		params.manta
@@ -745,6 +1186,13 @@ process manta {
 			#filter_manta_paired.pl results/variants/somaticSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/somaticSV.vcf.gz ${group}_manta.vcf.gz
 			gunzip ${group}_manta.vcf.gz
+			
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Manta:
+			##version: \$( configManta.py --version )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 		else {
@@ -763,13 +1211,37 @@ process manta {
 			#filter_manta.pl results/variants/tumorSV.vcf.gz > ${group}_manta.vcf
 			mv results/variants/tumorSV.vcf.gz ${group}_manta.vcf.gz
 			gunzip ${group}_manta.vcf.gz
+			
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Manta:
+			##version: \$( configManta.py --version )
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
+
+	stub:
+	"""
+	touch "${group}_manta.vcf"
+	
+	set +eu
+	source activate py2
+	set -eu
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Manta:
+	##version: \$( configManta.py --version )
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 // Delly SINGLE AND PAIRED
 process delly {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	cpus 2
 	time '20h'
 	memory '10GB'
@@ -781,6 +1253,7 @@ process delly {
 
 	output:
 		set group, file("${group}.delly.filtered.vcf") into delly_vcf
+		path "${task.process}.versions.yaml" into delly_versions
 
 	when:
 		params.manta
@@ -798,6 +1271,13 @@ process delly {
 			delly call -g $genome_file -o ${group}.delly.bcf $tumor $normal
 			bcftools view ${group}.delly.bcf > ${group}.delly.vcf
 			filter_delly.pl --vcf ${group}.delly.vcf --bed $params.regions_bed > ${group}.delly.filtered.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Delly:
+			##version: \$( echo \$(delly --version 2>&1) | sed 's/^.*Delly version: v//; s/ using.*\$//')
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
 		else {
@@ -805,34 +1285,60 @@ process delly {
 			delly call -g $genome_file -o ${group}.delly.bcf $bam
 			bcftools view ${group}.delly.bcf > ${group}.delly.vcf
 			filter_delly.pl --vcf ${group}.delly.vcf --bed $params.regions_bed > ${group}.delly.filtered.vcf
+			
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#Delly:
+			##version: \$( echo \$(delly --version 2>&1) | sed 's/^.*Delly version: v//; s/ using.*\$//')
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
+
+	stub:
+	"""
+	touch "${group}.delly.filtered.vcf"
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#Delly:
+	##version: \$( echo \$(delly --version 2>&1) | sed 's/^.*Delly version: v//; s/ using.*\$//')
+	##container: ${task.container}
+	END_VERSIONS	
+	"""
+
 }
 
 process single_cnv_pipe {
        time '2m'
        tag "$group"
 
-       when:
-               params.single_cnvcaller
+	when:
+		params.single_cnvcaller
 
-       input:
-               set group, id, type, file(read1), file(read2) from meta_nocnv
+	input:
+		set group, id, type, file(read1), file(read2) from meta_nocnv
        
-       output:
-               set group, file("${group}.cnvs.agg.vcf") into cnvs_singlecaller
-       
-       script:
-       """
-       echo singe_cnv_caller_pipeline > ${group}.cnvs.agg.vcf
-       """
+	output:
+		set group, file("${group}.cnvs.agg.vcf") into cnvs_singlecaller
+
+	script:
+	"""
+	echo singe_cnv_caller_pipeline > ${group}.cnvs.agg.vcf
+	"""
+
+	stub:
+	"""
+	touch "${group}.cnvs.agg.vcf"
+	"""
+
 }
 
 
 process concat_cnv {
         cpus 1
         memory '1GB'
-        publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+        publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
         //container = '/fs1/resources/containers/wgs_2020-03-25.sif'
         time '20m'
         tag "$group"
@@ -846,6 +1352,7 @@ process concat_cnv {
         output:
                 file("${group}_cnvkitagg.vcf") into aggcnvkit
                 set group, file("${group}.cnvs.agg.vcf") into cnvs
+		path "${task.process}.versions.yaml" into concat_cnv_versions
         
         script:
         
@@ -873,6 +1380,13 @@ process concat_cnv {
                         --normal-id ${id_c[normal_idx_c]} \\
                         --paired paired \\
                         --sample-order ${id_c[tumor_idx_c]},${id_c[normal_idx_c]} > ${group}.cnvs.agg.vcf
+
+				cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+				"${task.process}":
+				#SVDB:
+				##version: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+				##container: ${task.container}
+				END_VERSIONS
                 """
         }
         else {
@@ -882,14 +1396,35 @@ process concat_cnv {
                 touch ${group}_cnvkitagg.vcf
                 svdb --merge --vcf $vcfs --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority manta,delly,cnvkit > ${group}.merged.vcf
                 aggregate_cnv2_vcf.pl --vcfs ${group}.merged.vcf,$meltvcf --paired no > ${group}.cnvs.agg.vcf
+
+				cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+				"${task.process}":
+				#SVDB:
+				##version: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+				##container: ${task.container}
+				END_VERSIONS
                 """
                 
         }
+
+	stub:
+	"""
+	touch "${group}_cnvkitagg.vcf"
+	touch "${group}.cnvs.agg.vcf"
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#SVDB:
+	##version: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 process aggregate_vcfs {
 	cpus 1
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	time '20m'
 	tag "$group"
 
@@ -898,6 +1433,7 @@ process aggregate_vcfs {
 
 	output:
 		set group, file("${group}.agg.vcf") into vcf_pon, vcf_done
+		path "${task.process}.versions.yaml" into aggregate_vcfs_versions
 
 	script:
 		sample_order = id[0]
@@ -909,19 +1445,46 @@ process aggregate_vcfs {
 		if (params.single_cnvcaller) {
 			"""
 			aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.vcf
+
+			touch "${task.process}.versions.yaml"
 			"""
 		}
 		else {
 			"""
 			aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.tmp.vcf
 			vcf-concat ${group}.agg.tmp.vcf $cnvs | vcf-sort -c > ${group}.agg.vcf
+
+			cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+			"${task.process}":
+			#VCFtools:
+			##version: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
+			##container: ${task.container}
+			END_VERSIONS
 			"""
 		}
+	
+	stub:
+	if (params.single_cnvcaller) {
+		"""
+		touch "${group}.agg.vcf"
+		touch "${task.process}.versions.yaml"
+		"""
+	} else {
+		"""
+		touch "${group}.agg.vcf"
 
+		cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+		"${task.process}":
+		#VCFtools:
+		##version: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
+		##container: ${task.container}
+		END_VERSIONS
+		"""
+	}
 }
 
 process pon_filter {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	cpus 1
 	time '1h'
 	tag "$group"
@@ -941,7 +1504,6 @@ process pon_filter {
 			if( params.tnscope )   { pons.push("tnscope="+params.PON_tnscope) }
 			def pons_str = pons.join(",")
 			tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
-
 		"""
 		filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${id[tumor_idx]} > ${group}.agg.pon.vcf
 		"""
@@ -952,11 +1514,16 @@ process pon_filter {
 		vcfanno_linux64 -lua /fs1/resources/ref/hg19/bed/scout/sv_tracks/silly.lua $params.vcfanno $vcf > ${group}.agg.pon.vcf
 		"""
 	}
+
+	stub:
+	"""
+	touch "${group}.agg.pon.vcf"
+	"""
 }
 
 process annotate_vep {
 	container = params.vepcon
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	cpus params.cpu_many
 	time '1h'
 	tag "$group"
@@ -966,7 +1533,9 @@ process annotate_vep {
     
 	output:
 		set group, file("${group}.agg.pon.vep.vcf") into vcf_germline, vcf_contamination
+		path "${task.process}.versions.yaml" into annotate_vep_versions
 
+	script:
 	"""
 	vep -i ${vcf} -o ${group}.agg.pon.vep.vcf \\
 	--offline --merged --everything --vcf --no_stats \\
@@ -979,11 +1548,31 @@ process annotate_vep {
 	--custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
 	--custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
 	--cache \\
+
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#VEP:
+	##version: \$( echo \$(vep --help 2>&1) | sed 's/^.*Versions:.*ensembl-vep : //;s/ .*\$//')
+	##container: ${task.container}
+	END_VERSIONS
 	"""
+
+	stub:
+	"""
+	touch "${group}.agg.pon.vep.vcf"
+	
+	cat <<-END_VERSIONS | sed 's/#/\t/g' > ${task.process}.versions.yaml
+	"${task.process}":
+	#VEP:
+	##version: \$( echo \$(vep --help 2>&1) | sed 's/^.*Versions:.*ensembl-vep : //;s/ .*\$//')
+	##container: ${task.container}
+	END_VERSIONS
+	"""
+
 }
 
 process mark_germlines {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.vcf*'
 	cpus params.cpu_many
 	time '20m'
 	tag "$group"
@@ -994,7 +1583,6 @@ process mark_germlines {
 		
 	output:
 		set group, file("${group}.agg.pon.vep.markgerm.vcf") into vcf_umi
-
 
 	script:
 		if( id.size() >= 2 ) {
@@ -1011,10 +1599,16 @@ process mark_germlines {
 			mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
 			"""
 		}
+
+	stub:
+	"""
+	touch "${group}.agg.pon.vep.markgerm.vcf"
+	"""
+
 }
 
 process umi_confirm {
-	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true
+	publishDir "${OUTDIR}/vcf", mode: 'copy', overwrite: true, pattern: '*.umi*'
 	cpus 2
 	time '8h'
 	tag "$group"
@@ -1027,7 +1621,6 @@ process umi_confirm {
 	
 	output:
 		set group, file("${process_group}.agg.pon.vep.markgerm.umi*") into vcf_coyote
-
 
 	script:
 		process_group = group
@@ -1059,6 +1652,15 @@ process umi_confirm {
 			cp $vcf ${process_group}.agg.pon.vep.markgerm.umino.vcf
 			"""
 		}
+
+	stub:
+	process_group = group
+	"""
+	touch "umitmp.vcf"
+	touch "${process_group}.agg.pon.vep.markgerm.umi.vcf"
+	touch "${process_group}.agg.pon.vep.markgerm.umino.vcf"
+	"""
+
 }
 
 process contamination {
@@ -1110,11 +1712,34 @@ process contamination {
 			paste -d " " ${id}.1 ${id}.value > ${id}.contamination
 			"""
 		}
-		
+
+	stub:
+	if(id.size() >= 2) {
+		tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+		normal_idx = type.findIndexOf{ it == 'normal' || it == 'N' }
+		normal_id = id[normal_idx]
+		tumor_id = id[tumor_idx]
+		"""
+		touch "${tumor_id}.contamination"
+		touch "${normal_id}.contamination"
+		touch "${tumor_id}.png"
+		touch "${normal_id}.png"
+		touch "${tumor_id}.dist.txt"
+		touch "${normal_id}.dist.txt"
+		"""		
+	}else{
+		id = id[0]
+		"""
+		touch "${id}.contamination"
+		touch "${id}.dist.txt"
+		touch "${id}.png"
+		"""
+	}
+
 }
 
 process coyote {
-	publishDir "${params.crondir}/coyote", mode: 'copy', overwrite: true
+	publishDir "${params.crondir}/coyote", mode: 'copy', overwrite: true, pattern: '*.coyote'
 	cpus 1
 	time '10m'
 	tag "$group"
@@ -1158,5 +1783,57 @@ process coyote {
                 --build 38 \\
                 --gens ${group} \\
 		--clarity-pool-id ${pool_id[tumor_idx]}" > ${process_group}.coyote
+	"""
+
+	stub:
+	process_group = group
+	"""
+	touch "${process_group}.coyote"
+	"""
+}
+
+process version_dump {
+	publishDir "${OUTDIR}/versions", mode: 'copy', overwrite: true, pattern: '*final_versions.yaml'
+	tag "$group"
+	scratch true
+	memory '10GB'
+	stageInMode 'copy'
+	stageOutMode 'copy'
+
+	input:
+	val(group) from versions_group	
+	file('*') from bwa_umi_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from bwa_align_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from markdup_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from bqsr_umi_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from bqsr_to_constitutional_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from sentieon_qc_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from lowcov_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from freebayes_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from vardict_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from tnscope_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from pindel_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from concatenate_vcfs_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from cnvkit_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from gene_plot_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from melt_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from manta_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from delly_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from concat_cnv_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from aggregate_vcfs_versions.collect().ifEmpty(['']).flatten().first()
+	file('*') from annotate_vep_versions.collect().ifEmpty(['']).flatten().first()
+
+	output:
+	
+	file("${group}.final_versions.yaml") into final_ver
+
+	script:
+	"""
+	cat *.versions.yaml > ${group}.final_versions.yaml
+	"""
+
+	stub:
+	"""
+	cat *.versions.yaml > ${group}.final_versions.yaml
 	"""
 }
