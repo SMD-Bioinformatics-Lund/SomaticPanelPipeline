@@ -68,15 +68,30 @@ sub AF {
     my $pass = 1;
     foreach my $ind (@{ $var->{GT}}) {
         if ($ind->{_sample_id} eq $id) {
-            my @pr = split(',',$ind->{PR} );
-            my @sr = split(',',$ind->{SR} );
-            if ($pr[0] == 0 || $sr[0] == 0) {
+            my @pr = (0,1);
+            my @sr = (0,1);
+            if ($ind->{PR}) {
+                @pr = split(',',$ind->{PR} );
+            }
+            if ($ind->{SR}) {
+                @sr = split(',',$ind->{SR} );
+            }
+            
+            if (($pr[0] == 0 && $sr[0] == 0) || ( (($pr[0]+$pr[1]) < 20 ) && ( (($sr[0]+$sr[1]) < 20) ) ) ){
                 $pass = 0;
                 next;
             }
-            #print $var->{CHROM}."\t".$var->{POS}."\n";
-            my $af_pr = $pr[1]/$pr[0];
-            my $af_sr = $sr[1]/$sr[0];
+
+            my $af_pr = 0;
+            my $af_sr = 0;
+            if (($pr[0]+$pr[1]) != 0 ) {
+                $af_pr = $pr[1]/($pr[0]+$pr[1]);
+            }
+            if (($sr[0]+$sr[1]) != 0 ) {
+                $af_sr = $sr[1]/($sr[0]+$sr[1]);
+            }
+            
+            
             #print "$af_sr  $af_pr\n";
             if ($af_sr < $AF and $af_pr < $AF) {
                 $pass = 0;
