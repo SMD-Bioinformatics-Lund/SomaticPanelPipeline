@@ -21,6 +21,8 @@ include { POSTPROCESS                          } from '../../modules/local/GATK/
 include { MANTA                                } from '../../modules/local/manta/main'
 include { SVDB_MERGE_PANEL as JOIN_TUMOR       } from '../../modules/local/svdb/main'
 include { SVDB_MERGE_PANEL as JOIN_NORMAL      } from '../../modules/local/svdb/main'
+include { FILTER_MANTA as F_M_T                } from '../../modules/local/filters/main'
+include { FILTER_MANTA as F_M_N                } from '../../modules/local/filters/main'
 
 
 workflow CNV_CALLING {
@@ -92,16 +94,20 @@ workflow CNV_CALLING {
 		POSTPROCESS ( CALLED.join(PLOIDY,by:[0,1]).combine(gatk_ref.groupTuple(by:[3])))
 		FILTER_MERGE_GATK ( POSTPROCESS.out.gatk_germline_segmentsvcf )
 		/////////////////////////// MANTA /////////////////////////////////////////////////////
-		MANTA ( bam_markdup.groupTuple() )
+		MANTA ( bam_markdup.groupTuple(), params.bedgz, "CNV" )
 
 		// Join germline vcf
-		MANTA_NORMAL = MANTA.out.manta_vcf_normal_filtered.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		// as manta is groupTupled, its output needs to be separated from meta, and rejoined or it wont be able to be mixable for SVDB
+		MANTA_NORMAL = MANTA.out.manta_vcf_normal.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		F_M_N(MANTA_NORMAL)
 		GATK_NORMAL = FILTER_MERGE_GATK.out.gatk_normal_vcf.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] )}
-		JOIN_NORMAL ( GATK_NORMAL.mix(MANTA_NORMAL).groupTuple(by:[0,1]) )
+		JOIN_NORMAL ( GATK_NORMAL.mix(F_M_N.out.filtered).groupTuple(by:[0,1]) )
 		// Join tumor vcf
 		GATK_TUMOR = GATK2VCF.out.tumor_vcf
-		MANTA_TUMOR = MANTA.out.manta_vcf_tumor_filtered.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
-		JOIN_TUMOR ( GATK_TUMOR.mix(MANTA_TUMOR,CNVKIT_VCF_TUMOR).groupTuple(by:[0,1]) )
+		// as manta is groupTupled, its output needs to be separated from meta, and rejoined or it wont be able to be mixable for SVDB
+		MANTA_TUMOR = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
+		F_M_T(MANTA_TUMOR)
+		JOIN_TUMOR ( GATK_TUMOR.mix(F_M_T.out.filtered,CNVKIT_VCF_TUMOR).groupTuple(by:[0,1]) )
 		
 
 	emit:

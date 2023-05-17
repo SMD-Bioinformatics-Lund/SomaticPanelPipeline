@@ -12,6 +12,7 @@ include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
+include { FUSIONS                       } from '../subworkflows/local/fusions'
 
 println(params.genome_file)
 
@@ -80,6 +81,11 @@ workflow SOLID_GMS {
 		ch_cnv.segments,
 		ch_cnvcalled.gens,
 		ch_cnvcalled.gatcov_plot
+	)
+	FUSIONS (
+		ch_trim.fastq_trim,
+		CHECK_INPUT.out.meta,
+		ch_mapped.bam_dedup
 	)
 
 

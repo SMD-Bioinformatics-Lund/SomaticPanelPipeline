@@ -97,14 +97,14 @@ process CONTAMINATION {
 			echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[tumor_idx]}.1
 			paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contamination
 			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 --normal > ${meta.id[normal_idx]}.value
-			echo "--overwrite --sample-id ${meta.id[normal_idx]} --run-folder ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
+			echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
 			paste -d " " ${meta.id[normal_idx]}.1 ${meta.id[normal_idx]}.value > ${meta.id[normal_idx]}.contamination
 			"""
 		}
 		else {
 			"""
 			find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[0]}.value
-			echo "--overwrite --sample-id ${meta.id[0]} --run-folder ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
+			echo "--overwrite --sample-id ${meta.id[0]} --sequencing-run ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
 			paste -d " " ${meta.id[0]}.1 ${meta.id[0]}.value > ${meta.id[0]}.contamination
 			"""
 		}

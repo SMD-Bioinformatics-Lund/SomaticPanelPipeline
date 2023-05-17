@@ -21,13 +21,15 @@ process SVDB_MERGE_PANEL {
         delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
         cnvkit_idx = vcfs.findIndexOf{ it =~ 'cnvkit' }
         gatk_idx = vcfs.findIndexOf{ it =~ 'gatk' }
+        genefuse_idx = vcfs.findIndexOf{ it =~ 'genefuse' }
 
         // find vcfs //
         manta = manta_idx >= 0 ? vcfs[manta_idx].collect {it + ':manta ' } : null
         delly = delly_idx >= 0 ? vcfs[delly_idx].collect {it + ':delly ' } : null
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
-        tmp = manta + delly + gatk + cnvkit
+        genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
+        tmp = manta + delly + gatk + cnvkit + genefuse
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
 
@@ -36,24 +38,27 @@ process SVDB_MERGE_PANEL {
         dellyp = delly_idx >= 0 ? 'delly' : null
         gatkp = gatk_idx >= 0 ? 'gatk' : null
         cnvkitp = cnvkit_idx >= 0 ? 'cnvkit' : null
-        tmpp = [mantap, dellyp, gatkp, cnvkitp]
+        genefusep = genefuse_idx >= 0 ? 'genefuse' : null
+        tmpp = [mantap, dellyp, gatkp, cnvkitp, genefusep]
         tmpp = tmpp - null
         priority = tmpp.join(',')
     
         """
-        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 2500 --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
+        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
         """
     stub:
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
         delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
         cnvkit_idx = vcfs.findIndexOf{ it =~ 'cnvkit' }
         gatk_idx = vcfs.findIndexOf{ it =~ 'gatk' }
+        genefuse_idx = vcfs.findIndexOf{ it =~ 'genefuse' }
 
         // find vcfs //
         manta = manta_idx >= 0 ? vcfs[manta_idx].collect {it + ':manta ' } : null
         delly = delly_idx >= 0 ? vcfs[delly_idx].collect {it + ':delly ' } : null
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
+        genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
         tmp = manta + delly + gatk + cnvkit
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
@@ -63,7 +68,8 @@ process SVDB_MERGE_PANEL {
         dellyp = delly_idx >= 0 ? 'delly' : null
         gatkp = gatk_idx >= 0 ? 'gatk' : null
         cnvkitp = cnvkit_idx >= 0 ? 'cnvkit' : null
-        tmpp = [mantap, dellyp, gatkp, cnvkitp]
+        genefusep = genefuse_idx >= 0 ? 'genefuse' : null
+        tmpp = [mantap, dellyp, gatkp, cnvkitp, genefusep]
         tmpp = tmpp - null
         priority = tmpp.join(',')
         """

@@ -16,11 +16,11 @@ process QC_TO_CDM {
 
 	script:
 	"""
-	echo "--sequencing-run ${meta.sequencing_run} --sample_type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdm
+	echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdm
 	"""
 	stub:
 	"""
-	echo "--sequencing-run ${meta.sequencing_run} --sample_type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdm
+	echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdm
 	"""
 }
 
