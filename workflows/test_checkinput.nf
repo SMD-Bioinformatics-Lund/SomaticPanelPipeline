@@ -75,19 +75,28 @@ workflow SOLID_GMS {
 		CHECK_INPUT.out.meta
 	)
 	.set { ch_cnv }
-	ADD_TO_DB (
-		ch_vcf.finished_vcf,
-		ch_qc.lowcov.filter { item -> item[1] == 'T' },
-		ch_cnv.segments,
-		ch_cnvcalled.gens,
-		ch_cnvcalled.gatcov_plot
-	)
 	FUSIONS (
 		ch_trim.fastq_trim,
 		CHECK_INPUT.out.meta,
 		ch_mapped.bam_dedup
 	)
-
+	.set { ch_fusion }
+	BIOMARKERS (
+		CHECK_INPUT.out.meta,
+		ch_cnvcalled.cnvkit_hrd,
+		ch_mapped.bam_umi, 
+		ch_mapped.bam_dedup
+	)
+	.set { ch_bio }
+	ADD_TO_DB (
+		ch_vcf.finished_vcf,
+		ch_qc.lowcov.filter { item -> item[1] == 'T' },
+		ch_cnv.segments,
+		ch_cnvcalled.gens,
+		ch_cnvcalled.gatcov_plot,
+		ch_fusion.fusions,
+		ch_bio.biomarkers
+	)
 
 }
 

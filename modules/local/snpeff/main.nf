@@ -13,7 +13,7 @@ process SNPEFF {
         tuple val(group), val(meta), file(vcf)
 
     output:
-        tuple val(group), val(meta), file("${group}.merged.annotated.vcf"), emit: snpeff_vcf
+        tuple val(group), file("${group}.merged.annotated.vcf"), emit: snpeff_vcf
 
     script:
         """

@@ -277,3 +277,35 @@ process GENEFUSE_JSON_TO_VCF {
 		touch ${meta.id}_genefuse.vcf
 		"""
 }
+
+process BIOMARKERS_TO_JSON {
+	cpus 1
+	time '10m'
+	publishDir "${params.outdir}/${params.subdir}/biomarkers", mode: 'copy', overwrite: true
+
+	input:
+		tuple val(group), file(markers)
+
+	output:
+		tuple val(group), file("${group}.bio.json"), emit: biomarkers_json
+
+	script:
+		msis_idx = markers.findIndexOf{ it =~ 'msi_single' }
+        msip_idx = markers.findIndexOf{ it =~ 'msi_paired' }
+        hrd_idx = markers.findIndexOf{ it =~ 'HRD' }
+        // find biomarkers //
+        msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
+        msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
+        hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
+        tmp = msis + msip + hrd
+        tmp = tmp - null
+        command = tmp.join(' ')
+		"""
+		python /fs1/viktor/SomaticPanelPipeline_dsl2/bin/aggregate_biomarkers.py $command --out ${group}.bio.json --id $group
+		"""
+	stub:
+		"""
+		echo $command
+		touch ${group}.bio.json
+		"""
+}

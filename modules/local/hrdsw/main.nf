@@ -26,21 +26,17 @@ process CNVKIT2SCARHRD {
 	tag "$id"
 
 	input:
-		tuple val(group), val(id), val(type), file(segments) //val(ploidy)
+		tuple val(group), val(meta), val(part), file(segments)
 
 	output:
-		tuple val(group), val(id), val(type), val(caller), file("${id}.cnvkit.scarHRD.txt"), emit: scarHRD_segments
+		tuple val(group), val(meta), val(caller), file("${meta.id}.cnvkit.scarHRD.txt"), emit: scarHRD_segments
 
 	script:
-		//ploidyv = ploidy.getText().trim()
 		ploidyv = "NA"
 		caller = "cnvkit"
-		if (segments =~ /purity/) {
-			caller = "cnvkitpurity"
-		}
 
 	"""
-	cnvkit2HRD.pl $segments $id $ploidyv > ${id}.cnvkit.scarHRD.txt
+	cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${meta.id}.cnvkit.scarHRD.txt
 	"""   
 }
 
@@ -87,18 +83,18 @@ process SCARHRD {
 	publishDir "${params.outdir}/${params.subdir}/scarHRD/", mode: 'copy', overwrite: true, pattern: '*.txt'
 	cpus 1
 	time '1h'
-	tag "$id"
+	tag "${meta.id}"
 	container = '/fs1/resources/containers/scarHRD.sif'
 
 	input:
-		tuple val(group), val(id), val(type), val(sc), file(segments)
+		tuple val(group), val(meta), val(sc), file(segments)
 
 	output:
-		tuple val(group), val(id), val(type), file("${group}_${sc}_scarHRD_results.txt"), emit: scarHRD_score
+		tuple val(group), file("${meta.id}_${sc}_scarHRD_results.txt"), emit: scarHRD_score
 
 	"""
 	Rscript /fs1/viktor/SomaticPanelPipeline_dsl2/bin/Run_scarHRD.R $segments
-	mv ${group}_HRDresults.txt ${group}_${sc}_scarHRD_results.txt
+	mv ${meta.id}_HRDresults.txt ${meta.id}_${sc}_scarHRD_results.txt
     """
 
 }

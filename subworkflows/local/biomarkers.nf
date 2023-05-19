@@ -1,39 +1,46 @@
 #!/usr/bin/env nextflow
 
-include { ASCAT_252                   } from '../../modules/local/ASCAT/main'
-include { ASCAT_30                    } from '../../modules/local/ASCAT/main'
-include { CNVKIT2ASCAT                } from '../../modules/local/ASCAT/main'
 include { MSISENSOR                   } from '../../modules/local/msisensor/main'
-include { GENEFUSE                    } from '../../modules/local/genefuse/main'
 include { CNVKIT2OVAHRDSCAR           } from '../../modules/local/hrdsw/main'
 include { CNVKIT2SCARHRD              } from '../../modules/local/hrdsw/main'
-include { ASCAT2SCARHRD               } from '../../modules/local/hrdsw/main'
-include { ASCAT2OVAHRDSCAR            } from '../../modules/local/hrdsw/main'
 include { SCARHRD                     } from '../../modules/local/hrdsw/main'
-include { OVAHRDSCAR                  } from '../../modules/local/hrdsw/main'
-
+include { BIOMARKERS_TO_JSON          } from '../../modules/local/filters/main'
 
 
 workflow BIOMARKERS {
     take: 
-        baflogr
-        cnvkitsegments
-        cnvkitsegment_purity
+        meta                   // meta info for sample(s)
+        cnvkitsegments         // val(group), val(meta), val(part(backbone)), file("${group}.${meta.id}.${part}.call*.cns")
+        bam_umi                // val(group), val(meta), file(bam), file(bai), file(bqsr) umi deduped bam
+        bam_dedup              // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
 
     main:
-        CNVKIT2ASCAT ( baflogr )
-        //ASCAT_252 ( CNVKIT2ASCAT.out.ascat_input )
-        ASCAT_30 ( CNVKIT2ASCAT.out.ascat_input )
-        CNVKIT2OVAHRDSCAR ( cnvkitsegments.mix(cnvkitsegment_purity) )
-        CNVKIT2SCARHRD ( cnvkitsegments.mix(cnvkitsegment_purity) ) //.join(ASCAT_30.out.ploidy, by:[0,1])
-        ASCAT2SCARHRD ( ASCAT_30.out.baflogr ) //.join(ASCAT_30.out.ploidy, by:[0,1])
-        ASCAT2OVAHRDSCAR ( ASCAT_30.out.baflogr )
-        SCARHRD ( ASCAT2SCARHRD.out.scarHRD_segments.mix(CNVKIT2SCARHRD.out.scarHRD_segments) )
-        OVAHRDSCAR ( ASCAT2OVAHRDSCAR.out.ovaHRDscar_segments.mix(CNVKIT2OVAHRDSCAR.out.ovaHRDscar_segments) )
+        // HRD //
+        if (params.hrd) {
+            CNVKIT2SCARHRD ( cnvkitsegments.filter { it -> it[1].type == "T" })
+            SCARHRD ( CNVKIT2SCARHRD.out.scarHRD_segments) 
+        }
+        // MSI //
+        if (params.msi) {
+            MSISENSOR(bam_umi.groupTuple())
+        }
+
+        // combine biomarkers //
+        BIOMARKERS_TO_JSON( SCARHRD.out.scarHRD_score.mix(MSISENSOR.out.msi_score,MSISENSOR.out.msi_score_paired).groupTuple() )
+
+
+
+
+        // OLD ALTERNATE HRD ALGORITHMS AND SEGMENTATIONS //
+        // CNVKIT2ASCAT ( baflogr )
+        // //ASCAT_252 ( CNVKIT2ASCAT.out.ascat_input )
+        // ASCAT_30 ( CNVKIT2ASCAT.out.ascat_input )
+        // CNVKIT2OVAHRDSCAR ( cnvkitsegments.mix(cnvkitsegment_purity) )
+        // ASCAT2SCARHRD ( ASCAT_30.out.baflogr ) //.join(ASCAT_30.out.ploidy, by:[0,1])
+        // ASCAT2OVAHRDSCAR ( ASCAT_30.out.baflogr )
+        // OVAHRDSCAR ( ASCAT2OVAHRDSCAR.out.ovaHRDscar_segments.mix(CNVKIT2OVAHRDSCAR.out.ovaHRDscar_segments) )
 
     emit:
-        ascat = CNVKIT2ASCAT.out.ascat_input
-        //hrdscore_ascat252 = ASCAT_252.out.ascat252_HRD_score
-        //hrdscore_ascat30 = ASCAT_30.out.ascat30_HRD_score
+        biomarkers = BIOMARKERS_TO_JSON.out.biomarkers_json
 
 }

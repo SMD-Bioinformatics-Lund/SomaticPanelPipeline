@@ -196,7 +196,7 @@ process CNVKIT_CALL {
 }
 
 process MERGE_GENS {
-	publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
+	publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
 	publishDir "${params.outdir}/cron/gens", mode: 'copy', overwrite: true, pattern: '*.gens'
 	
 	input:
