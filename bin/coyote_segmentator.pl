@@ -61,6 +61,10 @@ sub read_vcf {
         if ($var->{INFO}->{FOLD_CHANGE_LOG}) {
             $fold = $var->{INFO}->{FOLD_CHANGE_LOG};
         }
+        ## for gatk-normals
+        elsif ( $var->{INFO}->{gatkCN}) {
+            $fold = $var->{INFO}->{gatkCN}/2;            
+        }
         else {
             if ($type eq "DEL") {
                 $fold = "DEL";

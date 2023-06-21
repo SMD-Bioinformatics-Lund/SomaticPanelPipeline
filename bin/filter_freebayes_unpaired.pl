@@ -15,7 +15,7 @@ system("zgrep ^#CHROM $ARGV[0]");
 while ( my $v = $vcf->next_var() ) {
 
     my @filters;
-
+    my @status;
 
     my( %likelihood, %gl_idx, %genotype, %altobs, %depth );
     my $status = "PASS";
@@ -43,8 +43,12 @@ while ( my $v = $vcf->next_var() ) {
     if( $TALT eq "0" ) {
 	$status = "WARN_NOVAR";
     } 
-
-    $v->{FILTER} = $status;
+    push @status,$status;
+    if ($v->{INFO}->{MQM} <= 10 ) {
+        push @status, "WARN_MQ";
+    }
+    $v->{FILTER} .= ";".join(";", @status);
+    #$v->{FILTER} = $status;
 
     vcfstr($v);
 }

@@ -51,13 +51,13 @@ sample_id = args.id
 if (args.msi_s):
     in_file = open(args.msi_s)
     msi_dict = read_msi(in_file)
-    biomarkers['MSI-S'] = msi_dict 
+    biomarkers['MSIS'] = msi_dict 
 
 # MSI-S paired sample predicted MSI-score
 if (args.msi_p):
     in_file = open(args.msi_p)
     msi_dict = read_msi(in_file)
-    biomarkers['MSI-P'] = msi_dict 
+    biomarkers['MSIP'] = msi_dict 
 
 # HRD
 if (args.hrd):

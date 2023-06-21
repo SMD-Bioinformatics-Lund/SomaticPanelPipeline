@@ -23,7 +23,7 @@ my $MIN_VAF_RATIO = 3;
 while ( my $v = $vcf->next_var() ) {
 
     my @filters;
-
+    my @status;
 
     my( %likelihood, %gl_idx, %genotype, %altobs, %depth );
     my $status = "PASS";
@@ -84,8 +84,12 @@ while ( my $v = $vcf->next_var() ) {
 	    $status = "FAIL_NVAF";
 	}
     }
-
-    $v->{FILTER} = $status;
+    push @status,$status;
+    if ($v->{INFO}->{MQM} <= 10 ) {
+        push @status, "WARN_MQ";
+    }
+    $v->{FILTER} .= ";".join(";", @status);
+    #$v->{FILTER} = $status;
     add_info( $v, "SSC", $DQUAL );    
 
     vcfstr($v);

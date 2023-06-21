@@ -34,10 +34,10 @@ while ( my $v = $vcf->next_var() ) {
 
     # Fail long INDELs as they tend to be false positives in VarDict.
     if( length($v->{REF}) - length($v->{ALT}) > 100 or $v->{ALT} =~ /^<DEL>$/ ) {
-	push @status, "FAIL_LONGDEL";
+	    push @status, "FAIL_LONGDEL";
     }
     elsif( length($v->{ALT}) - length($v->{REF}) > 100 or $v->{ALT} =~ /^<(DUP|INS)>$/ ) {
-	push @status, "FAIL_LONGINS";
+	    push @status, "FAIL_LONGINS";
     }
     
     if( $vaf{T} > 0 ) {
@@ -59,10 +59,11 @@ while ( my $v = $vcf->next_var() ) {
 	
     }
     else {
-	push @status, "FAIL_NO_TVAR";
+	    push @status, "FAIL_NO_TVAR";
     }
-
-
+    if ($v->{INFO}->{MQ} <= 10 ) {
+        push @status, "WARN_MQ";
+    }
 
     if( @status ) {
 	if( $v->{FILTER} eq "PASS" or $v->{FILTER} eq "." ) {

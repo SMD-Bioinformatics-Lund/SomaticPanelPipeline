@@ -42,7 +42,7 @@ process COYOTE {
 
 //echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
 		"""
-		echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group 
+		echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group \\
 			--vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
 			--clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
 			--build 38 \\

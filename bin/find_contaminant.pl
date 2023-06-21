@@ -49,6 +49,10 @@ my %assay_info = (
 	'GMSlymphoid'=> {
 		'cutoff' => 80,
 		'ADfield' => "VD"
+	},
+	'rnaseqexp-breast' => {
+		'cutoff' => 400,
+		'ADfield' => "AD"
 	}
 );
 my %dist_int;
@@ -65,6 +69,7 @@ while ( my $v = $vcf->next_var() ) {
 	next if $v->{CHROM} =~ /X|Y/;
 	if ( $v->{INFO}->{CSQ}->[0]->{gnomADg_AF} =~ /\d+/ ) {
 		$gnomad = $v->{INFO}->{CSQ}->[0]->{gnomADg_AF};
+		$gnomad = find_max($gnomad);
 	}
 	else {
 		next;
@@ -92,7 +97,13 @@ while ( my $v = $vcf->next_var() ) {
 				$t_VAF = $gt->{VAF};
 			}
 			else {
-				$t_VAF = $min/$t_DP;
+				if ($t_DP == 0) {
+					$t_VAF = 0;
+				}
+				else {
+					$t_VAF = $min/$t_DP;
+				}
+				
 			}
 		}
 		else {
@@ -109,7 +120,7 @@ while ( my $v = $vcf->next_var() ) {
 			
 		}
 	}
-
+	next if $t_DP <= 5;
 	if ($paired) {
 		if ($check_normal) {
 			check_vaf($n_VAF,0,$var);		
@@ -134,7 +145,7 @@ if ($opt{normal} && $paired) {
 ## get number of variants within each window set by high low and windowsize (0.005)
 my ($distri,$num_bins,$num_vars_bin) = get_distibution($low,$high);
 my %distri = %$distri;
-
+#print Dumper(%distri);
 ## if no bins, no variants, no contamination
 if ($num_bins == 0) {
 	print "0.0\n";
@@ -358,4 +369,17 @@ sub plot_distribution {
 	print IMG $gd->png;
 	close IMG;
 	#######################
+}
+
+sub find_max {
+	my $af = shift;
+	my @af = split('&',$af);
+
+	my $max = 0;
+	for my $a (@af) {
+		if ($a > $max ){
+			$max = $a;
+		}
+	}
+	return $max;
 }

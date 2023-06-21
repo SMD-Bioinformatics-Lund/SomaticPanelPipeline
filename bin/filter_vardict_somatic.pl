@@ -23,7 +23,7 @@ while ( my $v = $vcf->next_var() ) {
 
     #    my $status = "PASS";
     my @status;
-    my (%vaf, %dp, %strand_bias, %msi, %msilen);
+    my (%vaf, %dp, %strand_bias, %msi, %msilen, %mapping_qual);
 
     my $msi    = $v->{INFO}->{MSI};
     my $msilen = $v->{INFO}->{MSILEN};
@@ -38,6 +38,7 @@ while ( my $v = $vcf->next_var() ) {
 	$vaf{$type} = $gt->{AF};
 	$dp{$type} = $gt->{DP};
 	$strand_bias{$type} = $gt->{SBF};
+    $mapping_qual{$type} = $gt->{MQ};
     }
 
     # Fail long INDELs as they tend to be false positives in VarDict.
@@ -65,6 +66,9 @@ while ( my $v = $vcf->next_var() ) {
 	if( $strand_bias{T} < 0.05 ) {
 	    push @status, "WARN_STRANDBIAS";
 	}
+    if ( $mapping_qual{T} <= 10 ) {
+        push @status, "WARN_MQ";
+    }
 
         # If in a homopolymer
 	if( $msilen <= 2 and $msi > 10 ) {
