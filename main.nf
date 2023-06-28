@@ -371,7 +371,7 @@ process qc_values {
 
 process freebayes {
 	cpus 1
-	time '40m'
+	time '90m'
 	tag "$group"
 	
 	input:
