@@ -17,6 +17,7 @@ include { GATK_COUNT_GERMLINE                  } from '../../modules/local/GATK/
 include { GATK_CALL_PLOIDY                     } from '../../modules/local/GATK/main'
 include { GATK_CALL_GERMLINE_CNV               } from '../../modules/local/GATK/main'
 include { FILTER_MERGE_GATK                    } from '../../modules/local/GATK/main'
+include { MERGE_GATK_TUMOR                     } from '../../modules/local/GATK/main'
 include { POSTPROCESS                          } from '../../modules/local/GATK/main'
 include { MANTA                                } from '../../modules/local/manta/main'
 include { SVDB_MERGE_PANEL as JOIN_TUMOR       } from '../../modules/local/svdb/main'
@@ -85,6 +86,7 @@ workflow CNV_CALLING {
 		GATKCOV_COUNT ( bam_umi )
 		GATKCOV_CALL { GATKCOV_BAF.out.gatk_baf.join(GATKCOV_COUNT.out.gatk_count,by:[0,1]).groupTuple() }
 		GATK2VCF ( GATKCOV_CALL.out.gatcov_called.join(meta.filter( it -> it[1].type == "T" )) )
+		MERGE_GATK_TUMOR ( GATK2VCF.out.tumor_vcf )
 		// Do germline calling for normal
 		GATK_COUNT_GERMLINE ( bam_umi.filter { it -> it[1].type == "N" })
 		GATK_CALL_PLOIDY ( GATK_COUNT_GERMLINE.out.count_germline )
@@ -103,7 +105,7 @@ workflow CNV_CALLING {
 		GATK_NORMAL = FILTER_MERGE_GATK.out.gatk_normal_vcf.join(meta.filter( it -> it[1].type == "N" ) ).map{ val-> tuple(val[0], val[2], val[1] )}
 		JOIN_NORMAL ( GATK_NORMAL.mix(F_M_N.out.filtered).groupTuple(by:[0,1]) )
 		// Join tumor vcf
-		GATK_TUMOR = GATK2VCF.out.tumor_vcf
+		GATK_TUMOR = MERGE_GATK_TUMOR.out.tumor_vcf_merged
 		// as manta is groupTupled, its output needs to be separated from meta, and rejoined or it wont be able to be mixable for SVDB
 		MANTA_TUMOR = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
 		F_M_T(MANTA_TUMOR)

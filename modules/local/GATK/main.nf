@@ -345,3 +345,27 @@ process GATK2VCF {
 		touch ${meta.id}_gatk_tumor.vcf
 		"""
 }
+
+process MERGE_GATK_TUMOR {
+	publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: 'true'
+	tag "${meta.id}"
+	cpus 2
+	memory '1GB'
+	time '1h'
+
+	input:
+		tuple val(group), val(meta), file(gatk)
+
+	output:
+		tuple val(group), val(meta), file("${meta.id}_gatk_tumor_merged.vcf"), emit: tumor_vcf_merged
+
+	script:
+		"""
+		mergeGATK_tumor.pl $gatk > ${meta.id}_gatk_tumor_merged.vcf
+		"""
+	stub:
+		"""
+		touch ${meta.id}_gatk_tumor_merged.vcf
+		"""
+
+}
