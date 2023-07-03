@@ -42,17 +42,12 @@ process AGGREGATE_VCFS {
 			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 			sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
 		}
-		if (params.single_cnvcaller) {
-			"""
-			aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.vcf
-			"""
-		}
-		else {
-			"""
-			aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.tmp.vcf
-			vcf-concat ${group}.agg.tmp.vcf $cnvs | vcf-sort -c > ${group}.agg.vcf
-			"""
-		}
+
+		"""
+		aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.vcf
+		"""
+
+
 	stub:
 	if( meta.id.size() >= 2 ) {
 		tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }

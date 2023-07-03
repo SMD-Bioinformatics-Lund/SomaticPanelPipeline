@@ -3,47 +3,17 @@
 
 nextflow.enable.dsl = 2
 
-
+include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
-
+include { QC                            } from '../subworkflows/local/qc'
+include { SAMPLE                        } from '../subworkflows/local/sample'
 
 
 println(params.genome_file)
-genome_file = file(params.genome_file)
-
-OUTDIR = params.outdir+'/'+params.subdir
-CRONDIR = params.crondir
 
 csv = file(params.csv)
 println(csv)
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, file(row.read1), file(row.read2)) }
-    .set { fastq }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("ffpe") ? row.ffpe : false)) }
-    .set { meta }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("purity") ? row.purity : false)) }
-    .set { meta_purity }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.id, row.read1, row.read2) }
-    .set{ meta_qc }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, row.clarity_sample_id, row.clarity_pool_id) }
-    .set { meta_const }
-
-
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -59,17 +29,36 @@ Channel
 	.set{ gatk_ref}
 
 
-workflow SOLID_PON {
+workflow PON {
 
-	ALIGN_SENTIEON ( fastq.view() )
-	.set { ch_mapped }
-	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
+	// Checks input, creates meta-channel and decides whether data should be downsampled //
+	CHECK_INPUT ( Channel.fromPath(csv) )
+
+	// Downsample if meta.sub == value and not false //
+	SAMPLE ( CHECK_INPUT.out.fastq )  
+	.set{ ch_trim }
+	// Do alignment if downsample was false and mix with SAMPLE subworkflow output
+	ALIGN_SENTIEON ( 
+		ch_trim.fastq_trim,
+		CHECK_INPUT.out.meta
+	)
+	.set { ch_mapped } 
+	QC ( 
+        ch_mapped.qc_out, 
+		ch_mapped.bam_lowcov
+    )
+	.set { ch_qc }
+	SNV_CALLING ( 
+		ch_mapped.bam_umi.groupTuple(),
+		beds,
+		CHECK_INPUT.out.meta
+	)
 	.set { ch_vcf }
 
 }
 
 workflow {
-	SOLID_PON()
+	PON()
 }
 
 

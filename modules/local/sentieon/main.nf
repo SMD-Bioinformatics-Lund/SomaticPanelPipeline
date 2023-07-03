@@ -180,3 +180,51 @@ process SENTIEON_QC {
 		"""
 }
 
+process TNSCOPE {
+	cpus params.cpu_some
+	time '2h'   
+	tag "$group" 
+
+	input:
+		tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
+		each file(bed)
+
+	output:
+		tuple val("tnscope"), val(group), file("tnscope_${bed}.vcf"), emit: vcfparts_tnscope
+
+	when:
+		params.tnscope
+
+	script:
+		if( meta.id.size() >= 2 ) {
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+			"""
+			sentieon driver -t ${task.cpus} \\
+				-r $params.genome_file \\
+				-i ${bams[tumor_idx]} -q ${bqsr[tumor_idx]} \\
+				-i ${bams[normal_idx]} -q ${bqsr[normal_idx]} \\
+				--interval $bed --algo TNscope \\
+				--tumor_sample ${meta.id[tumor_idx]} --normal_sample ${meta.id[normal_idx]} \\
+				--clip_by_minbq 1 --max_error_per_read 3 --min_init_tumor_lod 2.0 \\
+				--min_base_qual 10 --min_base_qual_asm 10 --min_tumor_allele_frac 0.0005 \\
+				tnscope_${bed}.vcf.raw
+
+			filter_tnscope_somatic.pl tnscope_${bed}.vcf.raw ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > tnscope_${bed}.vcf
+
+			"""
+		}
+		else if( meta.id.size() == 1 ) {
+			"""
+			sentieon driver -t ${task.cpus} -r $params.genome_file \\
+				-i ${bams} -q ${bqsr} \\
+				--interval $bed --algo TNscope \\
+				--tumor_sample ${meta.id[0]} \\
+				--clip_by_minbq 1 --max_error_per_read 3 --min_init_tumor_lod 2.0 \\
+				--min_base_qual 10 --min_base_qual_asm 10 --min_tumor_allele_frac 0.0005 \\
+				tnscope_${bed}.vcf.raw
+
+			filter_tnscope_unpaired.pl tnscope_${bed}.vcf.raw > tnscope_${bed}.vcf
+			""" 
+		}
+}

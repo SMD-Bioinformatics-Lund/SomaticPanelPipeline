@@ -2,6 +2,7 @@
 
 include { FREEBAYES                } from '../../modules/local/freebayes/main'
 include { VARDICT                  } from '../../modules/local/vardict/main'
+include { TNSCOPE                  } from '../../modules/local/sentieon/main'
 include { CONCATENATE_VCFS         } from '../../modules/local/concatenate_vcfs/main'
 include { AGGREGATE_VCFS           } from '../../modules/local/concatenate_vcfs/main'
 include { PON_FILTER               } from '../../modules/local/filters/main'
@@ -22,11 +23,13 @@ workflow SNV_CALLING {
         // split by bed-file to speed up calling //
         FREEBAYES ( bam_umi, beds)
         VARDICT ( bam_umi, beds)
+        TNSCOPE ( bam_umi, beds)
         // Prepare vcf parts for concatenation //
         vcfparts_freebayes = FREEBAYES.out.vcfparts_freebayes.groupTuple(by:[0,1])
         vcfparts_vardict   = VARDICT.out.vcfparts_vardict.groupTuple(by:[0,1])
+        vcfparts_tnscope   = TNSCOPE.out.vcfparts_tnscope.groupTuple(by:[0,1])
         //vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict).mix(vcfparts_tnscope)
-        vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict)
+        vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict,vcfparts_tnscope)
         // Join vcfs split by bedparts //
         CONCATENATE_VCFS { vcfs_to_concat }
         // Aggregate all callers to one VCF

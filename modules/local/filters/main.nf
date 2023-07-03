@@ -309,3 +309,27 @@ process BIOMARKERS_TO_JSON {
 		touch ${group}.bio.json
 		"""
 }
+
+process ENIGMA {
+	cpus 1
+	time '1h'
+	tag "$group"
+	memory '5 GB'
+
+
+	input:
+		tuple val(group), val(meta), file(vcf) 
+		
+	output:
+		tuple val(group), val(meta), file("${group}.agg.enigma.vcf"), emit: vcf_enigma
+
+	script:
+		"""
+		vcfanno_linux64 -lua /fs1/resources/ref/hg19/bed/scout/sv_tracks/silly.lua $params.vcfanno $vcf > ${group}.agg.enigma.vcf
+		"""
+	stub:
+		"""
+		touch ${group}.agg.enigma.vcf
+		"""
+
+}
