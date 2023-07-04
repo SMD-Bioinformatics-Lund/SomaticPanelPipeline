@@ -30,7 +30,6 @@ process AGGREGATE_VCFS {
 
 	input:
 		tuple val(group), val(vc), file(vcfs), val(meta)
-		//row.group, row.id, row.type, (row.containsKey("ffpe") ? row.ffpe
 
 	output:
 		tuple val(group), val(meta), file("${group}.agg.vcf"), emit: vcf_concat

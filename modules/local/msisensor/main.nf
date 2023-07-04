@@ -51,12 +51,12 @@ process MSISENSOR {
 			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
 			"""
-			touch ${group}.msi
+			touch ${group}.msi_single
 			"""
 		}
-		else if( id.size() == 1 ) {
+		else if( meta.id.size() == 1 ) {
 			"""
-			touch ${group}.msi
+			touch ${group}.msi_single
 			"""
 		}
 }

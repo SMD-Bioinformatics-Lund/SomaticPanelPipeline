@@ -227,4 +227,8 @@ process TNSCOPE {
 			filter_tnscope_unpaired.pl tnscope_${bed}.vcf.raw > tnscope_${bed}.vcf
 			""" 
 		}
+	stub:
+		"""
+		touch tnscope_${bed}.vcf
+		"""
 }

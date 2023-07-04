@@ -35,9 +35,16 @@ process CNVKIT2SCARHRD {
 		ploidyv = "NA"
 		caller = "cnvkit"
 
-	"""
-	cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${meta.id}.cnvkit.scarHRD.txt
-	"""   
+		"""
+		cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${meta.id}.cnvkit.scarHRD.txt
+		"""  
+
+	stub:
+		ploidyv = "NA"
+		caller = "cnvkit"
+		"""
+		touch ${meta.id}.cnvkit.scarHRD.txt
+		""" 
 }
 
 process ASCAT2SCARHRD {
@@ -92,10 +99,16 @@ process SCARHRD {
 	output:
 		tuple val(group), file("${meta.id}_${sc}_scarHRD_results.txt"), emit: scarHRD_score
 
-	"""
-	Rscript /fs1/viktor/SomaticPanelPipeline_dsl2/bin/Run_scarHRD.R $segments
-	mv ${meta.id}_HRDresults.txt ${meta.id}_${sc}_scarHRD_results.txt
-    """
+	script:
+		"""
+		Rscript /fs1/viktor/SomaticPanelPipeline_dsl2/bin/Run_scarHRD.R $segments
+		mv ${meta.id}_HRDresults.txt ${meta.id}_${sc}_scarHRD_results.txt
+		"""
+
+	stub:
+		"""
+		touch ${meta.id}_${sc}_scarHRD_results.txt
+		""" 
 
 }
 

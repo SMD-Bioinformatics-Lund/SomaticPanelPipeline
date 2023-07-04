@@ -6,6 +6,7 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
+include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { QC                            } from '../subworkflows/local/qc'
@@ -18,9 +19,6 @@ println(params.genome_file)
 
 csv = file(params.csv)
 println(csv)
-
-cnvkit_reference_exons   = params.cnvkit_reference_exons      ? Channel.fromPath(params.cnvkit_reference_exons).map {it -> [[id:it[0].simpleName], it]}.collect(): ( ch_references.cnvkit_reference_exons                ?: Channel.empty() )
-cnvkit_reference_backbone   = params.cnvkit_reference_backbone      ? Channel.fromPath(params.cnvkit_reference_backbone).map {it -> [[id:it[0].simpleName], it]}.collect(): ( ch_references.cnvkit_reference_backbone                ?: Channel.empty() )
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -57,13 +55,21 @@ workflow SOLID_GMS {
 	.set { ch_qc }
 	SNV_CALLING ( 
 		ch_mapped.bam_umi.groupTuple(),
+		ch_mapped.bam_dedup,
 		beds,
-		CHECK_INPUT.out.meta
+		CHECK_INPUT.out.meta,
+		ch_qc.melt_qc
 	)
 	.set { ch_vcf }
+	SNV_ANNOTATE (
+		ch_vcf.agg_vcf,
+		ch_vcf.concat_vcfs,
+		CHECK_INPUT.out.meta
+	)
+	.set { ch_vcf_anno }
 	CNV_CALLING ( 
 		ch_mapped.bam_umi, 
-		ch_vcf.germline_variants,
+		ch_vcf_anno.germline_variants,
 		CHECK_INPUT.out.meta,
 		ch_mapped.bam_dedup,
 		gatk_ref
@@ -89,7 +95,7 @@ workflow SOLID_GMS {
 	)
 	.set { ch_bio }
 	ADD_TO_DB (
-		ch_vcf.finished_vcf,
+		ch_vcf_anno.finished_vcf,
 		ch_qc.lowcov.filter { item -> item[1] == 'T' },
 		ch_cnv.segments,
 		ch_cnvcalled.gens,

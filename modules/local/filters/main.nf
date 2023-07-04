@@ -195,15 +195,13 @@ process COYOTE_SEGMENTS {
 		if ( meta.type == 'normal' || meta.type == 'N'  ) {
 			normal = "--normal"
 		}
-		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
 		"""
-		coyote_segmentator.pl --vcf $vcf --panel /fs1/resources/ref/hg38/solid/solid.cna,$panel --id ${meta.id} $normal --genes /fs1/resources/ref/hg38/gtf/gencode.v33.annotation.genes.proteincoding.bed
+		coyote_segmentator.pl --vcf $vcf --panel $params.panel_cna --id ${meta.id} $normal --genes /fs1/resources/ref/hg38/gtf/gencode.v33.annotation.genes.proteincoding.bed
 		"""
 	stub:
 		panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
 		"""
 		touch ${meta.id}.cn-segments.panel.bed ${meta.id}.cn-segments.bed
-		echo $panel
 		"""
 }
 
@@ -304,6 +302,16 @@ process BIOMARKERS_TO_JSON {
 		python /fs1/viktor/SomaticPanelPipeline_dsl2/bin/aggregate_biomarkers.py $command --out ${group}.bio.json --id $group
 		"""
 	stub:
+		msis_idx = markers.findIndexOf{ it =~ 'msi_single' }
+        msip_idx = markers.findIndexOf{ it =~ 'msi_paired' }
+        hrd_idx = markers.findIndexOf{ it =~ 'HRD' }
+        // find biomarkers //
+        msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
+        msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
+        hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
+        tmp = msis + msip + hrd
+        tmp = tmp - null
+        command = tmp.join(' ')
 		"""
 		echo $command
 		touch ${group}.bio.json
