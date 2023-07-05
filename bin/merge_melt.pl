@@ -100,7 +100,11 @@ foreach my $file (@files) {
         print OUT join(';',@newinfo).";";
         print OUT join(',',@scoutcustom)."\t";
 
-        print OUT "GT"."\t".$a->{GT}->[0]->{GT};
+        my $VD = $a->{GT}->[0]->{AD};
+        my $DP = $a->{GT}->[0]->{DP};
+        my $VAF = $VD/($DP);
+        $VAF = sprintf("%.2f", $VAF);
+        print OUT "GT:VAF:VD:DP"."\t".$a->{GT}->[0]->{GT}.":".$VAF.":$VD:$DP";
         #print OUT join("\t",@str[8..$#str]);
         print OUT "\n";
 

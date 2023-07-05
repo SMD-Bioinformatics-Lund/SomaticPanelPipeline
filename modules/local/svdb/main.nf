@@ -78,3 +78,31 @@ process SVDB_MERGE_PANEL {
         """
 
 }
+
+
+process SVDB_MERGE_SINGLES {
+	cpus 1
+	tag "$group"
+	time '10m'
+	memory '1 GB'
+
+	input:
+		tuple val(group), val(vc), file(vcfs)
+        
+	output:
+		tuple val(group), val(vc), file("${group}_${vc}.merged.vcf"), emit: singles_merged_vcf
+
+	script:  
+        vcfs_svdb = vcfs.join(' ')
+        vc = vc[0]
+        """
+        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 1.0 > ${group}_${vc}.merged.vcf
+        """
+    stub:
+        vcfs_svdb = vcfs.join(' ')
+        vc = vc[0]
+        """
+        touch ${group}_${vc}.merged.vcf
+        """
+
+}

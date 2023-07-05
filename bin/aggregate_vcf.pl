@@ -152,100 +152,48 @@ sub fix_gt {
     $var->{FORMAT} = [];
     
     if( $vc =~ /^(mutect2|tnscope|vardict|pindel)$/ ) {
-	for my $gt ( @{$var->{GT}} ) {
-	    my ($ref_dp, $alt_dp, $af) = (0,0,0);
-	    if( $gt->{AD} ) {
-                my @a = split /,/, $gt->{AD};
-                $ref_dp = ($a[0] or "0");
-                $alt_dp = ($a[1] or "0");
-		if( $alt_dp + $ref_dp > 0 ) {
-		    $af = $alt_dp / ($alt_dp+$ref_dp);
-		}
-		  
-	    }
-            add_gt( $var, $gt->{_sample_id}, "GT", $gt->{GT});
-	    add_gt( $var, $gt->{_sample_id}, "VAF", ($gt->{AF} or $af) );
-	    add_gt( $var, $gt->{_sample_id}, "VD", $alt_dp );
-	    add_gt( $var, $gt->{_sample_id}, "DP", $alt_dp+$ref_dp );
-	}
+        for my $gt ( @{$var->{GT}} ) {
+            my ($ref_dp, $alt_dp, $af) = (0,0,0);
+            if( $gt->{AD} ) {
+                    my @a = split /,/, $gt->{AD};
+                    $ref_dp = ($a[0] or "0");
+                    $alt_dp = ($a[1] or "0");
+            if( $alt_dp + $ref_dp > 0 ) {
+                $af = $alt_dp / ($alt_dp+$ref_dp);
+            }
+            
+            }
+                add_gt( $var, $gt->{_sample_id}, "GT", $gt->{GT});
+            add_gt( $var, $gt->{_sample_id}, "VAF", ($gt->{AF} or $af) );
+            add_gt( $var, $gt->{_sample_id}, "VD", $alt_dp );
+            add_gt( $var, $gt->{_sample_id}, "DP", $alt_dp+$ref_dp );
+        }
     }
 
     elsif( $vc eq "freebayes" ) {
-	for my $gt ( @{$var->{GT}} ) {
-	    my( $vaf, $vd ) = (0,0);
-	    if( $gt->{AO} and $gt->{AO} ne "." ) {
-		$vaf = sprintf "%.4f", $gt->{AO} / $gt->{DP};
-                $vd = $gt->{AO};
-            }
+        for my $gt ( @{$var->{GT}} ) {
+            my( $vaf, $vd ) = (0,0);
+            if( $gt->{AO} and $gt->{AO} ne "." ) {
+            $vaf = sprintf "%.4f", $gt->{AO} / $gt->{DP};
+                    $vd = $gt->{AO};
+                }
+                add_gt( $var, $gt->{_sample_id}, "GT", $gt->{GT});
+                add_gt( $var, $gt->{_sample_id}, "VAF", $vaf );
+                add_gt( $var, $gt->{_sample_id}, "VD", $vd);
+                add_gt( $var, $gt->{_sample_id}, "DP", $gt->{DP});
+
+        }
+    }
+    elsif( $vc eq "MELT" ) {
+        for my $gt ( @{$var->{GT}} ) {
             add_gt( $var, $gt->{_sample_id}, "GT", $gt->{GT});
-            add_gt( $var, $gt->{_sample_id}, "VAF", $vaf );
-            add_gt( $var, $gt->{_sample_id}, "VD", $vd);
+            add_gt( $var, $gt->{_sample_id}, "VAF", $gt->{VAF} );
+            add_gt( $var, $gt->{_sample_id}, "VD", $gt->{VD});
             add_gt( $var, $gt->{_sample_id}, "DP", $gt->{DP});
 
-	}
+        }
     }
 }
-
-	# MANTA
-#	elsif( $caller eq "manta" ) {
-#	    $out_vcf_str .= "\t0/1";
-#	    my( $ref_dp, $alt_dp ) = split /,/, $full_info->{GT}->{ $translate_names->{$sample_name} }->{PR};
-#	    $out_vcf_str .= ":".($ref_dp+$alt_dp);
- #           $out_vcf_str .= ":".$alt_dp;
-  #          if( $alt_dp == 0 ) {
-   #             $out_vcf_str .= ":0";
-    #        }
-     #       else {
-      #          $out_vcf_str .= sprintf ":%.3f", $alt_dp / ($alt_dp + $ref_dp);
-#	    }	    
-#	}
-	
-
-	# GATK HaplotypeCaller
-#	elsif( $caller eq "gatkhc" ) {
-#	    $out_vcf_str .= "\t".$full_info->{GT}->{ $translate_names->{$sample_name} }->{GT};
-#	    $out_vcf_str .= ":".$full_info->{GT}->{ $translate_names->{$sample_name} }->{DP};
-#	    my( $ref_dp, $alt_dp ) = split /,/, $full_info->{GT}->{ $translate_names->{$sample_name} }->{AD};
-#	    $out_vcf_str .= ":".$alt_dp;
-#	    $out_vcf_str .= ":".($alt_dp/$full_info->{GT}->{ $translate_names->{$sample_name} }->{DP});
-#	}
-	    
-
-	# STRELKA
-#	elsif( $caller eq "strelka" ) {
-
-	    # INDELs
-#	    if( $full_info->{GT}->{ $translate_names->{$sample_name} }->{TAR} ) {
-#		my $ref_count = ( split ',', $full_info->{GT}->{ $translate_names->{$sample_name} }->{TAR} )[0];
-#		my $alt_count = ( split ',', $full_info->{GT}->{ $translate_names->{$sample_name} }->{TIR} )[0];
-#		my $dp = $full_info->{GT}->{ $translate_names->{$sample_name} }->{DP};
-		
-#		my $af = 0;
-#		if( ($alt_count + $ref_count) > 0 ) {
-#		    $af = $alt_count / ( $alt_count + $ref_count );
-#		}
-#		my $gt = "0/1";
-#		$gt = "0/0" if $af < 0.01;
-#		$out_vcf_str .= "\t$gt:".$dp.":".$alt_count.":".$af;    
-#	    }
-
-	    # SNVs
-#	    else {
-#		print STDERR Dumper($full_info);
-#		my $REF_FIELD = $full_info->{REF}."U";
-#		my $ALT_FIELD = $full_info->{ALT}."U";
-		#print STDERR "************* ".$full_info->{REF}."\t".$full_info->{ALT}."\t".$translate_names->{$sample_name}."\n";
-#		my $ref_count  = (split ',', $full_info->{GT}->{ $translate_names->{$sample_name} }->{$REF_FIELD} )[0];
-#		my $alt_count  = (split ',', $full_info->{GT}->{ $translate_names->{$sample_name} }->{$ALT_FIELD} )[0];
-#		my $dp = $full_info->{GT}->{ $translate_names->{$sample_name} }->{DP};
-#		my $af = $alt_count / ( $alt_count + $ref_count );
-#		my $gt = "0/1";
-#		$gt = "0/0" if $af < 0.01;		
-#		$out_vcf_str .= "\t$gt:".$dp.":".$alt_count.":".$af;    
-#	    }
-#	}
-
-
 
 sub check_options {
     my %opt = %{ $_[0] };
@@ -326,17 +274,20 @@ sub fluffify_pindel_variants {
 sub which_variantcaller{
     my $meta = shift;
     if( $meta->{source} ) {
-	return "freebayes" if $meta->{source} =~ /freeBayes/;
-	return "mutect2" if $meta->{source} =~ /Mutect2/;
-	return "pindel" if $meta->{source} =~ /pindel/;
+        return "freebayes" if $meta->{source} =~ /freeBayes/;
+        return "mutect2" if $meta->{source} =~ /Mutect2/;
+        return "pindel" if $meta->{source} =~ /pindel/;
     }
     if( $meta->{'SentieonCommandLine.TNscope'} ) {
-	return "tnscope";
+	    return "tnscope";
     }
     if( $meta->{INFO}->{MSILEN} ) { # FIXME: Terrible way of detecting vardict VCFs...
-	return "vardict";
+	    return "vardict";
     }
-
+    ## special rule from constiutional pipeline
+    elsif ( $meta->{INFO}->{ASSESS}) {
+        return "MELT";
+    }
     return "unknown";
 }
 
