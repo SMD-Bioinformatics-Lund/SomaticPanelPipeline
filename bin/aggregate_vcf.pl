@@ -81,34 +81,41 @@ sub aggregate_vcfs {
 	
 	while ( my $var = $vcf->next_var() ) {
 	    my $simple_id = $var->{CHROM}."_".$var->{POS}."_".$var->{REF}."_".$var->{ALT};
-
+        my $melt_info_keep = 0;
+        if ($var->{INFO}->{SCOUT_CUSTOM}) {
+            $melt_info_keep = $var->{INFO}->{SCOUT_CUSTOM};
+        }
 	    $var->{INFO} = {};
 	    $var->{INFO_order} = [];
 	    
 	    # Collect all filters for each variant
 	    if( $var->{FILTER} ) {
-		my @vc_filters = split /;/, $var->{FILTER};
-		foreach( @vc_filters ) {
-		    $filters{$simple_id}->{$_} = 1;
-		    $all_filters{$_} = 1;
-		}
+            my @vc_filters = split /;/, $var->{FILTER};
+            foreach( @vc_filters ) {
+                $filters{$simple_id}->{$_} = 1;
+                $all_filters{$_} = 1;
+            }
 	    }
 
 	    next if $vc eq "freebayes" and is_weird_freebayes($var);
 	    
 	    if( $agg{$simple_id} ) {
-		$agg{$simple_id}->{INFO}->{variant_callers} .= "|$vc";
+		    $agg{$simple_id}->{INFO}->{variant_callers} .= "|$vc";
 	    }
 	    else {
-		add_info( $var, "variant_callers", $vc );
-		fix_gt( $var, $vc );
-		$agg{$simple_id} = $var;
+		    add_info( $var, "variant_callers", $vc );
+            if ($vc eq "MELT") {
+                add_info( $var, "custom", $melt_info_keep);
+            }
+            
+		    fix_gt( $var, $vc );
+		    $agg{$simple_id} = $var;
 	    }
  	}
     }
 
     foreach my $id (keys %agg) {
-	$agg{$id}->{FILTER} = summarize_filters( keys %{$filters{$id}} )
+	    $agg{$id}->{FILTER} = summarize_filters( keys %{$filters{$id}} )
     }
     
     return( \%agg, \@headers, [keys %all_filters] );
@@ -190,7 +197,6 @@ sub fix_gt {
             add_gt( $var, $gt->{_sample_id}, "VAF", $gt->{VAF} );
             add_gt( $var, $gt->{_sample_id}, "VD", $gt->{VD});
             add_gt( $var, $gt->{_sample_id}, "DP", $gt->{DP});
-
         }
     }
 }
