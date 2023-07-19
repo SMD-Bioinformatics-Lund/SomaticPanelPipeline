@@ -248,3 +248,39 @@ process COHORT_CALL_PANEL {
         """
 
 }
+
+
+process GATK_SOM_PON {
+
+    input:
+        tuple val(prefix), val(id), file(tsvs)
+
+    output:
+        tuple val(prefix), path("${prefix}.somatic_gatk_pon.hdf5"), emit: somatic_pon
+    
+    script:
+        tsv_list = tsvs.collect {'-I ' + it}
+        tsv_list = tsv_list.join(' ')
+        """
+        export THEANO_FLAGS="base_compiledir=."
+        set +u
+        source activate gatk
+        export HOME=/local/scratch
+        export MKL_NUM_THREADS=${task.cpus}
+        export OMP_NUM_THREADS=${task.cpus}
+        gatk --java-options "-Djava.io.tmpdir=/local/scratch/" \\
+            CreateReadCountPanelOfNormals \\
+            --minimum-interval-median-percentile 5.0 \\
+            -O ${prefix}.somatic_gatk_pon.hdf5 \\
+        $tsv_list
+        """
+
+    stub:
+        tsv_list = tsvs.collect {'-I ' + it}
+        tsv_list = tsv_list.join(' ')
+        """
+        echo $tsv_list
+        touch ${prefix}.somatic_gatk_pon.hdf5
+        """
+
+}

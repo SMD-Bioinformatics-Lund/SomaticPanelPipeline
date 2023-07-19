@@ -3,6 +3,7 @@
 include { COHORT_PLOIDY           } from '../../modules/local/GATK_references/main'
 include { COHORT_CALL             } from '../../modules/local/GATK_references/main'
 include { COHORT_CALL_PANEL       } from '../../modules/local/GATK_references/main'
+include { GATK_SOM_PON            } from '../../modules/local/GATK_references/main'
 
 
 workflow CALL_COHORT {
@@ -20,7 +21,7 @@ workflow CALL_COHORT {
 		else {
 			COHORT_CALL(counts.groupTuple().join(COHORT_PLOIDY.out.ploidy).combine(scatters))
 		}
-		
+		GATK_SOM_PON( counts.groupTuple() )
 		
 	emit:
         ploidy = COHORT_PLOIDY.out.ploidy
