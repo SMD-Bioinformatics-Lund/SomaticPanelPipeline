@@ -1,3 +1,31 @@
+process CNVKITREF {
+
+    input:
+        tuple val(name), val(id), file(bam), file(bai)
+		val(part)
+		path(bedfile)
+
+    output:
+        tuple val(name), file("${name}_cnvkit_${part}.cnn"), emit: cnvkit_ref
+
+    script:
+        """
+        cnvkit.py batch --normal *.bam \\
+            --targets ${bedfile} \\
+            --annotate ${params.refflat} \\
+            --fasta ${params.genome_file} \\
+            --output-reference ${name}_cnvkit_${part}.cnn \\
+            --output-dir results/ -p ${task.cpus}
+        """
+
+    stub:
+        """
+		echo $bedfile $part
+        touch ${name}_cnvkit_${part}.cnn
+        """
+}
+
+
 process CNVKIT {
 	publishDir "${params.outdir}/${params.subdir}/cnvkit", mode: 'copy', overwrite: true, pattern: '*.cnvkit'
 	publishDir "${params.outdir}/${params.subdir}/cnvkit/segments", mode: 'copy', overwrite: true, pattern: '*.call.cns'
