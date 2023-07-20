@@ -6,8 +6,8 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
-include { QC                            } from '../subworkflows/local/qc'
 include { SAMPLE                        } from '../subworkflows/local/sample'
+include { CREATE_SNV_PON               } from '../subworkflows/local/create_snv_pon'
 
 
 println(params.genome_file)
@@ -22,14 +22,7 @@ Channel
     .splitText( by: 1000, file: 'bedpart.bed' )
     .set { beds }
 
-Channel
-	.fromPath(params.gatkreffolders)
-	.splitCsv(header:true)
-	.map{ row-> tuple(row.i, row.refpart) }
-	.set{ gatk_ref}
-
-
-workflow PON {
+workflow SPP_SNVPON {
 
 	// Checks input, creates meta-channel and decides whether data should be downsampled //
 	CHECK_INPUT ( Channel.fromPath(csv) )
@@ -43,22 +36,21 @@ workflow PON {
 		CHECK_INPUT.out.meta
 	)
 	.set { ch_mapped } 
-	QC ( 
-        ch_mapped.qc_out, 
-		ch_mapped.bam_lowcov
-    )
-	.set { ch_qc }
 	SNV_CALLING ( 
 		ch_mapped.bam_umi.groupTuple(),
+		ch_mapped.bam_dedup,
 		beds,
-		CHECK_INPUT.out.meta
+		CHECK_INPUT.out.meta,
+		Channel.of(tuple(1,2))
 	)
 	.set { ch_vcf }
-
+	CREATE_SNV_PON(
+		ch_vcf.concat_vcfs
+	)
 }
 
 workflow {
-	PON()
+	SPP_SNVPON()
 }
 
 

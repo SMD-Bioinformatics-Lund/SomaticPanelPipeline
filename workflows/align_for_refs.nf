@@ -13,21 +13,7 @@ println(params.genome_file)
 csv = file(params.csv)
 println(csv)
 
-// Split bed file in to smaller parts to be used for parallel variant calling
-Channel
-    .fromPath("${params.regions_bed}")
-    .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
-    .splitText( by: 1000, file: 'bedpart.bed' )
-    .set { beds }
-
-Channel
-	.fromPath(params.gatkreffolders)
-	.splitCsv(header:true)
-	.map{ row-> tuple(row.i, row.refpart) }
-	.set{ gatk_ref}
-
-
-workflow SOLID_GMS {
+workflow SPP_ALIGN_REFS {
 
 	// Checks input, creates meta-channel and decides whether data should be downsampled //
 	CHECK_INPUT ( Channel.fromPath(csv) )
@@ -41,11 +27,11 @@ workflow SOLID_GMS {
 		CHECK_INPUT.out.meta
 	)
 	.set { ch_mapped } 
-
+	
 }
 
 workflow {
-	SOLID_GMS()
+	SPP_ALIGN_REFS()
 }
 
 

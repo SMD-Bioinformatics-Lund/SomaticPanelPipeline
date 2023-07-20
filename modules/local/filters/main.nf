@@ -339,5 +339,28 @@ process ENIGMA {
 		"""
 		touch ${group}.agg.enigma.vcf
 		"""
+}
 
+process CREATE_SNVPON {
+	cpus 1
+	time '1h'
+	tag "$vc"
+	memory '5 GB'
+
+
+	input:
+		tuple val(group), val(vc), file(vcfs) 
+		
+	output:
+		tuple val(group), val(vc), file("${params.assay}_${vc}_PON.snv"), emit: SNV_PON
+
+	script:
+		"""
+		create_snv_pon.pl "*.vcf.gz" > ${params.assay}_${vc}_PON.snv
+		"""
+	stub:
+		"""
+		echo $vcfs
+		touch ${params.assay}_${vc}_PON.snv
+		"""
 }
