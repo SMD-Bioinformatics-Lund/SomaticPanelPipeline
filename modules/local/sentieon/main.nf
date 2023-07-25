@@ -184,6 +184,7 @@ process TNSCOPE {
 	cpus params.cpu_some
 	time '2h'   
 	tag "$group" 
+	container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
 		tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
