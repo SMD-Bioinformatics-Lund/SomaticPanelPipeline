@@ -1,9 +1,6 @@
 process MELT {
-	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-    container = '/fs1/resources/containers/melt_2.2.2.sif'
-	cpus 2
-	memory '50 GB'
-	tag "$group"
+    label "process_low"
+	tag "${meta.id}"
 
 	when:
 		params.melt

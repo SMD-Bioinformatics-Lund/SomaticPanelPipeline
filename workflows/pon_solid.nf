@@ -7,13 +7,10 @@ include { CHECK_INPUT                   } from '../subworkflows/local/create_met
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SAMPLE                        } from '../subworkflows/local/sample'
-include { CREATE_SNV_PON               } from '../subworkflows/local/create_snv_pon'
+include { CREATE_SNV_PON                } from '../subworkflows/local/create_snv_pon'
 
-
-println(params.genome_file)
 
 csv = file(params.csv)
-println(csv)
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -49,9 +46,9 @@ workflow SPP_SNVPON {
 	)
 }
 
-workflow {
-	SPP_SNVPON()
-}
+// workflow {
+// 	SPP_SNVPON()
+// }
 
 
 

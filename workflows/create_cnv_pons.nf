@@ -8,10 +8,8 @@ include { BED_INTERVALS                   } from '../subworkflows/local/bed_inte
 include { CALL_COHORT                     } from '../subworkflows/local/call_cohort'
 include { CNVKITREFS                      } from '../subworkflows/local/cnvkit_refs'
 
-println(params.genome_file)
-
 csv = file(params.csv)
-println(csv)
+
 
 workflow CREATE_REF {
 
@@ -34,9 +32,5 @@ workflow CREATE_REF {
          
 		 
 		 
-}
-
-workflow {
-	CREATE_REF()
 }
 

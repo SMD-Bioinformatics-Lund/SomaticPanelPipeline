@@ -1,15 +1,8 @@
 process BWA_UMI {
-	publishDir "${params.outdir}/${params.subdir}/bam", mode: 'copy', overwrite: true, pattern: "*bwa.umi.sort.bam*"
-	cpus params.cpu_all
-	memory '128 GB'
-	time '2h'
-	errorStrategy 'retry'
-	maxErrors 5
+	label 'process_alot'
+	label 'scratch'
+	label 'stage'
 	tag "${meta.id}"
-	scratch true
-	stageInMode 'copy'
-	stageOutMode 'copy'
-	container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
 		tuple val(group), val(meta), file(r1), file(r2)
@@ -71,14 +64,10 @@ process BWA_UMI {
 }
 
 process MARKDUP {
-	cpus params.cpu_many
-	memory '64 GB'
-	time '1h'
 	tag "${meta.id}"
-	scratch true
-	stageInMode 'copy'
-	stageOutMode 'copy'
-	container = "/fs1/resources/containers/sentieon_202112.sif"
+	label 'process_high'
+	label 'scratch'
+	label 'stage'
 	
 	input:
 		tuple val(group), val(meta), file(bam), file(bai)
@@ -111,14 +100,11 @@ process MARKDUP {
 }
 
 process BQSR_UMI {
-	cpus params.cpu_some
-	memory '16 GB'
-	time '1h'
+	label 'process_medium'
+	label 'scratch'
+	label 'stage'
 	tag "${meta.id}"
-	scratch true
-	stageInMode 'copy'
-	stageOutMode 'copy'
-	container = "/fs1/resources/containers/sentieon_202112.sif"
+
 
 	input:
 		tuple val(group), val(meta), file(bam), file(bai)
@@ -138,15 +124,10 @@ process BQSR_UMI {
 }
 
 process SENTIEON_QC {
-	cpus params.cpu_many
-	memory '32 GB'
-	publishDir "${params.outdir}/${params.subdir}/QC", mode: 'copy', overwrite: 'true', pattern: '*.QC*'
-	time '1h'
+	label 'process_high'
+	label 'scratch'
+	label 'stage'
 	tag "${meta.id}"
-	scratch true
-	stageInMode 'copy'
-	stageOutMode 'copy'
-	container = "/fs1/resources/containers/sentieon_202112.sif"
 
 	input:
 		tuple val(group), val(meta), file(bam), file(bai), file(dedup)
@@ -181,10 +162,8 @@ process SENTIEON_QC {
 }
 
 process TNSCOPE {
-	cpus params.cpu_some
-	time '2h'   
 	tag "$group" 
-	container = "/fs1/resources/containers/sentieon_202112.sif"
+	label 'process_medium'
 
 	input:
 		tuple val(group), val(meta), file(bams), file(bais), file(bqsr)

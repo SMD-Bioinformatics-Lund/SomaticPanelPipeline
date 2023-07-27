@@ -15,10 +15,7 @@ include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 
-println(params.genome_file)
-
 csv = file(params.csv)
-println(csv)
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -106,9 +103,9 @@ workflow SOLID_GMS {
 
 }
 
-workflow {
-	SOLID_GMS()
-}
+// workflow {
+// 	SOLID_GMS()
+// }
 
 
 
