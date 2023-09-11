@@ -1,8 +1,6 @@
 process VARDICT {
-	cpus 1
-	time '5h'
+	label "process_single"
 	tag "$group"
-	memory '15GB'
 
 	input:
 		tuple val(group), val(meta), file(bams), file(bais), file(bqsr)

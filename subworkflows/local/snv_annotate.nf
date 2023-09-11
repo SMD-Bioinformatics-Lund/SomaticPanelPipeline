@@ -5,8 +5,8 @@ include { FFPE_PON_FILTER          } from '../../modules/local/filters/main'
 include { ANNOTATE_VEP             } from '../../modules/local/filters/main'
 include { MARK_GERMLINES           } from '../../modules/local/filters/main'
 include { FILTER_FOR_CNV           } from '../../modules/local/filters/main'
-include { CONTAMINATION            } from '../../modules/local/concatenate_vcfs/main'
-include { ENIGMA                   } from '../../modules/local/filters/main'
+include { CONTAMINATION            } from '../../modules/local/filters/main'
+include { VCFANNO                  } from '../../modules/local/filters/main'
 
 workflow SNV_ANNOTATE {
     take: 
@@ -22,18 +22,18 @@ workflow SNV_ANNOTATE {
             // FFPE-PON if set to true
             if (params.ffpe_pon) {
                 FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should not be be FFPE annotated
-                ENIGMA_INPUT = FFPE_PON_FILTER.out.vcf_pon_ffpe
+                VCFANNO_INPUT = FFPE_PON_FILTER.out.vcf_pon_ffpe
             }
             else {
-                ENIGMA_INPUT = PON_FILTER.out.vcf_pon
+                VCFANNO_INPUT = PON_FILTER.out.vcf_pon
             }
             // ENIGMA if set to true
             if (params.vcfanno) {
-                ENIGMA { ENIGMA_INPUT }
-                PON_VEP = ENIGMA.out.vcf_enigma
+                VCFANNO { VCFANNO_INPUT }
+                PON_VEP = VCFANNO.out.vcf_enigma
             }
             else {
-                PON_VEP = ENIGMA_INPUT
+                PON_VEP = VCFANNO_INPUT
             }
         /////////////////////////////////////////
 

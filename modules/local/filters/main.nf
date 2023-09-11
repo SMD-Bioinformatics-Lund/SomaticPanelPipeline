@@ -1,9 +1,7 @@
 process PON_FILTER {
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-	cpus 1
-	time '1h'
+	label "process_single"
 	tag "$group"
-	memory '32 GB'
 
 	input:
 		tuple val(group), val(meta), file(vcf) 
@@ -32,10 +30,8 @@ process PON_FILTER {
 
 process FFPE_PON_FILTER {
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-	cpus 1
-	time '1h'
+	label "process_single"
 	tag "$group"
-	memory '32 GB'
 
 	when:
 		params.assay == "solid"
@@ -68,8 +64,7 @@ process FFPE_PON_FILTER {
 process ANNOTATE_VEP {
 	container = params.vepcon
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-	cpus params.cpu_many
-	time '3h'
+	label "process_high"
 	tag "$group"
     
 	input:
@@ -106,8 +101,7 @@ process ANNOTATE_VEP {
 
 process MARK_GERMLINES {
 	publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-	cpus 2
-	time '20m'
+	label "process_low"
 	tag "$group"
 
 	input:
@@ -152,8 +146,7 @@ process MARK_GERMLINES {
 
 process FILTER_FOR_CNV {
     publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-	cpus 1
-	time '20m'
+	label "process_single"
 	tag "$group"
 
     input:
@@ -179,8 +172,7 @@ process FILTER_FOR_CNV {
 
 process COYOTE_SEGMENTS {
 	publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
-	cpus 1
-	time '20m'
+	label "process_single"
 	tag "${meta.id}"
 
 	input:
@@ -207,8 +199,7 @@ process COYOTE_SEGMENTS {
 
 process MERGE_SEGMENTS {
 	publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
-	cpus 1
-	time '20m'
+	label "process_single"
 	tag "$group"
 
 	input:
@@ -230,8 +221,7 @@ process MERGE_SEGMENTS {
 
 process FILTER_MANTA {
 	publishDir "${params.outdir}/${params.subdir}/svvcf", mode: 'copy', overwrite: true
-	cpus 1
-	time '20m'
+	label "process_single"
 	tag "$group"
 
 	input:
@@ -255,8 +245,7 @@ process FILTER_MANTA {
 
 process GENEFUSE_JSON_TO_VCF {
 	publishDir "${params.outdir}/${params.subdir}/svvcf", mode: 'copy', overwrite: true
-	cpus 1
-	time '20m'
+	label "process_single"
 	tag "$group"
 	
 	input:
@@ -277,8 +266,8 @@ process GENEFUSE_JSON_TO_VCF {
 }
 
 process BIOMARKERS_TO_JSON {
-	cpus 1
-	time '10m'
+	label "process_single"
+	tag "$group"
 	publishDir "${params.outdir}/${params.subdir}/biomarkers", mode: 'copy', overwrite: true
 
 	input:
@@ -295,8 +284,10 @@ process BIOMARKERS_TO_JSON {
         msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
         msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
         hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
-        tmp = msis + msip + hrd
-        tmp = tmp - null
+		tmp = []
+		if (msis) { tmp = tmp + msis }
+		if (msip) { tmp = tmp + msip }
+		if (hrd) { tmp = tmp + hrd }
         command = tmp.join(' ')
 		"""
 		python /fs1/viktor/SomaticPanelPipeline_dsl2/bin/aggregate_biomarkers.py $command --out ${group}.bio.json --id $group
@@ -309,8 +300,10 @@ process BIOMARKERS_TO_JSON {
         msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
         msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
         hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
-        tmp = msis + msip + hrd
-        tmp = tmp - null
+        tmp = []
+		if (msis) { tmp = tmp + msis }
+		if (msip) { tmp = tmp + msip }
+		if (hrd) { tmp = tmp + hrd }
         command = tmp.join(' ')
 		"""
 		echo $command
@@ -318,11 +311,9 @@ process BIOMARKERS_TO_JSON {
 		"""
 }
 
-process ENIGMA {
-	cpus 1
-	time '1h'
+process VCFANNO {
+	label "process_single"
 	tag "$group"
-	memory '5 GB'
 
 
 	input:
@@ -342,10 +333,8 @@ process ENIGMA {
 }
 
 process CREATE_SNVPON {
-	cpus 1
-	time '1h'
+	label "process_single"
 	tag "$vc"
-	memory '5 GB'
 
 
 	input:
@@ -363,4 +352,61 @@ process CREATE_SNVPON {
 		echo $vcfs
 		touch ${params.assay}_${vc}_PON.snv
 		"""
+}
+
+process CONTAMINATION {
+	publishDir "${params.outdir}/${params.subdir}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.png"
+	publishDir "${params.outdir}/${params.subdir}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.txt"
+	publishDir "${params.crondir}/contamination", mode: 'copy', overwrite: true, pattern: "*.contamination"
+	container = "/fs1/resources/containers/perl-gd.sif"
+	label "process_single"
+	tag "$group"
+
+	input:
+		tuple val(group), val(meta), file(vcf)
+
+	output:
+		tuple val(group), file("*.txt"), file("*.png"), emit: contamination_result_files
+		tuple val(group), file("*.contamination"), emit: contamination_cdm
+
+	script:
+		if(meta.id.size() >= 2) { 
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+			"""
+			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[tumor_idx]}.value
+			echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[tumor_idx]}.1
+			paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contamination
+			find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 --normal > ${meta.id[normal_idx]}.value
+			echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
+			paste -d " " ${meta.id[normal_idx]}.1 ${meta.id[normal_idx]}.value > ${meta.id[normal_idx]}.contamination
+			"""
+		}
+		else {
+			"""
+			find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[0]}.value
+			echo "--overwrite --sample-id ${meta.id[0]} --sequencing-run ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
+			paste -d " " ${meta.id[0]}.1 ${meta.id[0]}.value > ${meta.id[0]}.contamination
+			"""
+		}
+	stub:
+		if(meta.id.size() >= 2) { 
+			tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+			normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+			"""
+			touch test.png
+			touch test.txt
+			touch ${meta.id[tumor_idx]}.contamination
+			touch ${meta.id[normal_idx]}.contamination
+			"""
+		}
+		else {
+			"""
+			touch test.png
+			touch test.txt
+			touch ${meta.id[0]}.contamination
+			"""
+		}	
+
+
 }

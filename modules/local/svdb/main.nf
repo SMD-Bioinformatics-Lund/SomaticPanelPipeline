@@ -1,12 +1,7 @@
 process SVDB_MERGE_PANEL {
-	cpus 1
+	label "process_single"
 	tag "$group"
 	publishDir "${params.outdir}/${params.subdir}/svvcf/merged/", mode: 'copy', overwrite: 'true'
-	time '10m'
-	memory '1 GB'
-	// scratch true
-	// stageInMode 'copy'
-	// stageOutMode 'copy'
 
 	input:
 		tuple val(group), val(meta), file(vcfs)
@@ -81,10 +76,8 @@ process SVDB_MERGE_PANEL {
 
 
 process SVDB_MERGE_SINGLES {
-	cpus 1
+	label "process_single"
 	tag "$group"
-	time '10m'
-	memory '1 GB'
 
 	input:
 		tuple val(group), val(vc), file(vcfs)

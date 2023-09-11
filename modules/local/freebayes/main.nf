@@ -1,6 +1,5 @@
 process FREEBAYES {
-	cpus 1
-	time '40m'
+	label "process_single"
 	tag "$group"
 	
 	input:

@@ -5,6 +5,7 @@ process MSISENSOR {
 	time '20m'
 	tag "$group"
 	container = "/fs1/resources/containers/msisensor-pro-1.2.0.sif"
+	errorStrategy 'ignore'
 
 	when:
 		params.msi

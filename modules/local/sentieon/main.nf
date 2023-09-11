@@ -162,8 +162,8 @@ process SENTIEON_QC {
 }
 
 process TNSCOPE {
-	tag "$group" 
-	label 'process_medium'
+	label "process_single"
+	tag "$group"
 
 	input:
 		tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
