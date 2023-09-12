@@ -261,6 +261,7 @@ process MERGE_GENS {
 		echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
 		else
 		echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.cov.bed.gz" > !{meta.id}.gens
+		echo "needs to tabix here to Ram and Saile!"
 		fi
 		'''
 	stub:
