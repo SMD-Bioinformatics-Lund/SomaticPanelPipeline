@@ -24,7 +24,7 @@ process SVDB_MERGE_PANEL {
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
         genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = manta + delly + gatk + cnvkit + genefuse
+        tmp = [manta, delly, gatk, cnvkit, genefuse]
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
 
@@ -54,7 +54,7 @@ process SVDB_MERGE_PANEL {
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
         genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = manta + delly + gatk + cnvkit
+        tmp = [manta, delly, gatk, cnvkit]
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
 
