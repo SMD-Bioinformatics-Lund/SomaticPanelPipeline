@@ -9,7 +9,8 @@ process SVDB_MERGE_PANEL {
 	output:
 		tuple val(group), val(meta), file("${meta.id}.merged.vcf"), emit: merged_vcf
 
-	script:  
+	script:
+        def args = task.ext.args ?: ''  
         // for each sv-caller add idx, find vcf and find priority, add in priority order! //
         // index of vcfs added from mix //
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
@@ -24,7 +25,7 @@ process SVDB_MERGE_PANEL {
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
         genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = [manta, delly, gatk, cnvkit, genefuse]
+        tmp = manta + delly + gatk + cnvkit + genefuse
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
 
@@ -39,7 +40,7 @@ process SVDB_MERGE_PANEL {
         priority = tmpp.join(',')
     
         """
-        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
+        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only $args --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
         """
     stub:
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
@@ -54,7 +55,7 @@ process SVDB_MERGE_PANEL {
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
         genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = [manta, delly, gatk, cnvkit]
+        tmp = manta + delly + gatk + cnvkit
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
 
