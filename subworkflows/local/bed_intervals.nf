@@ -8,29 +8,39 @@ include { REMOVE_ALT_CONTIGS       } from '../../modules/local/GATK_references/m
 include { SCATTER_INTERVALS        } from '../../modules/local/GATK_references/main'
 
 workflow BED_INTERVALS {
-	take:
-		prefix         // val(prefix) name of reference
-		sample		   // val(id), file(cram), file(crai), file(bai)
+    take:
+        prefix         // val(prefix) name of reference
+        sample           // val(id), file(cram), file(crai), file(bai)
 
-	main:
+    main:
+        ch_versions = Channel.empty()
+        
         PREPROCESSINTERVALS(prefix)
-		ANNOTATE_GC(PREPROCESSINTERVALS.out.preprocessed)
-		COUNT_READS(sample,PREPROCESSINTERVALS.out.preprocessed)
-		CORRECT_GC(PREPROCESSINTERVALS.out.preprocessed.join(ANNOTATE_GC.out.annotated_intervals), COUNT_READS.out.count_tsv.groupTuple())
-		REMOVE_ALT_CONTIGS(CORRECT_GC.out.corrected_intervals)
-		if (params.panel) {
-			scattered = REMOVE_ALT_CONTIGS.out.noaltcontigs
-		}
-		else {
-			SCATTER_INTERVALS(REMOVE_ALT_CONTIGS.out.noaltcontigs, params.scatter_size)  // scatter bins. 380000 per bin creates 7 scatters for human wgs, this is used to fasten up calling downstream
-			scattered = SCATTER_INTERVALS.out.scatter
-		}
-		
-		
+        ch_versions = ch_versions.mix(PREPROCESSINTERVALS.out.versions)
 
-	emit:
-        intervals = REMOVE_ALT_CONTIGS.out.noaltcontigs
-		intervals_scattered = scattered
-		counts = COUNT_READS.out.count_tsv
+        ANNOTATE_GC(PREPROCESSINTERVALS.out.preprocessed)
+        ch_versions = ch_versions.mix(ANNOTATE_GC.out.versions)
 
+        COUNT_READS(sample,PREPROCESSINTERVALS.out.preprocessed)
+        ch_versions = ch_versions.mix(COUNT_READS.out.versions)
+
+        CORRECT_GC(PREPROCESSINTERVALS.out.preprocessed.join(ANNOTATE_GC.out.annotated_intervals), COUNT_READS.out.count_tsv.groupTuple())
+        ch_versions = ch_versions.mix(CORRECT_GC.out.versions)
+
+        REMOVE_ALT_CONTIGS(CORRECT_GC.out.corrected_intervals)
+
+        if (params.panel) {
+            scattered = REMOVE_ALT_CONTIGS.out.noaltcontigs
+        }
+        else {
+            SCATTER_INTERVALS(REMOVE_ALT_CONTIGS.out.noaltcontigs, params.scatter_size)  // scatter bins. 380000 per bin creates 7 scatters for human wgs, this is used to fasten up calling downstream
+            ch_versions = ch_versions.mix(SCATTER_INTERVALS.out.versions)
+            scattered   = SCATTER_INTERVALS.out.scatter
+        }
+
+    emit:
+        intervals           =   REMOVE_ALT_CONTIGS.out.noaltcontigs
+        intervals_scattered =   scattered
+        counts              =   COUNT_READS.out.count_tsv
+        versions            =   ch_versions
 }

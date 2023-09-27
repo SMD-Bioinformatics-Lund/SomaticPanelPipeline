@@ -8,6 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CREATE_SNV_PON                } from '../subworkflows/local/create_snv_pon'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 
 
 csv = file(params.csv)
@@ -21,69 +22,68 @@ Channel
 
 workflow SPP_SNVPON {
 
-	// Checks input, creates meta-channel and decides whether data should be downsampled //
-	CHECK_INPUT ( Channel.fromPath(csv) )
+    ch_versions = Channel.empty()
 
-	// Downsample if meta.sub == value and not false //
-	SAMPLE ( CHECK_INPUT.out.fastq )  
-	.set{ ch_trim }
-	// Do alignment if downsample was false and mix with SAMPLE subworkflow output
-	ALIGN_SENTIEON ( 
-		ch_trim.fastq_trim,
-		CHECK_INPUT.out.meta
-	)
-	.set { ch_mapped } 
-	SNV_CALLING ( 
-		ch_mapped.bam_umi.groupTuple(),
-		ch_mapped.bam_dedup,
-		beds,
-		CHECK_INPUT.out.meta,
-		Channel.of(tuple(1,2))
-	)
-	.set { ch_vcf }
-	CREATE_SNV_PON(
-		ch_vcf.concat_vcfs
-	)
+    // Checks input, creates meta-channel and decides whether data should be downsampled //
+    CHECK_INPUT ( Channel.fromPath(csv) )
+
+    // Downsample if meta.sub == value and not false //
+    SAMPLE ( CHECK_INPUT.out.fastq )  
+    .set{ ch_trim }
+    ch_versions = ch_versions.mix(ch_trim.versions)
+
+    // Do alignment if downsample was false and mix with SAMPLE subworkflow output
+    ALIGN_SENTIEON ( 
+        ch_trim.fastq_trim,
+        CHECK_INPUT.out.meta
+    )
+    .set { ch_mapped } 
+    ch_versions = ch_versions.mix(ch_mapped.versions)
+
+    SNV_CALLING ( 
+        ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_dedup,
+        beds,
+        CHECK_INPUT.out.meta,
+        Channel.of(tuple(1,2))
+    )
+    .set { ch_vcf }
+    ch_versions = ch_versions.mix(ch_vcf.versions)
+
+    CREATE_SNV_PON(
+        ch_vcf.concat_vcfs
+    )
+    ch_versions = ch_versions.mix(CREATE_SNV_PON.out.versions)
+
+    CUSTOM_DUMPSOFTWAREVERSIONS (
+        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+    )
+
 }
-
-// workflow {
-// 	SPP_SNVPON()
-// }
-
-
-
-
-
-
-
-
-
-
-
 
 
 workflow.onComplete {
 
-	def msg = """\
-		Pipeline execution summary
-		---------------------------
-		Completed at: ${workflow.complete}
-		Duration    : ${workflow.duration}
-		Success     : ${workflow.success}
-		scriptFile  : ${workflow.scriptFile}
-		workDir     : ${workflow.workDir}
-		exit status : ${workflow.exitStatus}
-		errorMessage: ${workflow.errorMessage}
-		errorReport :
-		"""
-		.stripIndent()
-	def error = """\
-		${workflow.errorReport}
-		"""
-		.stripIndent()
+    def msg = """\
+        Pipeline execution summary
+        ---------------------------
+        Completed at: ${workflow.complete}
+        Duration    : ${workflow.duration}
+        Success     : ${workflow.success}
+        scriptFile  : ${workflow.scriptFile}
+        workDir     : ${workflow.workDir}
+        exit status : ${workflow.exitStatus}
+        errorMessage: ${workflow.errorMessage}
+        errorReport :
+        """
+        .stripIndent()
+    def error = """\
+        ${workflow.errorReport}
+        """
+        .stripIndent()
 
-	base = csv.getBaseName()
-	logFile = file("/fs1/results/cron/logs/" + base + ".complete")
-	logFile.text = msg
-	logFile.append(error)
+    base = csv.getBaseName()
+    logFile = file("/fs1/results/cron/logs/" + base + ".complete")
+    logFile.text = msg
+    logFile.append(error)
 }

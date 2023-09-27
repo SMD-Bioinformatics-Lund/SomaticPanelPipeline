@@ -1,15 +1,16 @@
 process SVDB_MERGE_PANEL {
-	label "process_single"
-	tag "$group"
-	publishDir "${params.outdir}/${params.subdir}/svvcf/merged/", mode: 'copy', overwrite: 'true'
+    label "process_single"
+    tag "$group"
+    publishDir "${params.outdir}/${params.subdir}/svvcf/merged/", mode: 'copy', overwrite: 'true'
 
-	input:
-		tuple val(group), val(meta), file(vcfs)
+    input:
+        tuple val(group), val(meta), file(vcfs)
 
-	output:
-		tuple val(group), val(meta), file("${meta.id}.merged.vcf"), emit: merged_vcf
+    output:
+        tuple val(group), val(meta), file("${meta.id}.merged.vcf"), emit: merged_vcf
+        path "versions.yml",                                        emit: versions
 
-	script:  
+    script:  
         // for each sv-caller add idx, find vcf and find priority, add in priority order! //
         // index of vcfs added from mix //
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
@@ -40,7 +41,13 @@ process SVDB_MERGE_PANEL {
     
         """
         svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
+    
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
         """
+
     stub:
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
         delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
@@ -70,32 +77,49 @@ process SVDB_MERGE_PANEL {
         """
         echo $vcfs_svdb $priority
         touch ${meta.id}.merged.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
         """
 
 }
 
 
 process SVDB_MERGE_SINGLES {
-	label "process_single"
-	tag "$group"
+    label "process_single"
+    tag "$group"
 
-	input:
-		tuple val(group), val(vc), file(vcfs)
+    input:
+        tuple val(group), val(vc), file(vcfs)
         
-	output:
-		tuple val(group), val(vc), file("${group}_${vc}.merged.vcf"), emit: singles_merged_vcf
+    output:
+        tuple val(group), val(vc), file("${group}_${vc}.merged.vcf"),   emit: singles_merged_vcf
+        path "versions.yml",                                            emit: versions
 
-	script:  
+    script:  
         vcfs_svdb = vcfs.join(' ')
         vc = vc[0]
         """
         svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 1.0 > ${group}_${vc}.merged.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
         """
+
     stub:
         vcfs_svdb = vcfs.join(' ')
         vc = vc[0]
         """
         touch ${group}_${vc}.merged.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
         """
 
 }

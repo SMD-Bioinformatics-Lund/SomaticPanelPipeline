@@ -10,6 +10,7 @@ include { CNV_CALLING                   } from '../subworkflows/local/cnv_callin
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -58,76 +59,76 @@ Channel
     .set { beds }
 
 Channel
-	.fromPath(params.gatkreffolders)
-	.splitCsv(header:true)
-	.map{ row-> tuple(row.i, row.refpart) }
-	.set{ gatk_ref}
+    .fromPath(params.gatkreffolders)
+    .splitCsv(header:true)
+    .map{ row-> tuple(row.i, row.refpart) }
+    .set{ gatk_ref}
 
 
 workflow SOLID_GMS {
 
-	ALIGN_SENTIEON ( fastq )
-	.set { ch_mapped }
-	QC ( 
+    ch_versions = Channel.empty()
+
+    ALIGN_SENTIEON ( fastq )
+    .set { ch_mapped }
+    ch_versions = ch_versions.mix(ch_mapped.versions)
+
+    QC ( 
         ch_mapped.qc_out,
         meta_qc,
-		ch_mapped.bam_lowcov
+        ch_mapped.bam_lowcov
     )
-	.set { ch_qc }
-	SNV_CALLING ( 
-		ch_mapped.bam_umi.groupTuple(),
-		beds,
-		meta,
-		meta_contamination
-	)
-	.set { ch_vcf }
-	ADD_TO_DB (
-		ch_vcf.finished_vcf,
-		meta_coyote.groupTuple(),
-		ch_qc.lowcov.groupTuple()
-	)
+    .set { ch_qc }
+    ch_versions = ch_versions.mix(ch_qc.versions)
 
+    SNV_CALLING ( 
+        ch_mapped.bam_umi.groupTuple(),
+        beds,
+        meta,
+        meta_contamination
+    )
+    .set { ch_vcf }
+    ch_versions = ch_versions.mix(ch_vcf.versions)
 
+    ADD_TO_DB (
+        ch_vcf.finished_vcf,
+        meta_coyote.groupTuple(),
+        ch_qc.lowcov.groupTuple()
+    )
+
+    CUSTOM_DUMPSOFTWAREVERSIONS (
+        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+    )
 }
 
 workflow {
-	SOLID_GMS()
+    SOLID_GMS()
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
 workflow.onComplete {
 
-	def msg = """\
-		Pipeline execution summary
-		---------------------------
-		Completed at: ${workflow.complete}
-		Duration    : ${workflow.duration}
-		Success     : ${workflow.success}
-		scriptFile  : ${workflow.scriptFile}
-		workDir     : ${workflow.workDir}
-		exit status : ${workflow.exitStatus}
-		errorMessage: ${workflow.errorMessage}
-		errorReport :
-		"""
-		.stripIndent()
-	def error = """\
-		${workflow.errorReport}
-		"""
-		.stripIndent()
+    def msg = """\
+        Pipeline execution summary
+        ---------------------------
+        Completed at: ${workflow.complete}
+        Duration    : ${workflow.duration}
+        Success     : ${workflow.success}
+        scriptFile  : ${workflow.scriptFile}
+        workDir     : ${workflow.workDir}
+        exit status : ${workflow.exitStatus}
+        errorMessage: ${workflow.errorMessage}
+        errorReport :
+        """
+        .stripIndent()
+    def error = """\
+        ${workflow.errorReport}
+        """
+        .stripIndent()
 
-	base = csv.getBaseName()
-	logFile = file("/fs1/results/cron/logs/" + base + ".complete")
-	logFile.text = msg
-	logFile.append(error)
+    base = csv.getBaseName()
+    logFile = file("/fs1/results/cron/logs/" + base + ".complete")
+    logFile.text = msg
+    logFile.append(error)
 }
