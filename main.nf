@@ -1,24 +1,32 @@
 #!/usr/bin/env nextflow
 
+/*
+    A common somatic panel pipeline (SPP) for targeted gene panel analysis of myeloid, lymphoid and solid cancer data. 
+*/
 
 nextflow.enable.dsl = 2
 
-include { SPP_SNVPON        } from './workflows/pon_solid.nf'
-include { SOLID_GMS         } from './workflows/test_checkinput.nf'
-include { CREATE_REF        } from './workflows/create_cnv_pons.nf'
+include { SPP_CREATE_SNVPON        } from './workflows/pon_solid.nf'
+include { SPP_COMMON               } from './workflows/commom.nf'
+include { SPP_CREATE_CNVPON        } from './workflows/create_cnv_pons.nf'
 
 println(params.genome_file)
 csv = file(params.csv)
 println(csv)
 
+/*
+    Different workflows for the analysis; current entry point is SPP i.e -entry SPP
+*/
 workflow SPP {
-    SOLID_GMS()
+    SPP_COMMON ()
 }
 
 workflow SNVPON {
-    SPP_SNVPON()
+    SPP_CREATE_SNVPON()
 }
 
 workflow CNVPON {
-    CREATE_REF()
+    SPP_CREATE_CNVPON()
 }
+
+

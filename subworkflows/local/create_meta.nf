@@ -8,8 +8,8 @@ workflow CHECK_INPUT {
 		csv
 
 	main:
-		//CSV_CHECK ( csv )
-		csv.splitCsv( header:true, sep:',' ).set { csvmap }
+		CSV_CHECK ( csv )
+		checkedCsv = CSV_CHECK.out.splitCsv( header:true, sep:',').set { csvmap }
 
 		fastq     = csvmap.map { create_fastq_channel(it) }
 		meta      = csvmap.map { create_samples_channel(it) }
@@ -24,7 +24,7 @@ workflow CHECK_INPUT {
 def create_fastq_channel(LinkedHashMap row) {
 	// create meta map
 	def meta = [:]
-	meta.id                 = row.id
+	meta.id					= row.id
 	meta.group              = row.group
 	meta.diagnosis          = row.diagnosis
 	meta.type               = row.type

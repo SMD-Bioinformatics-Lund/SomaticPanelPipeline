@@ -6,6 +6,12 @@ use vcf2;
 use Data::Dumper;
 use List::Util qw( max min );
 
+#   Usage : filter_freebayes_somatic.pl tumor.vcf normal.vcf
+#   
+#   Filters the variants and taggs variants based on differnt filter criteria
+# 
+#   Dependencies: This script requires vcf2 module. please make sure the module is in the your bin folder. 
+
 my $vcf = vcf2->new('file'=>$ARGV[0] );
 
 my $T = $ARGV[1];
@@ -69,20 +75,20 @@ while ( my $v = $vcf->next_var() ) {
 
     my $TALT;
     unless( $genotype{T}->[1] == $genotype{N}->[0] or $genotype{T}->[1] == $genotype{N}->[1] ) {
-	$TALT = $genotype{T}->[1];
+	    $TALT = $genotype{T}->[1];
     }
     else {
-	$TALT = $genotype{T}->[0];
-	$status = "WARN_NOVAR" if $TALT eq "0";
+	    $TALT = $genotype{T}->[0];
+	    $status = "WARN_NOVAR" if $TALT eq "0";
     }
 
     # Fail if difference between tumor's and normal's VAF is < 3x.
     if( $depth{N} > 0 and $depth{T} > 0 ) {
-	my $NVAF = $altobs{N}->[$TALT-1] / $depth{N};
-	my $TVAF = $altobs{T}->[$TALT-1] / $depth{T};
-	if( $NVAF > 0 and ($TVAF/$NVAF < $MIN_VAF_RATIO) ) {
-	    $status = "FAIL_NVAF";
-	}
+	    my $NVAF = $altobs{N}->[$TALT-1] / $depth{N};
+	    my $TVAF = $altobs{T}->[$TALT-1] / $depth{T};
+	    if( $NVAF > 0 and ($TVAF/$NVAF < $MIN_VAF_RATIO) ) {
+	        $status = "FAIL_NVAF";
+	    }
     }
     push @status,$status;
     if ($v->{INFO}->{MQM} <= 10 ) {
@@ -96,8 +102,9 @@ while ( my $v = $vcf->next_var() ) {
 }
 
 
-
-
+#   Function: add_info
+#
+#   Description: Add information from the vcffile
 
 sub add_info {
     my( $var, $key, $val ) = @_;
@@ -105,6 +112,9 @@ sub add_info {
     $var->{INFO}->{$key} = $val;
 }
 
+#   Function:   vcfstr
+#
+#   Description: This function prints all the information from the vcf string   
 sub vcfstr {
     my $v = shift;
 

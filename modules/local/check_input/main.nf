@@ -4,11 +4,22 @@ process CSV_CHECK {
     path samplesheet
 
     output:
-    path '*.csv'       , emit: cool
+    path "${samplesheet.baseName}.checked.csv", emit: csv
 
+    script:
+    """
+    check_samplesheet.py -c ${samplesheet} -o samplecheck.txt
 
-    script: // This script is bundled with the pipeline, in nf-core/raredisease/bin/
+    if [[ -e "samplecheck.txt" ]]; then
+        cp ${samplesheet} "${samplesheet.baseName}.checked.csv"
+    else
+        echo "samplecheck.txt does not exist"
+    fi
     """
-    echo bla > bla.csv
-    """
+
+    stub:
+     """
+		echo ${samplesheet} 
+        touch ${samplesheet}.checked.csv
+     """
 }
