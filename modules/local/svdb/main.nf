@@ -10,7 +10,10 @@ process SVDB_MERGE_PANEL {
         tuple val(group), val(meta), file("${meta.id}.merged.vcf"), emit: merged_vcf
         path "versions.yml",                                        emit: versions
 
-    script:  
+
+    script:
+        def args = task.ext.args ?: ''  
+
         // for each sv-caller add idx, find vcf and find priority, add in priority order! //
         // index of vcfs added from mix //
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
@@ -40,7 +43,7 @@ process SVDB_MERGE_PANEL {
         priority = tmpp.join(',')
     
         """
-        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
+        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only $args --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
     
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
