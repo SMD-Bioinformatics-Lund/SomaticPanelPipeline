@@ -5,24 +5,31 @@ include { FASTP                } from '../../modules/local/fastp/main'
 
 
 workflow SAMPLE {
-	take:
-		fastq
+    take:
+        fastq
 
-	main:
-		// Only sub-sample if meta.sub == value
-		SEQTK ( fastq.filter{ item -> item[1].sub != false } )
-		//combine with any sample that does not get sub-sampled
-		fastq_sample = SEQTK.out.fastq_sub.mix( fastq.filter{ item -> item[1].sub == false } )
+    main:
+        ch_versions = Channel.empty()
 
-		if (params.trimfq) {
-			FASTP ( fastq_sample )
-			fastq_done = FASTP.out.fastq_trimmed
-		}
-		else {
-			fastq_done = fastq_sample
-		}
+        // Only sub-sample if meta.sub == value
+        SEQTK ( fastq.filter{ item -> item[1].sub != false } )
+        ch_versions = ch_versions.mix(SEQTK.out.versions)
 
-	emit:
-		fastq_trim = fastq_done
+
+        //combine with any sample that does not get sub-sampled
+        fastq_sample = SEQTK.out.fastq_sub.mix( fastq.filter{ item -> item[1].sub == false } )
+
+        if (params.trimfq) {
+            FASTP ( fastq_sample )
+            fastq_done = FASTP.out.fastq_trimmed
+            ch_versions = ch_versions.mix(FASTP.out.versions)
+        }
+        else {
+            fastq_done = fastq_sample
+        }
+
+    emit:
+        fastq_trim  =   fastq_done
+        versions    =   ch_versions 
 
 }

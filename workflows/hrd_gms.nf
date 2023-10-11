@@ -8,6 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -42,72 +43,74 @@ Channel
     .set { beds }
 
 Channel
-	.fromPath(params.gatkreffolders)
-	.splitCsv(header:true)
-	.map{ row-> tuple(row.i, row.refpart) }
-	.set{ gatk_ref}
+    .fromPath(params.gatkreffolders)
+    .splitCsv(header:true)
+    .map{ row-> tuple(row.i, row.refpart) }
+    .set{ gatk_ref}
 
 
 workflow SOLID_GMS {
 
-	ALIGN_SENTIEON ( fastq )
-	.set { ch_mapped }
-	SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
-	.set { ch_vcf }
-	CNV_CALLING ( 
-		ch_mapped.bam_umi, 
-		ch_vcf.germline_variants,
-		meta_purity,
-		ch_vcf.concat_vcfs
-	)
-	.set { ch_cnvcalled }
-	BIOMARKERS ( 
-		ch_cnvcalled.baflogr,
-		ch_cnvcalled.cnvkitsegment,
-		ch_cnvcalled.cnvkitsegment_purity
-	)
+    ch_versions = Channel.empty()
 
+    ALIGN_SENTIEON ( fastq )
+    .set { ch_mapped }
+    ch_versions = ch_versions.mix(ch_mapped.versions)
 
+    SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
+    .set { ch_vcf }
+    ch_versions = ch_versions.mix(ch_vcf.versions)
+
+    CNV_CALLING ( 
+        ch_mapped.bam_umi, 
+        ch_vcf.germline_variants,
+        meta_purity,
+        ch_vcf.concat_vcfs
+    )
+    .set { ch_cnvcalled }
+    ch_versions = ch_versions.mix(ch_cnvcalled.versions)
+
+    BIOMARKERS ( 
+        ch_cnvcalled.baflogr,
+        ch_cnvcalled.cnvkitsegment,
+        ch_cnvcalled.cnvkitsegment_purity
+    )
+    ch_versions = ch_versions.mix(ch_bio.versions)
+
+    CUSTOM_DUMPSOFTWAREVERSIONS (
+        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+    )
 }
 
 workflow {
-	SOLID_GMS()
+    SOLID_GMS()
 }
-
-
-
-
-
-
-
-
-
 
 
 
 
 workflow.onComplete {
 
-	def msg = """\
-		Pipeline execution summary
-		---------------------------
-		Completed at: ${workflow.complete}
-		Duration    : ${workflow.duration}
-		Success     : ${workflow.success}
-		scriptFile  : ${workflow.scriptFile}
-		workDir     : ${workflow.workDir}
-		exit status : ${workflow.exitStatus}
-		errorMessage: ${workflow.errorMessage}
-		errorReport :
-		"""
-		.stripIndent()
-	def error = """\
-		${workflow.errorReport}
-		"""
-		.stripIndent()
+    def msg = """\
+        Pipeline execution summary
+        ---------------------------
+        Completed at: ${workflow.complete}
+        Duration    : ${workflow.duration}
+        Success     : ${workflow.success}
+        scriptFile  : ${workflow.scriptFile}
+        workDir     : ${workflow.workDir}
+        exit status : ${workflow.exitStatus}
+        errorMessage: ${workflow.errorMessage}
+        errorReport :
+        """
+        .stripIndent()
+    def error = """\
+        ${workflow.errorReport}
+        """
+        .stripIndent()
 
-	base = csv.getBaseName()
-	logFile = file("/fs1/results/cron/logs/" + base + ".complete")
-	logFile.text = msg
-	logFile.append(error)
+    base = csv.getBaseName()
+    logFile = file("/fs1/results/cron/logs/" + base + ".complete")
+    logFile.text = msg
+    logFile.append(error)
 }
