@@ -9,7 +9,7 @@ process MELT {
         tuple val(group), val(meta), file(bam), file(bai), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV)
 
     output:
-        tuple val(group), val("melt"), file("${meta.id}.melt.merged.vcf"),  emit: melt_vcf
+        tuple val(group), val(meta), val("melt"), file("${meta.id}.melt.merged.vcf"),  emit: melt_vcf
         path "versions.yml",                                                emit: versions
 
     script:
