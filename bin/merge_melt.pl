@@ -39,7 +39,7 @@ foreach my $file (@files) {
     my $size = -s $file;
     if ($size < 1) { next; }
 
-    my $vcf = CMD::vcf2->new('file'=>$file);
+    my $vcf = vcf2->new('file'=>$file);
     my $out = $file."mod";
     open (OUT, '>' ,$out);
     my @header = split/\n/,$vcf->{header_str};
@@ -67,7 +67,6 @@ foreach my $file (@files) {
         my $start = $a -> {POS};
 
         ## Filter variants in introns and invalid positions
-        #if ($a->{INFO}->{INTERNAL} =~ /INTRONIC|null|PROMOTER/) { next; }
         ## Filter variants due to low quality for sample
         if ($a->{FILTER} =~ /ac0/) { next; }
 
@@ -89,33 +88,22 @@ foreach my $file (@files) {
 
         my @scoutcustom;
         my @newinfo;
-        my @qcf = (split ';', $a->{FILTER});
-        my $qcf = '';
-        foreach my $s (@qcf) {
-            if ($s eq 'lc') {
-                $qcf = 'lc';
-            }
-            elsif ($s eq 'PASS') {
-                $qcf = 'PASS';
-            }
-            else {
-                $qcf = $qcf[0];
-            }
-        }
         push @newinfo,"SVTYPE=INS";
         push @newinfo,"END=$start";
         push @scoutcustom,"SCOUT_CUSTOM=Repeat Element|".$alt;
         push @scoutcustom,"Subtype|".$meinfo;
         push @scoutcustom,"Consequence|".$event;
         push @scoutcustom,"Target Site Duplication|".$a->{INFO}->{TSD};
-        push @scoutcustom,"Filter|".$qcval{$qcf};
+        push @scoutcustom,"Filter|".$qcval{$a->{FILTER}};
         push @scoutcustom,"Assess|".$assess{$a->{INFO}->{ASSESS}};
         print OUT join(';',@newinfo).";";
-        print OUT "MELT_RANK=".$a->{INFO}->{ASSESS}.";";
-        print OUT "MELT_QC=".$qcf.";";
         print OUT join(',',@scoutcustom)."\t";
 
-        print OUT "GT"."\t".$a->{GT}->[0]->{GT};
+        my $VD = $a->{GT}->[0]->{AD};
+        my $DP = $a->{GT}->[0]->{DP};
+        my $VAF = $VD/($DP);
+        $VAF = sprintf("%.4f", $VAF);
+        print OUT "GT:VAF:VD:DP"."\t".$a->{GT}->[0]->{GT}.":".$VAF.":$VD:$DP";
         #print OUT join("\t",@str[8..$#str]);
         print OUT "\n";
 
