@@ -104,17 +104,29 @@ process ANNOTATE_VEP {
         out = out + ".vep.vcf"
 
         """
-        vep -i ${vcf} -o ${out} \\
-        --offline --merged --everything --vcf --no_stats \\
-        --fork ${task.cpus} \\
-        --force_overwrite \\
-        --plugin CADD $params.CADD --plugin LoFtool \\
-        --fasta $params.VEP_FASTA \\
-        --dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
-        --distance 200 \\
-        --custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
-        --custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
-        --cache \\
+        vep \\
+		-i ${vcf} \\
+		-o ${out} \\
+		--offline \\
+		--everything \\
+		--merged \\
+		--vcf \\
+		--no_stats \\
+		--synonyms $params.SYNONYMS \\
+		--fork ${task.cpus} \\
+		--force_overwrite \\
+		--fasta $params.VEP_FASTA \\
+		--dir_cache $params.VEP_CACHE \\
+		--dir_plugins $params.VEP_CACHE/Plugins \\
+		--distance 200 \\
+		-cache \\
+		--plugin CADD,$params.CADD \\
+		--plugin LoFtool \\
+		--plugin MaxEntScan,$params.MAXENTSCAN,SWA,NCSS \\
+		--plugin dbNSFP,$params.dbNSFP,transcript_match=1,REVEL_score,REVEL_rankscore \\
+		-custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
+		-custom $params.PHYLOP \\
+		-custom $params.PHASTCONS \\
         ${params.custom_vep}
 
         cat <<-END_VERSIONS > versions.yml
