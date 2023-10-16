@@ -413,9 +413,7 @@ process BIOMARKERS_TO_JSON {
         msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
         msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
         hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
-
-        tmp = [msis, msip, hrd]
-        tmp = tmp - null
+        tmp = (msis ?: []) + (msip ?: []) + (hrd ?: [])
         command = tmp.join(' ')
 
         """
@@ -435,9 +433,7 @@ process BIOMARKERS_TO_JSON {
         msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
         msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
         hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
-
-        tmp = [msis, msip, hrd]
-        tmp = tmp - null
+        tmp = (msis ?: []) + (msip ?: []) + (hrd ?: [])
         command = tmp.join(' ')
 
         """
