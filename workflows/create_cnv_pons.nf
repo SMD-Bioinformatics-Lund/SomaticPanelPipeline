@@ -7,30 +7,41 @@ include { CHECK_INPUT                     } from '../subworkflows/local/create_i
 include { BED_INTERVALS                   } from '../subworkflows/local/bed_intervals'
 include { CALL_COHORT                     } from '../subworkflows/local/call_cohort'
 include { CNVKITREFS                      } from '../subworkflows/local/cnvkit_refs'
+include { CUSTOM_DUMPSOFTWAREVERSIONS     } from '../modules/nf-core/custom/dumpsoftwareversions/main'
 
 csv = file(params.csv)
 
 
 workflow CREATE_REF {
 
-	// Checks input, creates meta-channel and decides whether data should be downsampled //
-	CHECK_INPUT ( Channel.fromPath(csv) )
+    ch_versions = Channel.empty()
+
+    // Checks input, creates meta-channel and decides whether data should be downsampled //
+    CHECK_INPUT ( Channel.fromPath(csv) )
+
     CNVKITREFS( 
         CHECK_INPUT.out.sample,
         params.name
     )
-	BED_INTERVALS(
-		params.name,
-		CHECK_INPUT.out.sample
-	)
-	.set { ch_bed }
-	CALL_COHORT (
-		ch_bed.intervals,
-		ch_bed.intervals_scattered,
-		ch_bed.counts
-	)
-         
-		 
-		 
+    ch_versions = ch_versions.mix(CNVKITREFS.out.versions)
+
+    BED_INTERVALS(
+        params.name,
+        CHECK_INPUT.out.sample
+    )
+    .set { ch_bed }
+    ch_versions = ch_versions.mix(ch_bed.versions)
+
+    CALL_COHORT (
+        ch_bed.intervals,
+        ch_bed.intervals_scattered,
+        ch_bed.counts
+    )
+    ch_versions = ch_versions.mix(CALL_COHORT.out.versions)
+
+    CUSTOM_DUMPSOFTWAREVERSIONS (
+        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+    )
+
 }
 

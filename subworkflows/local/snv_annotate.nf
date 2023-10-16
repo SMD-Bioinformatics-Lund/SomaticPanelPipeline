@@ -15,38 +15,51 @@ workflow SNV_ANNOTATE {
         meta
 
     main:
+        ch_versions = Channel.empty()
+
         // Filter with PoN, annotate with VEP, mark germlines
         PON_FILTER { agg_vcf }
+        ch_versions = ch_versions.mix(PON_FILTER.out.versions)
 
         // OPTIONAL PARTS SET BY CONFIG T/F
             // FFPE-PON if set to true
             if (params.ffpe_pon) {
                 FFPE_PON_FILTER { PON_FILTER.out.vcf_pon } // needs to be merged with normal PON above, myeloid should not be be FFPE annotated
                 VCFANNO_INPUT = FFPE_PON_FILTER.out.vcf_pon_ffpe
+                ch_versions = ch_versions.mix(FFPE_PON_FILTER.out.versions)
             }
             else {
                 VCFANNO_INPUT = PON_FILTER.out.vcf_pon
             }
+
             // ENIGMA if set to true
             if (params.vcfanno) {
                 VCFANNO { VCFANNO_INPUT }
                 PON_VEP = VCFANNO.out.vcf_enigma
+                ch_versions = ch_versions.mix(VCFANNO.out.versions)
             }
             else {
                 PON_VEP = VCFANNO_INPUT
             }
-        /////////////////////////////////////////
 
         // NON-OPTIONAL, NEEDED BY COYOTE
-        ANNOTATE_VEP { PON_VEP } 
+        ANNOTATE_VEP { PON_VEP }
+        ch_versions = ch_versions.mix(ANNOTATE_VEP.out.versions)
+
         MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep }
+        ch_versions = ch_versions.mix(MARK_GERMLINES.out.versions)
+
         // BAF for CNVkit //
         FILTER_FOR_CNV { ANNOTATE_VEP.out.vcf_vep.join(concat_vcfs.filter { item -> item[1] == 'freebayes' })  }
+        ch_versions = ch_versions.mix(FILTER_FOR_CNV.out.versions)
+
         // contamination values from VCF //
         CONTAMINATION { ANNOTATE_VEP.out.vcf_vep }
+        ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
 
     emit:
-        germline_variants = FILTER_FOR_CNV.out.vcf_only_germline
-        finished_vcf = MARK_GERMLINES.out.vcf_germline
+        germline_variants   =   FILTER_FOR_CNV.out.vcf_only_germline
+        finished_vcf        =   MARK_GERMLINES.out.vcf_germline
+        versions            =   ch_versions
 
 }

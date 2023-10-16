@@ -7,7 +7,12 @@ workflow CREATE_SNV_PON {
         concat_vcfs
 
     main:
-        CREATE_SNVPON( concat_vcfs.groupTuple(by:[1]))
-    
+        ch_versions = Channel.empty()
 
+        CREATE_SNVPON( concat_vcfs.groupTuple(by:[1]))
+        ch_versions = ch_versions.mix(CREATE_SNVPON.out.versions)
+
+    emit:
+        versions    =   ch_versions
+        snv_pon     =   CREATE_SNVPON.out.SNV_PON
 }

@@ -15,27 +15,33 @@ workflow BIOMARKERS {
         bam_dedup              // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
 
     main:
+        ch_versions = Channel.empty()
+
         if (params.other_biomarkers) {
             // HRD //
             if (params.hrd) {
                 CNVKIT2SCARHRD ( cnvkitsegments.filter { it -> it[1].type == "T" })
+                ch_versions = ch_versions.mix(CNVKIT2SCARHRD.out.versions)
+
                 SCARHRD ( CNVKIT2SCARHRD.out.scarHRD_segments) 
+                ch_versions = ch_versions.mix(SCARHRD.out.versions)
             }
+
             // MSI //
             if (params.msi) {
-                MSISENSOR(bam_umi.groupTuple())
+                MSISENSOR (bam_umi.groupTuple())
+                ch_versions = ch_versions.mix(MSISENSOR.out.versions)
             }
 
             // combine biomarkers //
             BIOMARKERS_TO_JSON( SCARHRD.out.scarHRD_score.mix(MSISENSOR.out.msi_score,MSISENSOR.out.msi_score_paired).groupTuple() )
+            ch_versions = ch_versions.mix(BIOMARKERS_TO_JSON.out.versions)
 
             output = BIOMARKERS_TO_JSON.out.biomarkers_json
         }
         else {
             output = Channel.empty()
         }
-
-
 
 
         // OLD ALTERNATE HRD ALGORITHMS AND SEGMENTATIONS //
@@ -48,6 +54,7 @@ workflow BIOMARKERS {
         // OVAHRDSCAR ( ASCAT2OVAHRDSCAR.out.ovaHRDscar_segments.mix(CNVKIT2OVAHRDSCAR.out.ovaHRDscar_segments) )
 
     emit:
-        biomarkers = output
+        biomarkers  =   output
+        versions    =   ch_versions
 
 }
