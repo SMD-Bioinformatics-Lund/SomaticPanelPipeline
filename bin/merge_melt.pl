@@ -67,7 +67,6 @@ foreach my $file (@files) {
         my $start = $a -> {POS};
 
         ## Filter variants in introns and invalid positions
-        if ($a->{INFO}->{INTERNAL} =~ /INTRONIC|null/) { next; }
         ## Filter variants due to low quality for sample
         if ($a->{FILTER} =~ /ac0/) { next; }
 

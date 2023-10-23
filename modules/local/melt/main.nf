@@ -9,7 +9,7 @@ process MELT {
         tuple val(group), val(meta), file(bam), file(bai), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV)
 
     output:
-        tuple val(group), val("melt"), file("${meta.id}.melt.merged.vcf"),  emit: melt_vcf
+        tuple val(group), val(meta), val("melt"), file("${meta.id}.melt.merged.vcf"),  emit: melt_vcf
         path "versions.yml",                                                emit: versions
 
     script:
@@ -19,7 +19,7 @@ process MELT {
             -r 150 \\
             -h $params.genome_file \\
             -n /opt/MELTv2.2.2/add_bed_files/Hg38/Hg38.genes.bed \\
-            -z 50000 \\
+            -z 500000 \\
             -d 50 -t /opt/mei_list \\
             -w . \\
             -c $MEAN_DEPTH \\
