@@ -31,14 +31,10 @@ my %assay_json;
 if( $opt{'assay_json'}) {
     my $assay_json = read_json($opt{'assay_json'});
     %assay_json = %$assay_json;
-    #print Dumper(%assay_json);
     %GENES = ();
     foreach my $gene ( @{ $assay_json{"genes"} }) {
         $GENES{$gene} = 1;
     }
-    # print Dumper(%GENES);
-
-    # exit;
 }
 
 elsif( $opt{'assay'} ) {
@@ -137,10 +133,11 @@ sub mini_rank {
     my $rank = shift;
     my %rank = %$rank;
     my $score = 0;
-    my $gnomad = 0;
-
 
     ## check clinvar ##
+    # if only one annotation handle differently, this is to support sole Benign annotations
+    # otherwise find highest score acoring to rank->clinvar from JSON. 
+    # This let's the user define some value and let other be 0. This is ugly?
     my $clinvar = 0;
     if ($var->{INFO}->{CLNSIG}) {
         my @clinsig = split("/",$var->{INFO}->{CLNSIG});
@@ -162,7 +159,9 @@ sub mini_rank {
 
     }
     ## check consequence ## ## check gnomad ##
-    my $max_score = 0;
+    # save the most severe consequence defined in JSON
+    # check if gnomad passes cutoff from JSON
+    my $max_score = 0; my $gnomad = 0;
     for my $tx ( @{ $var->{INFO}->{CSQ} } ) {
         if( $tx->{Consequence} ) {
             foreach my $csq (@{$tx->{Consequence}} ) {
@@ -180,18 +179,23 @@ sub mini_rank {
             }
         }
     }
+    # add to score if most severe conseqeunce is within JSON cutoff
     if ($max_score >= $assay_json{"consequence_cutoff"}) {
         $score++;
     }
+    # add to score if gnomad is below cutoff
     if ($gnomad >= 1) {
         $score++;
     }
+    # add the clinvar score to score, Benign can disqualify the other two categories completely (is this ok?)
     if ($clinvar) {
         $score = $clinvar + $score;
     }
+    # if score 2 or more send back 1, and GERMLINE will still be true
     if ($score > 1) {
         return 1;
     }
+    # if score 1 or lower, send back 0, and thus GERMLINE is no longer true
     else {
         return 0;
     }
