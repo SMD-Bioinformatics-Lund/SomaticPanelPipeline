@@ -87,7 +87,7 @@ while ( my $var = $vcf->next_var() ) {
 
     # Add GERMLINE filter and remove FAIL_NVAF for confirmed relevant germlines
     if ( $germline ) {
-        my @new_filters = ("GERMLINE",$germline);
+        my @new_filters = ("GERMLINE");
         foreach( split(';', $var->{FILTER}) ) {
             push @new_filters, $_ unless $_ eq "FAIL_NVAF"; 
         }
