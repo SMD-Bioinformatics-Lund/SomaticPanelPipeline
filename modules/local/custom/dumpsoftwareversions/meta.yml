@@ -16,6 +16,9 @@ input:
       type: file
       description: YML file containing software versions
       pattern: "*.yml"
+  - meta:
+      type: list
+      description: List of values with group and dict of other meta information
 
 output:
   - yml:

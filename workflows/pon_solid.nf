@@ -8,7 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CREATE_SNV_PON                } from '../subworkflows/local/create_snv_pon'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
 
 csv = file(params.csv)
@@ -56,7 +56,8 @@ workflow SPP_SNVPON {
     ch_versions = ch_versions.mix(CREATE_SNV_PON.out.versions)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+        CHECK_INPUT.out.meta
     )
 
 }

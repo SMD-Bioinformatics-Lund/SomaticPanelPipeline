@@ -12,7 +12,7 @@ include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
 println(params.genome_file)
 
@@ -96,7 +96,8 @@ workflow LYMPH_GMS {
     // )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+        CHECK_INPUT.out.meta
     )
 }
 
