@@ -439,7 +439,6 @@ process VCFANNO {
     label "process_single"
     tag "$group"
 
-
     input:
         tuple val(group), val(meta), file(vcf) 
         
@@ -453,7 +452,7 @@ process VCFANNO {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            vcfanno: \$ ( echo \$(vcfanno_linux64 2>&1) |sed 's/.*version //; s/ \\[.*//')
+            vcfanno: \$( echo \$(vcfanno_linux64 2>&1) | sed 's/.*version //' | sed 's/ \\[.*//')
         END_VERSIONS
         """
 
@@ -463,7 +462,7 @@ process VCFANNO {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            vcfanno: \$ ( echo \$(vcfanno_linux64 2>&1) |sed 's/.*version //; s/ \\[.*//')
+            vcfanno: \$( echo \$(vcfanno_linux64 2>&1) | sed 's/.*version //' | sed 's/ \\[.*//')
         END_VERSIONS
         """
 }

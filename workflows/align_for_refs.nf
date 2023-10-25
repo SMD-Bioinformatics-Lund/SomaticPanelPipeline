@@ -6,7 +6,7 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SAMPLE                        } from '../subworkflows/local/sample'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
 
 println(params.genome_file)
@@ -35,7 +35,8 @@ workflow SPP_ALIGN_REFS {
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+        CHECK_INPUT.out.meta
     )
 }
 
