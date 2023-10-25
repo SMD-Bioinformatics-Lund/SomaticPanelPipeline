@@ -504,7 +504,7 @@ process CREATE_SNVPON {
 process CONTAMINATION {
     publishDir "${params.outdir}/${params.subdir}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.png"
     publishDir "${params.outdir}/${params.subdir}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.txt"
-    publishDir "${params.crondir}/contamination", mode: 'copy', overwrite: true, pattern: "*.contamination"
+    publishDir "${params.crondir}/contamination", mode: 'copy', overwrite: true, pattern: "*.contaminationpy"
     container = "/fs1/resources/containers/perl-gd.sif"
     label "process_single"
     tag "$group"
