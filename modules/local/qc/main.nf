@@ -9,19 +9,19 @@ process QC_TO_CDM {
         tuple val(group), val(meta), file(qc)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.cdm"), emit: cdm_done
+        tuple val(group), val(meta), file("${meta.id}.cdmpy"), emit: cdm_done
 
     when:
         !params.noupload
 
     script:
         """
-        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdm
+        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdmpy
         """
 
     stub:
         """
-        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdm
+        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdmpy
         """
 }
 

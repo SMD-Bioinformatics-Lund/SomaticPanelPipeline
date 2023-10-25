@@ -1,5 +1,5 @@
 process MELT {
-    label "process_low"
+    label "process_low", "error_retry"
     tag "${meta.id}"
 
     when:
