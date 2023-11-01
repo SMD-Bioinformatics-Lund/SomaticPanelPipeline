@@ -550,6 +550,9 @@ process CONTAMINATION {
         tuple val(group), file("*.contamination"),      emit: contamination_cdm
         path "versions.yml",                            emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
         def args    = task.ext.args     ?: ''
         def args2   = task.ext.args2    ?: ''
@@ -616,7 +619,6 @@ process CONTAMINATION {
 }
 
 process BEDTOOLS_INTERSECT {
-    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
     label "process_single"
     tag "${meta.id}"
 
@@ -625,12 +627,17 @@ process BEDTOOLS_INTERSECT {
         val(bed)
 
     output:
-        tuple val(group), val(vc), file("${meta.id}_${vc}_intersected.vcf"), emit: vcf_intersected
-        path "versions.yml",                                                 emit: versions
+        tuple val(group), val(vc), file("*_${vc}_intersected.vcf"), emit: vcf_intersected
+        path "versions.yml",                                        emit: versions
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args    = task.ext.args     ?: ''
+        def prefix  = task.ext.prefix ?: "${meta.id}"
         """
-        bedtools intersect -a $vcf -b $bed -header > ${meta.id}_${vc}_intersected.vcf
+        bedtools intersect -a $vcf -b $bed $args > ${prefix}_${vc}_intersected.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -639,9 +646,10 @@ process BEDTOOLS_INTERSECT {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${meta.id}"
         """
         echo $vcf
-        touch ${meta.id}_${vc}_intersected.vcf
+        touch ${prefix}_${vc}_intersected.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
