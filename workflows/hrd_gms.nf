@@ -8,7 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -78,7 +78,8 @@ workflow SOLID_GMS {
     ch_versions = ch_versions.mix(ch_bio.versions)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+        meta
     )
 }
 

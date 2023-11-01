@@ -55,6 +55,7 @@ def create_fastq_channel(LinkedHashMap row) {
 def create_samples_channel(LinkedHashMap row) {
 	def meta                = [:]
 	meta.id                 = row.id
+	meta.group				= row.group
 	meta.diagnosis          = row.diagnosis
 	meta.type               = row.type
 	meta.clarity_sample_id  = row.clarity_sample_id

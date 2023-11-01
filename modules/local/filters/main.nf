@@ -484,7 +484,7 @@ process VCFANNO {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            vcfanno: \$ ( echo \$(vcfanno_linux64 2>&1) |sed 's/.*version //; s/ \\[.*//')
+            vcfanno: \$( echo \$(vcfanno_linux64 2>&1) | sed 's/.*version //' | sed 's/ \\[.*//')
         END_VERSIONS
         """
 
@@ -495,7 +495,7 @@ process VCFANNO {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            vcfanno: \$ ( echo \$(vcfanno_linux64 2>&1) |sed 's/.*version //; s/ \\[.*//')
+            vcfanno: \$( echo \$(vcfanno_linux64 2>&1) | sed 's/.*version //' | sed 's/ \\[.*//')
         END_VERSIONS
         """
 }
@@ -614,3 +614,39 @@ process CONTAMINATION {
             """
         }
 }
+
+process BEDTOOLS_INTERSECT {
+    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
+    label "process_single"
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), val(vc), file(vcf)
+        val(bed)
+
+    output:
+        tuple val(group), val(vc), file("${meta.id}_${vc}_intersected.vcf"), emit: vcf_intersected
+        path "versions.yml",                                                 emit: versions
+    
+    script:
+        """
+        bedtools intersect -a $vcf -b $bed -header > ${meta.id}_${vc}_intersected.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
+        END_VERSIONS
+        """
+
+    stub:
+        """
+        echo $vcf
+        touch ${meta.id}_${vc}_intersected.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
+        END_VERSIONS
+        """
+}
+
