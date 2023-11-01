@@ -160,7 +160,8 @@ foreach( 0..scalar(@$data)-1 ) {
  
 my $variants = $client->ns("coyote.variants_idref");
 my $var = $variants->with_codec( prefer_numeric => 1 );
-my $result = $var->insert_many($data_filtered);
+print Dumper($data_filtered);
+#my $result = $var->insert_many($data_filtered);
 #print Dumper($result);
 if( $opt{'cnv'} ) {
 
