@@ -7,15 +7,11 @@ include { MERGE_SEGMENTS                        } from '../../modules/local/filt
 
 workflow CNV_ANNOTATE {
 	take: 
-		tumor              // val(group), val(meta), file(merged_vcf) // tumor
-		normal             // val(group), val(meta), file(merged_vcf) // normal optional
-		meta               // map: (csv meta info)
-
+		tumor              // channel: [mandatory] [ val(group), val(meta), file(tumor_merged_vcf) ]
+		normal             // channel: [mandatory] [ val(group), val(meta), file(normal_merged_vcf) ]
+		meta               // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 	main:
 		ch_versions = Channel.empty()
-
-        //ANNOTATE_VEP ( tumor.mix(normal) )
-		// choose panel, combine with out from vep //
 
 		COYOTE_SEGMENTS ( tumor.mix(normal) )
 		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions)
@@ -23,7 +19,6 @@ workflow CNV_ANNOTATE {
 		MERGE_SEGMENTS ( COYOTE_SEGMENTS.out.filtered.groupTuple().view() )
 
 	emit:
-        //annotated = 	ANNOTATE_VEP.out.vcf_vep
-		segments 	= 	MERGE_SEGMENTS.out.merged
-		versions    =   ch_versions 
+		segments 	= 	MERGE_SEGMENTS.out.merged	// channel: [ val(group), file(cn-segments.panel.merged.bed) ]
+		versions    =   ch_versions 				// channel: [ file(versions) ]
 }

@@ -1,24 +1,28 @@
 process SNPEFF {
-    publishDir "${params.outdir}/${params.subdir}/fusions/", mode: 'copy', overwrite: true, pattern: '*.vcf'
-    cpus 16
-    time '10h'
+    label 'process_medium'
     tag "$group"
-    // scratch true
-    memory '4GB'
-    // stageInMode 'copy'
-    // stageOutMode 'copy'
-    container = "/fs1/resources/containers/snpeff_4.3.1t2.sif"
 
     input:
         tuple val(group), val(meta), file(vcf)
 
     output:
-        tuple val(group), file("${group}.merged.annotated.vcf"),    emit: snpeff_vcf
-        path "versions.yml",                                        emit: versions
+        tuple val(group), file("*.merged.annotated.vcf"),   emit: snpeff_vcf
+        path "versions.yml",                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args        = task.ext.args ?: ''
+        def prefix      = task.ext.prefix ?: "${group}"
+        def avail_mem   = 6144
+        if (!task.memory) {
+            log.info '[snpEff] Available memory not known - defaulting to 6GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
         """
-        snpEff -Xmx4g -configOption data.dir=/fs1/resources/ref/hg38/snpeff/ GRCh38.86 ${vcf} > ${group}.merged.annotated.vcf
+        snpEff -Xmx${avail_mem}M $args ${vcf} > ${prefix}.merged.annotated.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -27,8 +31,9 @@ process SNPEFF {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${group}.merged.annotated.vcf
+        touch ${prefix}.merged.annotated.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

@@ -12,7 +12,7 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS     } from '../modules/nf-core/custom/dump
 csv = file(params.csv)
 
 
-workflow CREATE_REF {
+workflow SPP_CREATE_CNVPON {
 
     ch_versions = Channel.empty()
 

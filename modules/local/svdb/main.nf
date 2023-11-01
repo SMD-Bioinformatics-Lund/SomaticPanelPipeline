@@ -1,18 +1,20 @@
 process SVDB_MERGE_PANEL {
-    label "process_single"
+    label "process_low"
     tag "$group"
-    publishDir "${params.outdir}/${params.subdir}/svvcf/merged/", mode: 'copy', overwrite: 'true'
 
     input:
         tuple val(group), val(meta), file(vcfs)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.merged.vcf"), emit: merged_vcf
-        path "versions.yml",                                        emit: versions
+        tuple val(group), val(meta), file("*.merged.vcf"), emit: merged_vcf
+        path "versions.yml",                               emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
-        def args = task.ext.args ?: ''  
+        def args    = task.ext.args     ?: ''
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
 
         // for each sv-caller add idx, find vcf and find priority, add in priority order! //
         // index of vcfs added from mix //
@@ -43,7 +45,7 @@ process SVDB_MERGE_PANEL {
         priority = tmpp.join(',')
     
         """
-        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only $args --overlap 0.7 --priority $priority > ${meta.id}.merged.vcf
+        svdb --merge --vcf $vcfs_svdb $args --priority $priority > ${prefix}.merged.vcf
     
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -52,6 +54,9 @@ process SVDB_MERGE_PANEL {
         """
 
     stub:
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
+        // for each sv-caller add idx, find vcf and find priority, add in priority order! //
+        // index of vcfs added from mix //
         manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
         delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
         cnvkit_idx = vcfs.findIndexOf{ it =~ 'cnvkit' }
@@ -64,7 +69,7 @@ process SVDB_MERGE_PANEL {
         cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
         gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
         genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = manta + delly + gatk + cnvkit
+        tmp = manta + delly + gatk + cnvkit + genefuse
         tmp = tmp - null
         vcfs_svdb = tmp.join(' ')
 
@@ -79,7 +84,7 @@ process SVDB_MERGE_PANEL {
         priority = tmpp.join(',')
         """
         echo $vcfs_svdb $priority
-        touch ${meta.id}.merged.vcf
+        touch ${prefix}.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -91,21 +96,26 @@ process SVDB_MERGE_PANEL {
 
 
 process SVDB_MERGE_SINGLES {
-    label "process_single"
+    label "process_low"
     tag "$group"
 
     input:
         tuple val(group), val(vc), file(vcfs)
         
     output:
-        tuple val(group), val(vc), file("${group}_${vc}.merged.vcf"),   emit: singles_merged_vcf
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(vc), file("*_${vc}.merged.vcf"),  emit: singles_merged_vcf
+        path "versions.yml",                                    emit: versions
 
-    script:  
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${group}" 
         vcfs_svdb = vcfs.join(' ')
         vc = vc[0]
         """
-        svdb --merge --vcf $vcfs_svdb --no_intra --pass_only --bnd_distance 10 --overlap 1.0 > ${group}_${vc}.merged.vcf
+        svdb --merge --vcf $vcfs_svdb $args > ${prefix}_${vc}.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -114,10 +124,11 @@ process SVDB_MERGE_SINGLES {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         vcfs_svdb = vcfs.join(' ')
         vc = vc[0]
         """
-        touch ${group}_${vc}.merged.vcf
+        touch ${prefix}_${vc}.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

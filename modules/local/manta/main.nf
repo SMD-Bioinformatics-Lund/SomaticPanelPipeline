@@ -1,12 +1,8 @@
 process MANTA {
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: true, pattern: '*.vcf'
-    cpus 16
-    time '10h'
+    label 'process_medium'
+    label 'stage'
+    label 'scratch'
     tag "$group"
-    scratch true
-    memory '10GB'
-    stageInMode 'copy'
-    stageOutMode 'copy'
     
     input:
         tuple val(group), val(meta), file(bam), file(bai)
@@ -14,21 +10,26 @@ process MANTA {
         val(type)
 
     output:
-        tuple val(group), file("${meta.id[tumor_idx]}_manta.${type}.vcf"),                  emit: manta_vcf_tumor
-        tuple val(group), file("${meta.id[normal_idx]}_manta.${type}.vcf"), optional: true, emit: manta_vcf_normal
-        path "versions.yml",                                                                emit: versions
+        tuple val(group), file("${prefix}_manta.${type}.vcf"),                  emit: manta_vcf_tumor
+        tuple val(group), file("${prefix2}_manta.${type}.vcf"), optional: true, emit: manta_vcf_normal
+        path "versions.yml",                                                    emit: versions
         
 
     when:
-        params.manta
+        task.ext.when == null || task.ext.when
     
     script:
-        tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal = bam[normal_idx]
-        normal_id = meta.id[normal_idx]
-        tumor = bam[tumor_idx]
-        tumor_id = meta.id[tumor_idx]
+        def args    = task.ext.args  ?: ""
+        def args2   = task.ext.args2 ?: ""
+        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+        normal      = bam[normal_idx]
+        normal_id   = meta.id[normal_idx]
+        tumor       = bam[tumor_idx]
+        tumor_id    = meta.id[tumor_idx]
+        prefix      = task.ext.prefix  ?: tumor_id
+        prefix2     = task.ext.prefix2 ?: normal_id
+
         if(meta.id.size() == 2) { 
             """
             set +eu
@@ -37,16 +38,14 @@ process MANTA {
             configManta.py \\
                 --tumorBam $tumor \\
                 --normalBam $normal \\
-                --reference ${params.genome_file} \\
-                --exome \\
                 --callRegions $reference \\
-                --generateEvidenceBam \\
+                $args \\
                 --runDir .
-            python runWorkflow.py -m local -j ${task.cpus}
-            mv results/variants/somaticSV.vcf.gz ${meta.id[tumor_idx]}_manta.${type}.vcf.gz
-            mv results/variants/diploidSV.vcf.gz ${meta.id[normal_idx]}_manta.${type}.vcf.gz
-            gunzip ${meta.id[tumor_idx]}_manta.${type}.vcf.gz
-            gunzip ${meta.id[normal_idx]}_manta.${type}.vcf.gz
+            python runWorkflow.py $args2
+            mv results/variants/somaticSV.vcf.gz ${prefix}_manta.${type}.vcf.gz
+            mv results/variants/diploidSV.vcf.gz ${prefix2}_manta.${type}.vcf.gz
+            gunzip ${prefix}_manta.${type}.vcf.gz
+            gunzip ${prefix2}_manta.${type}.vcf.gz
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -62,14 +61,12 @@ process MANTA {
             set -eu
             configManta.py \\
                 --tumorBam $bam \\
-                --reference ${params.genome_file} \\
-                --exome \\
                 --callRegions $reference \\
-                --generateEvidenceBam \\
+                $args \\
                 --runDir .
-            python runWorkflow.py -m local -j ${task.cpus}
-            mv results/variants/tumorSV.vcf.gz ${meta.id[tumor_idx]}_manta.${type}.vcf.gz
-            gunzip ${meta.id[tumor_idx]}_manta.${type}.vcf.gz
+            python runWorkflow.py $args2
+            mv results/variants/tumorSV.vcf.gz ${prefix}_manta.${type}.vcf.gz
+            gunzip ${prefix}_manta.${type}.vcf.gz
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -80,19 +77,21 @@ process MANTA {
         }
 
     stub:
-        tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal = bam[normal_idx]
-        normal_id = meta.id[normal_idx]
-        tumor = bam[tumor_idx]
-        tumor_id = meta.id[tumor_idx]
+        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+        normal      = bam[normal_idx]
+        normal_id   = meta.id[normal_idx]
+        tumor       = bam[tumor_idx]
+        tumor_id    = meta.id[tumor_idx]
+        prefix      = task.ext.prefix  ?: tumor_id
+        prefix2     = task.ext.prefix2 ?: normal_id
         if(meta.id.size() == 2) {
             """
             set +eu
             source activate py2
             set -eu
-            touch ${meta.id[tumor_idx]}_manta.${type}.vcf 
-            touch ${meta.id[normal_idx]}_manta.${type}.vcf
+            touch ${prefix}_manta.${type}.vcf 
+            touch ${prefix2}_manta.${type}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -106,8 +105,8 @@ process MANTA {
             set +eu
             source activate py2
             set -eu
-            touch ${meta.id[tumor_idx]}_manta.${type}.vcf 
-            touch ${meta.id[tumor_idx]}_manta_filtered.${type}.vcf
+            touch ${prefix}_manta.${type}.vcf 
+            touch ${prefix}_manta_filtered.${type}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

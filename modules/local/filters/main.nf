@@ -1,5 +1,4 @@
 process PON_FILTER {
-    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
     label "process_single"
     tag "$group"
 
@@ -7,10 +6,14 @@ process PON_FILTER {
         tuple val(group), val(meta), file(vcf) 
         
     output:
-        tuple val(group), val(meta), file("${group}.agg.pon.vcf"),      emit: vcf_pon
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), file("*.agg.pon.vcf"), emit: vcf_pon
+        path "versions.yml",                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${group}"
         def pons = []
         if( params.freebayes ) { pons.push("freebayes="+params.PON_freebayes) }
         if( params.vardict )   { pons.push("vardict="+params.PON_vardict) }
@@ -18,7 +21,7 @@ process PON_FILTER {
         def pons_str = pons.join(",")
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${group}.agg.pon.vcf
+        filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${prefix}.agg.pon.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -27,10 +30,11 @@ process PON_FILTER {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
         echo ${meta.id[tumor_idx]}
-        touch ${group}.agg.pon.vcf
+        touch ${prefix}.agg.pon.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -41,7 +45,6 @@ process PON_FILTER {
 
 
 process FFPE_PON_FILTER {
-    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
     label "process_single"
     tag "$group"
 
@@ -49,13 +52,14 @@ process FFPE_PON_FILTER {
         tuple val(group), val(meta), file(vcf)
         
     output:
-        tuple val(group), val(meta), file("${group}.agg.pon.ponffpe.vcf"),  emit: vcf_pon_ffpe
+        tuple val(group), val(meta), file("*.agg.pon.ponffpe.vcf"), emit: vcf_pon_ffpe
         path "versions.yml",                                                emit: versions
 
     when:
-        params.assay == "solid"
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${group}"
         def pons = []
         if( params.freebayes ) { pons.push("freebayes="+params.PON_freebayes) }
         if( params.vardict )   { pons.push("vardict="+params.PON_vardict) }
@@ -63,7 +67,7 @@ process FFPE_PON_FILTER {
         def pons_str = pons.join(",")
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${group}.agg.pon.ponffpe.vcf
+        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${prefix}.agg.pon.ponffpe.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -72,10 +76,11 @@ process FFPE_PON_FILTER {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
         echo ${meta.id[tumor_idx]}
-        touch ${group}.agg.pon.ponffpe.vcf
+        touch ${prefix}.agg.pon.ponffpe.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -86,36 +91,26 @@ process FFPE_PON_FILTER {
 
 
 process ANNOTATE_VEP {
-    container = params.vepcon
-    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-    label "process_single"
+
+    label "process_medium"
     tag "$group"
 
     input:
         tuple val(group), val(meta), file(vcf)
         
     output:
-        tuple val(group), val(meta), file("${out}"),    emit: vcf_vep
+        tuple val(group), val(meta), file("*.vep.vcf"), emit: vcf_vep
         path "versions.yml",                            emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
-        out = vcf.getBaseName()
-        out = out + ".vep.vcf"
+        def args   = task.ext.args   ?: ''
+        def prefix = task.ext.prefix ?: "${vcf.baseName}"
 
         """
-        vep -i ${vcf} -o ${out} \\
-        --offline --merged --everything --vcf --no_stats \\
-        --fork ${task.cpus} \\
-        --force_overwrite \\
-        --plugin CADD $params.CADD --plugin LoFtool \\
-        --fasta $params.VEP_FASTA \\
-        --dir_cache $params.VEP_CACHE --dir_plugins $params.VEP_CACHE/Plugins \\
-        --distance 200 \\
-        --custom $params.GNOMAD,gnomADg,vcf,exact,0,AF_popmax,AF,popmax \\
-        --custom $params.COSMIC,COSMIC,vcf,exact,0,CNT \\
-        --cache \\
-        ${params.custom_vep}
+        vep -i ${vcf} -o ${prefix}".vep.vcf" --fork ${task.cpus} $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -124,12 +119,11 @@ process ANNOTATE_VEP {
         """
 
     stub:
-        out = vcf.getBaseName()
-        out = out + ".vep.vcf"
+        def prefix = task.ext.prefix ?: "${vcf.baseName}"
 
         """
-        touch ${out}
-        echo ${params.custom_vep} $params.VEP_CACHE
+        touch ${prefix}".vep.vcf"
+        echo $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -140,8 +134,7 @@ process ANNOTATE_VEP {
 
 
 process MARK_GERMLINES {
-    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
-    label "process_low"
+    label "process_single"
     tag "$group"
 
     input:
@@ -149,17 +142,21 @@ process MARK_GERMLINES {
 
         
     output:
-        tuple val(group), val(meta), file("${group}.agg.pon.vep.markgerm.vcf"), emit: vcf_germline
-        path "versions.yml",                                                    emit: versions
+        tuple val(group), val(meta), file("*.agg.pon.vep.markgerm.vcf"),    emit: vcf_germline
+        path "versions.yml",                                                emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${group}"
         if( meta.id.size() >= 2 ) {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
-            mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+            fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
+            mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -169,8 +166,8 @@ process MARK_GERMLINES {
         }
         else if( meta.id.size() == 1 ) {
             """
-            fix_vep_gnomad.pl $vcf > ${group}.agg.pon.vep.fix.vcf
-            mark_germlines.pl --vcf ${group}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[0]} --assay $params.assay > ${group}.agg.pon.vep.markgerm.vcf
+            fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
+            mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[0]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -180,12 +177,13 @@ process MARK_GERMLINES {
         }
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         if( meta.id.size() >= 2 ) {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
             echo --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]}
-            touch ${group}.agg.pon.vep.markgerm.vcf
+            touch ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -196,7 +194,7 @@ process MARK_GERMLINES {
         else if( meta.id.size() == 1 ) {
             """
             echo ${meta.id[0]}
-            touch ${group}.agg.pon.vep.markgerm.vcf
+            touch ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -208,7 +206,6 @@ process MARK_GERMLINES {
 
 
 process FILTER_FOR_CNV {
-    publishDir "${params.outdir}/${params.subdir}/vcf", mode: 'copy', overwrite: true
     label "process_single"
     tag "$group"
 
@@ -216,15 +213,20 @@ process FILTER_FOR_CNV {
         tuple val(group), val(meta), file(vcf), val(vc), file(vcf_unfilt)
 
     output:
-        tuple val(group), file("${group}_vardict.germlines.vcf.gz"), file("${group}_vardict.germlines.vcf.gz.tbi"), emit: vcf_only_germline
-        path "versions.yml",                                                                                        emit: versions
+        tuple val(group), file("*_vardict.germlines.vcf.gz"), file("*_vardict.germlines.vcf.gz.tbi"),   emit: vcf_only_germline
+        path "versions.yml",                                                                            emit: versions
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        germline_for_cnvkit.pl $vcf > ${group}.agg.pon.vep.germline.vcf
-        bedtools intersect -a $vcf_unfilt -b ${group}.agg.pon.vep.germline.vcf -header > ${group}_vardict.germlines.vcf
-        bgzip ${group}_vardict.germlines.vcf
-        tabix ${group}_vardict.germlines.vcf.gz
+        germline_for_cnvkit.pl $vcf > ${prefix}.agg.pon.vep.germline.vcf
+        bedtools intersect -a $vcf_unfilt -b ${prefix}.agg.pon.vep.germline.vcf $args > ${prefix}_vardict.germlines.vcf
+        bgzip ${prefix}_vardict.germlines.vcf
+        tabix ${prefix}_vardict.germlines.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -236,9 +238,11 @@ process FILTER_FOR_CNV {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         """
         echo $vcf $vcf_unfilt
-        touch ${group}_vardict.germlines.vcf.gz ${group}_vardict.germlines.vcf.gz.tbi
+        touch ${prefix}_vardict.germlines.vcf.gz 
+        touch ${prefix}_vardict.germlines.vcf.gz.tbi
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -252,7 +256,6 @@ process FILTER_FOR_CNV {
 
 
 process COYOTE_SEGMENTS {
-    publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
     label "process_single"
     tag "${meta.id}"
 
@@ -260,17 +263,20 @@ process COYOTE_SEGMENTS {
         tuple val(group), val(meta), file(vcf)
     
     output:
-        tuple val(group), val(meta), file("${meta.id}.cn-segments.panel.bed"),  emit: filtered
-        tuple val(group), val(meta), file("${meta.id}.cn-segments.bed"),        emit: raw
-        path "versions.yml",                                                    emit: versions
+        tuple val(group), val(meta), file("*.cn-segments.panel.bed"),  emit: filtered
+        tuple val(group), val(meta), file("*.cn-segments.bed"),        emit: raw
+        path "versions.yml",                                           emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
-        normal = ""
-        if ( meta.type == 'normal' || meta.type == 'N'  ) {
-            normal = "--normal"
-        }
+        def args   = task.ext.args   ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
+        def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
+
         """
-        coyote_segmentator.pl --vcf $vcf --panel $params.panel_cna --id ${meta.id} $normal --genes /fs1/resources/ref/hg38/gtf/gencode.v33.annotation.genes.proteincoding.bed
+        coyote_segmentator.pl --vcf $vcf --id ${meta.id} $normal $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -279,9 +285,9 @@ process COYOTE_SEGMENTS {
         """
 
     stub:
-        panel = params.cnv_panel_path + "/" + meta.diagnosis + ".cna"
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}.cn-segments.panel.bed ${meta.id}.cn-segments.bed
+        touch ${prefix}.cn-segments.panel.bed ${prefix}.cn-segments.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -291,7 +297,6 @@ process COYOTE_SEGMENTS {
 }
 
 process MERGE_SEGMENTS {
-    publishDir "${params.outdir}/${params.subdir}/cnv", mode: 'copy', overwrite: true
     label "process_single"
     tag "$group"
 
@@ -299,22 +304,29 @@ process MERGE_SEGMENTS {
         tuple val(group), val(meta), file(segments)
 
     output:
-        tuple val(group), file("${group}.cn-segments.panel.merged.bed"), emit: merged
+        tuple val(group), file("*.cn-segments.panel.merged.bed"), emit: merged
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args   = task.ext.args   ?: ''
+        def prefix = task.ext.prefix ?: "${group}"
 
     script:
         """
-        cat $segments > ${group}.cn-segments.panel.merged.bed
+        cat $segments > ${prefix}.cn-segments.panel.merged.bed
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${group}.cn-segments.panel.merged.bed
+        touch ${prefix}.cn-segments.panel.merged.bed
         """
 
 }
 
 process FILTER_MANTA {
-    publishDir "${params.outdir}/${params.subdir}/svvcf", mode: 'copy', overwrite: true
     label "process_single"
     tag "$group"
 
@@ -322,13 +334,18 @@ process FILTER_MANTA {
         tuple val(group), val(meta), file(vcf)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}_manta_filtered.vcf"),     emit: filtered
-        tuple val(group), val(meta), file("${meta.id}_manta_bnd_filtered.vcf"), emit: bnd_filtered
-        path "versions.yml",                                                    emit: versions
+        tuple val(group), val(meta), file("*_manta_filtered.vcf"),     emit: filtered
+        tuple val(group), val(meta), file("*_manta_bnd_filtered.vcf"), emit: bnd_filtered
+        path "versions.yml",                                           emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args   = task.ext.args   ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        filter_manta.pl --vcf $vcf --id ${meta.id} --af 0.05
+        filter_manta.pl --vcf $vcf $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -337,8 +354,10 @@ process FILTER_MANTA {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}_manta_bnd_filtered.vcf ${meta.id}_manta_filtered.vcf
+        touch ${prefix}_manta_bnd_filtered.vcf
+        touch ${prefix}_manta_filtered.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -349,7 +368,6 @@ process FILTER_MANTA {
 }
 
 process GENEFUSE_JSON_TO_VCF {
-    publishDir "${params.outdir}/${params.subdir}/svvcf", mode: 'copy', overwrite: true
     label "process_single"
     tag "$group"
     
@@ -357,12 +375,16 @@ process GENEFUSE_JSON_TO_VCF {
         tuple val(group), val(meta), file(json)
 
     output:
-        tuple val(group), file("${meta.id}_genefuse.vcf"),  emit: genefuse_vcf
+        tuple val(group), file("*_genefuse.vcf"),  emit: genefuse_vcf
         path "versions.yml",                                emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        python /fs1/viktor/SomaticPanelPipeline_dsl2/bin/genefuse_json_to_vcf.py -i ${meta.id} -j $json -o ${meta.id}_genefuse.vcf
+        genefuse_json_to_vcf.py -i ${meta.id} -j $json -o ${prefix}_genefuse.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -371,8 +393,9 @@ process GENEFUSE_JSON_TO_VCF {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}_genefuse.vcf
+        touch ${prefix}_genefuse.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -384,16 +407,19 @@ process GENEFUSE_JSON_TO_VCF {
 process BIOMARKERS_TO_JSON {
     label "process_single"
     tag "$group"
-    publishDir "${params.outdir}/${params.subdir}/biomarkers", mode: 'copy', overwrite: true
 
     input:
         tuple val(group), file(markers)
 
     output:
-        tuple val(group), file("${group}.bio.json"),    emit: biomarkers_json
-        path "versions.yml",                            emit: versions
+        tuple val(group), file("*.bio.json"),   emit: biomarkers_json
+        path "versions.yml",                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${group}"
         msis_idx = markers.findIndexOf{ it =~ 'msi_single' }
         msip_idx = markers.findIndexOf{ it =~ 'msi_paired' }
         hrd_idx = markers.findIndexOf{ it =~ 'HRD' }
@@ -401,13 +427,11 @@ process BIOMARKERS_TO_JSON {
         msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
         msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
         hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
-
-        tmp = [msis, msip, hrd]
-        tmp = tmp - null
+        tmp = (msis ?: []) + (msip ?: []) + (hrd ?: [])
         command = tmp.join(' ')
 
         """
-        python /fs1/viktor/SomaticPanelPipeline_dsl2/bin/aggregate_biomarkers.py $command --out ${group}.bio.json --id $group
+        aggregate_biomarkers.py $command --out ${prefix}.bio.json --id $group
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -416,6 +440,7 @@ process BIOMARKERS_TO_JSON {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         msis_idx = markers.findIndexOf{ it =~ 'msi_single' }
         msip_idx = markers.findIndexOf{ it =~ 'msi_paired' }
         hrd_idx = markers.findIndexOf{ it =~ 'HRD' }
@@ -423,14 +448,12 @@ process BIOMARKERS_TO_JSON {
         msis = msis_idx >= 0 ? markers[msis_idx].collect {'--msi_s ' + it} : null
         msip = msip_idx >= 0 ? markers[msip_idx].collect {'--msi_p ' + it} : null
         hrd = hrd_idx >= 0 ? markers[hrd_idx].collect {'--hrd ' + it} : null
-
-        tmp = [msis, msip, hrd]
-        tmp = tmp - null
+        tmp = (msis ?: []) + (msip ?: []) + (hrd ?: [])
         command = tmp.join(' ')
 
         """
         echo $command
-        touch ${group}.bio.json
+        touch ${prefix}.bio.json
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -443,17 +466,21 @@ process VCFANNO {
     label "process_single"
     tag "$group"
 
-
     input:
         tuple val(group), val(meta), file(vcf) 
         
     output:
-        tuple val(group), val(meta), file("${group}.agg.enigma.vcf"),   emit: vcf_enigma
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), file("*.agg.enigma.vcf"),  emit: vcf_enigma
+        path "versions.yml",                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        vcfanno_linux64 -lua /fs1/resources/ref/hg19/bed/scout/sv_tracks/silly.lua $params.vcfanno $vcf > ${group}.agg.enigma.vcf
+        vcfanno_linux64 $args $vcf > ${prefix}.agg.enigma.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -462,8 +489,9 @@ process VCFANNO {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${group}.agg.enigma.vcf
+        touch ${prefix}.agg.enigma.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -473,20 +501,23 @@ process VCFANNO {
 }
 
 process CREATE_SNVPON {
-    label "process_single"
+    label "process_alot"
     tag "$vc"
-
 
     input:
         tuple val(group), val(vc), file(vcfs) 
 
     output:
-        tuple val(group), val(vc), file("${params.assay}_${vc}_PON.snv"),   emit: SNV_PON
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(vc), file("*_${vc}_PON.snv"), emit: SNV_PON
+        path "versions.yml",                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${params.assay}"
         """
-        create_snv_pon.pl "*.vcf.gz" > ${params.assay}_${vc}_PON.snv
+        create_snv_pon.pl "*.vcf.gz" > ${prefix}_${vc}_PON.snv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -495,9 +526,10 @@ process CREATE_SNVPON {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${params.assay}"
         """
         echo $vcfs
-        touch ${params.assay}_${vc}_PON.snv
+        touch ${prefix}_${vc}_PON.snv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -507,10 +539,6 @@ process CREATE_SNVPON {
 }
 
 process CONTAMINATION {
-    publishDir "${params.outdir}/${params.subdir}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.png"
-    publishDir "${params.outdir}/${params.subdir}/QC/contamination", mode: 'copy', overwrite: true, pattern: "*.txt"
-    publishDir "${params.crondir}/contamination", mode: 'copy', overwrite: true, pattern: "*.contamination"
-    container = "/fs1/resources/containers/perl-gd.sif"
     label "process_single"
     tag "$group"
 
@@ -523,15 +551,18 @@ process CONTAMINATION {
         path "versions.yml",                            emit: versions
 
     script:
+        def args    = task.ext.args     ?: ''
+        def args2   = task.ext.args2    ?: ''
+
         if(meta.id.size() >= 2) { 
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
             """
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[tumor_idx]}.value
+            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args > ${meta.id[tumor_idx]}.value
             echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[tumor_idx]}.1
             paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contamination
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} --assay ${params.cdm} --detect-level 0.01 --normal > ${meta.id[normal_idx]}.value
+            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args2 > ${meta.id[normal_idx]}.value
             echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
             paste -d " " ${meta.id[normal_idx]}.1 ${meta.id[normal_idx]}.value > ${meta.id[normal_idx]}.contamination
 
@@ -543,7 +574,7 @@ process CONTAMINATION {
         }
         else {
             """
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} --assay ${params.cdm} --detect-level 0.01 > ${meta.id[0]}.value
+            find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} $args > ${meta.id[0]}.value
             echo "--overwrite --sample-id ${meta.id[0]} --sequencing-run ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
             paste -d " " ${meta.id[0]}.1 ${meta.id[0]}.value > ${meta.id[0]}.contamination
 

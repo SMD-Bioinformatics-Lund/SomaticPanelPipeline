@@ -10,11 +10,11 @@ include { SVDB_MERGE_SINGLES       } from '../../modules/local/svdb/main'
 
 workflow SNV_CALLING {
     take: 
-        bam_umi             // tuple val(group), val(meta), file("umi.bam"), file("umi.bam.bai")
-        bam_dedup           // tuple val(group), val(meta), file("dedup.bam"), file("dedup.bam.bai")
-        beds
-        meta
-        qc_values           // tuple val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV)
+        bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
+        bam_dedup       // channel: [mandatory] [ val(group), val(meta), file("dedup.bam"), file("dedup.bam.bai") ]
+        beds            // channel: [mandatory] [ file(bed) ]
+        meta            // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
+        qc_values       // channel: [mandatory] [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
 
     main:
         ch_versions = Channel.empty()
@@ -59,8 +59,8 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(AGGREGATE_VCFS.out.versions.first())
 
     emit:
-        concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs
-        agg_vcf     =   AGGREGATE_VCFS.out.vcf_concat
-        versions    =   ch_versions
+        concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
+        agg_vcf     =   AGGREGATE_VCFS.out.vcf_concat           // channel: [ val(group), val(meta), file(agg.vcf) ]
+        versions    =   ch_versions                             // channel: [ file(versions) ]
 
 }
