@@ -1,0 +1,62 @@
+{
+    "AKT2" : {
+        "type": "amp",
+        "estimated_copies": [33,20],
+        "size": null
+    },
+    "BRAF" : {
+        "type": "amp",
+        "estimated_copies": [13,6],
+        "size": null
+    },
+    "EGFR" : {
+        "type": "amp",
+        "estimated_copies": [7,3],
+        "size": null
+    },
+    "ERBB2" : {
+        "type": "amp",
+        "estimated_copies": [5,3],
+        "size": null            
+    },
+    "FGFR3" : {
+        "type": "amp",
+        "estimated_copies": [13,3],
+        "size": null         
+    },
+    "KIT" : {
+        "type": "amp",
+        "estimated_copies": [6,3],
+        "size": null
+    },
+    "KRAS" : {
+        "type": "amp",
+        "estimated_copies": [5,3],
+        "size": null
+    },
+    "MET" : {
+        "type": "amp",
+        "estimated_copies": [6,3],
+        "size": null
+    },
+    "MYC" : {
+        "type": "amp",
+        "estimated_copies": [9,4],
+        "size": null
+    },
+    "MYCN" : {
+        "type": "amp",
+        "estimated_copies": [8,4],
+        "size": null
+    },
+    "NTRK1" : {
+        "type": "amp",
+        "estimated_copies": [31,20],
+        "size": null
+    },
+    "PIK3CA" : {
+        "type": "amp",
+        "estimated_copies": [4,3],
+        "size": null
+    }
+}
