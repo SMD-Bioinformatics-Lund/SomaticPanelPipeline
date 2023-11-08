@@ -67,9 +67,9 @@ def read_bedlike_vcf(file_name,panel_genes):
                 varid = chrom+":"+start+"-"+end
                 LOG.debug("Processing varid: %s", varid)
                 varinfo = get_varinfo(info,gt)
-                varinfo["chr"] = chrom
-                varinfo["start"] = start
-                varinfo["end"] = end
+                varinfo["chr"] = str(chrom)
+                varinfo["start"] = int(start)
+                varinfo["end"] = int(end)
 
                 if varid in variants:
                     genes = [genematch]
@@ -109,13 +109,13 @@ def info_field(info):
 def get_varinfo(info,gt):
     varinfo = {}
     if "PROBES" in info:
-        varinfo["nprobes"] = info["PROBES"]
+        varinfo["nprobes"] = int(info["PROBES"])
     if "set" in info:
         varinfo["callers"] = info["set"]
     if "FOLD_CHANGE_LOG" in info:
-        varinfo["ratio"] = info["FOLD_CHANGE_LOG"]
+        varinfo["ratio"] = float(info["FOLD_CHANGE_LOG"])
     if "SVLEN" in info:
-        varinfo["size"] = info["SVLEN"]
+        varinfo["size"] = int(info["SVLEN"])
     if "PR" in gt:
         varinfo["PR"] = gt["PR"]
     if "SR" in gt:
