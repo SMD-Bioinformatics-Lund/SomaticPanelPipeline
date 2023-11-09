@@ -31,9 +31,9 @@ while ( my $var = $vcf->next_var() ) {
 
     my $T_VAF;
     for my $gt ( @{$var->{GT}} ) {
-	if( $tid and $gt->{_sample_id} eq $tid ) {
-	    $T_VAF = $gt->{VAF};
-	}
+    if( $tid and $gt->{_sample_id} eq $tid ) {
+        $T_VAF = $gt->{VAF};
+    }
     }
     die "Tumor sample not found" if !defined($T_VAF);
 
@@ -42,24 +42,24 @@ while ( my $var = $vcf->next_var() ) {
     my @filters = split ';', $var->{FILTER};
     my $remove_pass = 0;
     for my $vc (sort keys %pons) {
-	my $pon = $pons{$vc};
-	if( $pon->{$varid} ) {
-	    my $p = $pon->{$varid};
-	    my $frac = $p->{num_non_germ} / $p->{total};
+    my $pon = $pons{$vc};
+    if( $pon->{$varid} ) {
+        my $p = $pon->{$varid};
+        my $frac = $p->{num_non_germ} / $p->{total};
 
-	    if( $frac > 0.05 ) {
-		if( $T_VAF < $p->{mean_vaf} + $p->{stdev_vaf}*2 ) {
-		    push @filters, "FAIL_PON_$vc";
-		    $remove_pass = 1;
-		}
-		else {
-		    push @filters, "WARN_PON_$vc";
-		}
-	    }
-	    add_info($var, "PON_NUM_$vc", $p->{num_non_germ}."/".$p->{total});
-	    add_info($var, "PON_VAFS_$vc", $p->{all});
-	
-	}
+        if( $frac > 0.05 ) {
+        if( $T_VAF < $p->{mean_vaf} + $p->{stdev_vaf}*2 ) {
+            push @filters, "FAIL_PON_$vc";
+            $remove_pass = 1;
+        }
+        else {
+            push @filters, "WARN_PON_$vc";
+        }
+        }
+        add_info($var, "PON_NUM_$vc", $p->{num_non_germ}."/".$p->{total});
+        add_info($var, "PON_VAFS_$vc", $p->{all});
+    
+    }
     }
 
     @filters = grep {!/^PASS$/} @filters if $remove_pass;
@@ -77,15 +77,15 @@ sub read_pon {
     open(PON, $file) or die "Cannot open $file";
     my %pon;
     while(<PON>) {
-	chomp;
-	my( $var, $vars, $germline, $total, $mean_vaf, $stdev_vaf, $all_vafs) = split /\t/;
-	$pon{$var} = {
-	    'num_non_germ'=>($vars-$germline),
-	    'total'=>$total,
-	    'mean_vaf'=>$mean_vaf,
-	    'stdev_vaf'=>$stdev_vaf,
-	    'all'=>$all_vafs
-	};
+    chomp;
+    my( $var, $vars, $germline, $total, $mean_vaf, $stdev_vaf, $all_vafs) = split /\t/;
+    $pon{$var} = {
+        'num_non_germ'=>($vars-$germline),
+        'total'=>$total,
+        'mean_vaf'=>$mean_vaf,
+        'stdev_vaf'=>$stdev_vaf,
+        'all'=>$all_vafs
+    };
 }
 
     return \%pon;
@@ -97,15 +97,15 @@ sub print_header {
 
     system("zgrep ^## $file");
     for my $vc (@$vcs) {
-	print "##FILTER=<ID=WARN_PON_$vc,Description=\"Warning, exists in PON for $vc\">\n";
-	print "##FILTER=<ID=FAIL_PON_$vc,Description=\"Failed, exists in PON for $vc\">\n";
+    print "##FILTER=<ID=WARN_PON_$vc,Description=\"Warning, exists in PON for $vc\">\n";
+    print "##FILTER=<ID=FAIL_PON_$vc,Description=\"Failed, exists in PON for $vc\">\n";
 
-	print "##INFO=<ID=PON_NUM_$vc,Number=.,Type=String,Description=\"Number of PON samples variants exists in, for $vc\">\n";
-	print "##INFO=<ID=PON_VAFS_$vc,Number=.,Type=String,Description=\"VAFs for PON variants, for $vc\">\n";
+    print "##INFO=<ID=PON_NUM_$vc,Number=.,Type=String,Description=\"Number of PON samples variants exists in, for $vc\">\n";
+    print "##INFO=<ID=PON_VAFS_$vc,Number=.,Type=String,Description=\"VAFs for PON variants, for $vc\">\n";
     }
-   
+
     system("zgrep ^#CHROM $file");
-	    
+        
 }
 
 
@@ -119,9 +119,9 @@ sub check_options {
     my %pons;
     my @pons = split /,/, $op{pons};
     foreach( @pons ) {
-	my( $vc, $file) = split /=/;
-	$pons{$vc} = $file;
-	die "PON file does not exist $file..." unless -s $file;
+    my( $vc, $file) = split /=/;
+    $pons{$vc} = $file;
+    die "PON file does not exist $file..." unless -s $file;
     }
     
     die "File does not exist $op{vcf}..." if ! -s $op{vcf};
@@ -151,9 +151,9 @@ sub vcfstr {
 
     # Generate and print INFO field
     for my $info_key (@{$v->{INFO_order}}) {
-	my $key2 = $info_key;
-	$key2 = "_CSQ_str" if $info_key eq "CSQ";
-	push @all_info, $info_key."=".$v->{INFO}->{$key2};
+    my $key2 = $info_key;
+    $key2 = "_CSQ_str" if $info_key eq "CSQ";
+    push @all_info, $info_key."=".$v->{INFO}->{$key2};
     }
     print join(";", @all_info)."\t";
 
@@ -163,11 +163,11 @@ sub vcfstr {
     
     # Print GT fields for all samples
     for my $gt (@{$v->{GT}}) {
-	my @all_gt;
-	for my $key ( @{$v->{FORMAT}} ) {
-	    push @all_gt, ( defined $gt->{$key} ? $gt->{$key} : "");
-	}
-	print "\t".join(":", @all_gt);
+    my @all_gt;
+    for my $key ( @{$v->{FORMAT}} ) {
+        push @all_gt, ( defined $gt->{$key} ? $gt->{$key} : "");
+    }
+    print "\t".join(":", @all_gt);
     }
     print "\n";
 }

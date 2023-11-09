@@ -6,6 +6,12 @@ use vcf2;
 use Data::Dumper;
 use List::Util qw( max min );
 
+#   Usage : filter_vardict_somatic.pl tumor.vcf normal.vcf
+#   
+#   Filters the variants called from vardict tools in specific genomic region of interest and tags variants based on differnt filteration criteria
+# 
+#   Dependencies: This script requires vcf2 module. please make sure the module is in the your bin folder. See the complementary script to filter an unpaired samples
+
 my $vcf = vcf2->new('file'=>$ARGV[0] );
 
 my $T = $ARGV[1];

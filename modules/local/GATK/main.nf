@@ -1,28 +1,38 @@
 // SOMATIC CALLING //
 process GATKCOV_BAF {
-    cpus 10
-    memory '64 GB'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
+    label 'process_medium_cpus'
+    label 'process_high_memory'
+    label 'process_more_time'
 
     input:
         tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.allelicCounts.tsv"),  emit: gatk_baf
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta), file("*.allelicCounts.tsv"),  emit: gatk_baf
+        path "versions.yml",                                       emit: versions
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args        = task.ext.args   ?: ''
+        def prefix      = task.ext.prefix ?: "${meta.id}"
+        def avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK CollectAllelicCounts] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
         export OMP_NUM_THREADS=${task.cpus}
         set +u
         source activate gatk
-        gatk --java-options "-Xmx50g" CollectAllelicCounts \\
-            -L $params.GATK_GNOMAD \\
+        gatk --java-options "-Xmx${avail_mem}M" CollectAllelicCounts \\
             -I $bam \\
-            -R $params.genome_file \\
-            -O ${meta.id}.allelicCounts.tsv
+            $args \\
+            -O ${prefix}.allelicCounts.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -31,6 +41,7 @@ process GATKCOV_BAF {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -38,7 +49,7 @@ process GATKCOV_BAF {
         set +u
         source activate gatk
 
-        touch ${meta.id}.allelicCounts.tsv
+        touch ${prefix}.allelicCounts.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -49,19 +60,30 @@ process GATKCOV_BAF {
 
 
 process GATKCOV_COUNT {
-    cpus 10
-    memory '64 GB'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
-    publishDir "${params.outdir}/${params.subdir}/gatkcov", mode: 'copy', overwrite: true 
+    label 'process_high'
+    tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.standardizedCR.tsv"), file("${meta.id}.denoisedCR.tsv"),  emit: gatk_count
-        path "versions.yml",                                                                                    emit: versions
+        tuple val(group), val(meta), file("*.standardizedCR.tsv"), file("*.denoisedCR.tsv"),    emit: gatk_count
+        path "versions.yml",                                                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args        = task.ext.args      ?: ''
+        def args2       = task.ext.args2     ?: ''
+        def args3       = task.ext.args3     ?: ''
+        def prefix      = task.ext.prefix    ?: "${meta.id}"
+        def avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -69,17 +91,20 @@ process GATKCOV_COUNT {
         set +u
         source activate gatk
         gatk CollectReadCounts \\
-            -I ${bam} -L $params.gatk_intervals_full \\
-            --interval-merging-rule OVERLAPPING_ONLY -O ${bam}.hdf5
-        gatk --java-options '-Xmx50g' DenoiseReadCounts \\
-            -I ${bam}.hdf5 --count-panel-of-normals $params.GATK_pon \\
-            --standardized-copy-ratios ${meta.id}.standardizedCR.tsv \\
-            --denoised-copy-ratios ${meta.id}.denoisedCR.tsv
+            -I ${bam} \\
+            $args \\
+            -O ${bam}.hdf5
+
+        gatk --java-options "-Xmx${avail_mem}M" DenoiseReadCounts \\
+            -I ${bam}.hdf5 $args2 \\
+            --standardized-copy-ratios ${prefix}.standardizedCR.tsv \\
+            --denoised-copy-ratios ${prefix}.denoisedCR.tsv
+
         gatk PlotDenoisedCopyRatios \\
-            --standardized-copy-ratios ${meta.id}.standardizedCR.tsv \\
-            --denoised-copy-ratios ${meta.id}.denoisedCR.tsv \\
-            --sequence-dictionary $params.GENOMEDICT \\
-            --minimum-contig-length 46709983 --output . --output-prefix ${meta.id}
+            --standardized-copy-ratios ${prefix}.standardizedCR.tsv \\
+            --denoised-copy-ratios ${prefix}.denoisedCR.tsv \\
+            $args3 \\
+            --output . --output-prefix ${prefix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -88,6 +113,7 @@ process GATKCOV_COUNT {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -95,7 +121,8 @@ process GATKCOV_COUNT {
         set +u
         source activate gatk
 
-        touch ${meta.id}.standardizedCR.tsv ${meta.id}.denoisedCR.tsv
+        touch ${prefix}.standardizedCR.tsv 
+        touch ${prefix}.denoisedCR.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -106,26 +133,38 @@ process GATKCOV_COUNT {
 
 
 process GATKCOV_CALL {
-    publishDir "${params.outdir}/${params.subdir}/gatkcov", mode: 'copy', overwrite: true, pattern: '*.seg'
-    publishDir "${params.outdir}/${params.subdir}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
-    cpus 10
-    memory '64 GB'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
+    label 'process_high'
+    tag "${meta.id[tumor_idx]}"
 
     input:
         tuple val(group), val(meta), file(allele), file(stdCR), file(denoised)
 
     output:
-        tuple val(group), file("${meta.id[tumor_idx]}.called.seg"),     emit: gatcov_called
-        tuple val(group), file("${meta.id[tumor_idx]}.modeled.png"),    emit: gatcov_plot
-        path "versions.yml",                                            emit: versions
+        tuple val(group), file("*.called.seg"),     emit: gatcov_called
+        tuple val(group), file("*.modeled.png"),    emit: gatcov_plot
+        path "versions.yml",                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args   = task.ext.args      ?: ''
+        def args2  = task.ext.args2     ?: ''
+        def args3  = task.ext.args3     ?: ''
+
         normalcounts = ""
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T'  }
         normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N'  }
+        prefix = task.ext.prefix ?: "${meta.id[tumor_idx]}"
         if (meta.id.size() == 2) {
-            normalcounts = "--normal-allelic-counts " + allele[normal_idx]
+            args = args + " --normal-allelic-counts " + allele[normal_idx]
+        }
+
+        def avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
         }
 
         """
@@ -134,24 +173,25 @@ process GATKCOV_CALL {
         export OMP_NUM_THREADS=${task.cpus}
         set +u
         source activate gatk
-        gatk --java-options "-Xmx40g" ModelSegments \\
+        gatk --java-options "-Xmx${avail_mem}M" ModelSegments \\
             --denoised-copy-ratios ${denoised[tumor_idx]} \\
             --allelic-counts ${allele[tumor_idx]} \\
-            --minimum-total-allele-count-normal 20 \\
+            $args \\
             --output . \\
-            --output-prefix ${meta.id[tumor_idx]} \\
-            $normalcounts
+            --output-prefix ${prefix}
+
         gatk CallCopyRatioSegments \\
-            --input ${meta.id[tumor_idx]}.cr.seg \\
-            --output ${meta.id[tumor_idx]}.called.seg
+            --input ${prefix}.cr.seg \\
+            --output ${prefix}.called.seg \\
+            $args2
+
         gatk PlotModeledSegments \\
             --denoised-copy-ratios ${denoised[tumor_idx]} \\
-            --allelic-counts ${meta.id[tumor_idx]}.hets.tsv \\
-            --segments ${meta.id[tumor_idx]}.modelFinal.seg \\
-            --sequence-dictionary $params.GENOMEDICT \\
-            --minimum-contig-length 46709983 \\
+            --allelic-counts ${prefix}.hets.tsv \\
+            --segments ${prefix}.modelFinal.seg \\
+            $args3 \\
             --output . \\
-            --output-prefix ${meta.id[tumor_idx]}
+            --output-prefix ${prefix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -162,6 +202,7 @@ process GATKCOV_CALL {
     stub:
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T'  }
         normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N'  }
+        prefix = task.ext.prefix ?: "${meta.id[tumor_idx]}"
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -169,8 +210,8 @@ process GATKCOV_CALL {
         set +u
         source activate gatk
 
-        touch ${meta.id[tumor_idx]}.called.seg
-        touch ${meta.id[tumor_idx]}.modeled.png
+        touch ${prefix}.called.seg
+        touch ${prefix}.modeled.png
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -182,35 +223,41 @@ process GATKCOV_CALL {
 
 // GERMLINE CALLING //
 process GATK_COUNT_GERMLINE {
-    cpus 10
-    memory '50GB'
-    time '2h'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
-    scratch true
-    stageInMode 'copy'
-    stageOutMode 'copy'
+    label 'process_high'
+    label "stage"
+    label "scratch"
     tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.tsv"),    emit: count_germline
-        path "versions.yml",                                    emit: versions
+        tuple val(group), val(meta), file("*.tsv"),   emit: count_germline
+        path "versions.yml",                          emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args        = task.ext.args                  ?: ''
+        def prefix      = task.ext.prefix                ?: "${meta.id}"
+        def suffix      = args.contains("--format TSV")  ? '.tsv' : '.tsv'
+        def avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
         export OMP_NUM_THREADS=${task.cpus}
         set +u
         source activate gatk
-        gatk --java-options "-Xmx20g" CollectReadCounts \\
-            -L $params.gatk_intervals \\
-            -R $params.genome_file \\
-            -imr OVERLAPPING_ONLY \\
+        gatk --java-options "-Xmx${avail_mem}M" CollectReadCounts \\
             -I $bam \\
-            --format TSV -O ${meta.id}.tsv
+            $args \\
+            -O ${prefix}${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -219,6 +266,9 @@ process GATK_COUNT_GERMLINE {
         """
 
     stub:
+        def args   = task.ext.args                  ?: ''
+        def prefix = task.ext.prefix                ?: "${meta.id}"
+        def suffix = args.contains("--format TSV")  ? '.tsv' : '.tsv'
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -226,7 +276,7 @@ process GATK_COUNT_GERMLINE {
         set +u
         source activate gatk
 
-        touch ${meta.id}.tsv
+        touch ${prefix}${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -237,13 +287,9 @@ process GATK_COUNT_GERMLINE {
 
 
 process GATK_CALL_PLOIDY {
-    cpus 10
-    memory '40GB'
-    time '2h'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
-    scratch true
-    stageInMode 'copy'
-    stageOutMode 'copy'
+    label 'process_high'
+    label "stage"
+    label "scratch"
     tag "$group"
 
     input:
@@ -253,18 +299,29 @@ process GATK_CALL_PLOIDY {
         tuple val(group), val(meta), file("ploidy.tar"),    emit: gatk_ploidy
         path "versions.yml",                                emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args        = task.ext.args      ?: ''
+        def prefix      = task.ext.prefix    ?: "${group}"
+        def avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
         export OMP_NUM_THREADS=${task.cpus}
         set +u
         source activate gatk
-        gatk --java-options "-Xmx20g" DetermineGermlineContigPloidy \\
-            --model $params.ploidymodel \\
+        gatk --java-options "-Xmx${avail_mem}M" DetermineGermlineContigPloidy \\
+            $args \\
             -I $tsv \\
             -O ploidy/ \\
-            --output-prefix $group
+            --output-prefix $prefix
         tar -cvf ploidy.tar ploidy/
 
         cat <<-END_VERSIONS > versions.yml
@@ -275,6 +332,7 @@ process GATK_CALL_PLOIDY {
         """
 
     stub:
+        def prefix = task.ext.prefix    ?: "${group}"
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -294,24 +352,30 @@ process GATK_CALL_PLOIDY {
 
 
 process GATK_CALL_GERMLINE_CNV {
-    cpus 8
-    memory '45GB'
-    time '3h'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: true, pattern: '*.vcf'
-    scratch true
-    stageInMode 'copy'
-    stageOutMode 'copy'
+    label 'process_medium'
+    label "stage"
+    label "scratch"
     tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), file(tsv), file(ploidy), val(i), val(refpart)
 
     output:
-        tuple val(group), val(meta), val(i), file("${group}_${i}.tar"), emit: gatk_call_germline
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), val(i), file("*_${i}.tar"),    emit: gatk_call_germline
+        path "versions.yml",                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args        = task.ext.args      ?: ''
+        def prefix      = task.ext.prefix    ?: "${group}"
+        def avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
         """
         export THEANO_FLAGS="base_compiledir=."
         set +u
@@ -320,15 +384,15 @@ process GATK_CALL_GERMLINE_CNV {
         export MKL_NUM_THREADS=${task.cpus}
         export OMP_NUM_THREADS=${task.cpus}
         tar -xvf ploidy.tar
-        mkdir ${group}_${i}
-        gatk --java-options "-Xmx25g" GermlineCNVCaller \\
-            --run-mode CASE \\
+        mkdir ${prefix}_${i}
+        gatk --java-options "-Xmx${avail_mem}M" GermlineCNVCaller \\
+            $args \\
             -I $tsv \\
-            --contig-ploidy-calls ploidy/${group}-calls/ \\
+            --contig-ploidy-calls ploidy/${prefix}-calls/ \\
             --model ${refpart} \\
-            --output ${group}_${i}/ \\
-            --output-prefix ${group}_${i}
-        tar -cvf ${group}_${i}.tar ${group}_${i}/
+            --output ${prefix}_${i}/ \\
+            --output-prefix ${prefix}_${i}
+        tar -cvf ${prefix}_${i}.tar ${prefix}_${i}/
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -338,6 +402,7 @@ process GATK_CALL_GERMLINE_CNV {
         """
 
     stub:
+        def prefix = task.ext.prefix    ?: "${group}"
         """
         export THEANO_FLAGS="base_compiledir=."
         set +u
@@ -346,7 +411,7 @@ process GATK_CALL_GERMLINE_CNV {
         export MKL_NUM_THREADS=${task.cpus}
         export OMP_NUM_THREADS=${task.cpus}
 
-        touch ${group}_${i}.tar
+        touch ${prefix}_${i}.tar
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -358,26 +423,33 @@ process GATK_CALL_GERMLINE_CNV {
 
 
 process POSTPROCESS {
-    cpus 8
-    memory '40GB'
-    time '3h'
-    container = '/fs1/resources/containers/gatk_4.1.9.0.sif'
-    scratch true
-    stageInMode 'copy'
-    stageOutMode 'copy'
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: 'true'
+    label 'process_medium'
+    label "stage"
+    label "scratch"
     tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), val(i), file(tar), file(ploidy), val(shard_no), val(shard)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}_gatk_genotyped-intervals.vcf.gz"),    emit: gatk_germline_intervals
-        tuple val(group), val(meta), file("${meta.id}_gatk_genotyped-segments.vcf.gz"),     emit: gatk_germline_segmentsvcf
-        tuple val(group), val(meta), file("${meta.id}_gatk_denoised.vcf.gz"),               emit: gatk_germline_denoised_log2
-        path "versions.yml",                                                                emit: versions
+        tuple val(group), val(meta), file("*_gatk_genotyped-intervals.vcf.gz"),    emit: gatk_germline_intervals
+        tuple val(group), val(meta), file("*_gatk_genotyped-segments.vcf.gz"),     emit: gatk_germline_segmentsvcf
+        tuple val(group), val(meta), file("*_gatk_denoised.vcf.gz"),               emit: gatk_germline_denoised_log2
+        path "versions.yml",                                                       emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        args        = task.ext.args     ?: ''                   
+        prefix      = task.ext.prefix   ?: "${meta.id}"
+        avail_mem   = 12288
+        if (!task.memory) {
+            log.info '[GATK] Available memory not known - defaulting to 12GB. Specify process memory requirements to change this.'
+        } else {
+            avail_mem = (task.memory.mega*0.8).intValue()
+        }
+
         modelshards = shard.join(' --model-shard-path ') // join each reference shard
         caseshards = []
         for (n = 1; n <= i.size(); n++) { // join each shard(n) that's been called
@@ -397,14 +469,12 @@ process POSTPROCESS {
         source activate gatk
         export MKL_NUM_THREADS=!{task.cpus}
         export OMP_NUM_THREADS=!{task.cpus}
-        gatk --java-options "-Xmx25g" PostprocessGermlineCNVCalls \
-            --allosomal-contig X --allosomal-contig Y \
+        gatk --java-options "-Xmx!{avail_mem}M" PostprocessGermlineCNVCalls \
             --contig-ploidy-calls ploidy/!{group}-calls/ \
-            --sample-index 0 \\
-            --output-genotyped-intervals !{meta.id}_gatk_genotyped-intervals.vcf.gz \
-            --output-genotyped-segments !{meta.id}_gatk_genotyped-segments.vcf.gz \
-            --output-denoised-copy-ratios !{meta.id}_gatk_denoised.vcf.gz \
-            --sequence-dictionary !{params.GENOMEDICT} \
+            --output-genotyped-intervals !{prefix}_gatk_genotyped-intervals.vcf.gz \
+            --output-genotyped-segments !{prefix}_gatk_genotyped-segments.vcf.gz \
+            --output-denoised-copy-ratios !{prefix}_gatk_denoised.vcf.gz \
+            !{args} \
             --calls-shard-path !{caseshards} \
             --model-shard-path !{modelshards}
 
@@ -416,6 +486,8 @@ process POSTPROCESS {
         '''
 
     stub:
+        def prefix = task.ext.prefix    ?: "${meta.id}"
+
         """
         export THEANO_FLAGS="base_compiledir=."
         export MKL_NUM_THREADS=${task.cpus}
@@ -423,9 +495,9 @@ process POSTPROCESS {
         set +u
         source activate gatk
 
-        touch ${meta.id}_gatk_genotyped-intervals.vcf.gz 
-        touch ${meta.id}_gatk_genotyped-segments.vcf.gz 
-        touch ${meta.id}_gatk_denoised.vcf.gz
+        touch ${prefix}_gatk_genotyped-intervals.vcf.gz 
+        touch ${prefix}_gatk_genotyped-segments.vcf.gz 
+        touch ${prefix}_gatk_denoised.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -437,23 +509,25 @@ process POSTPROCESS {
 
 
 process FILTER_MERGE_GATK {
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: 'true'
+    label 'process_low'
     tag "${meta.id}"
-    cpus 2
-    memory '1GB'
-    time '1h'
 
     input:
         tuple val(group), val(meta), file(gatk)
 
     output:
-        tuple val(group), file("${meta.id}.gatk.filtered.merged.vcf"),  emit: gatk_normal_vcf
-        path "versions.yml",                                            emit: versions
+        tuple val(group), file("*.gatk.filtered.merged.vcf"),   emit: gatk_normal_vcf
+        path "versions.yml",                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args     ?: ''
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
-        filter_gatk.pl $gatk > ${meta.id}.gatk.filtered.vcf
-        mergeGATK.pl ${meta.id}.gatk.filtered.vcf > ${meta.id}.gatk.filtered.merged.vcf
+        filter_gatk.pl $gatk > ${prefix}.gatk.filtered.vcf
+        mergeGATK.pl ${prefix}.gatk.filtered.vcf > ${prefix}.gatk.filtered.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -462,8 +536,9 @@ process FILTER_MERGE_GATK {
         """
 
     stub:
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
-        touch ${meta.id}.gatk.filtered.merged.vcf
+        touch ${prefix}.gatk.filtered.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -475,22 +550,25 @@ process FILTER_MERGE_GATK {
 
 
 process GATK2VCF {
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: 'true'
+    label 'process_low'
     tag "${meta.id}"
-    cpus 2
-    memory '1GB'
-    time '1h'
 
     input:
         tuple val(group), file(seg), val(meta)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}_gatk_tumor.vcf"), emit: tumor_vcf
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), file("*_gatk_tumor.vcf"),  emit: tumor_vcf
+        path "versions.yml",                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args     ?: ''
+        def prefix = task.ext.prefix    ?: "${meta.id}"
+
         """
-        python3 /fs1/viktor/SomaticPanelPipeline_dsl2/bin/gatk_to_vcf.py -s $seg -o ${meta.id}_gatk_tumor.vcf -p ${meta.purity}
+        gatk_to_vcf.py -s $seg -o ${prefix}_gatk_tumor.vcf $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -499,8 +577,9 @@ process GATK2VCF {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}_gatk_tumor.vcf
+        touch ${prefix}_gatk_tumor.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -511,22 +590,23 @@ process GATK2VCF {
 
 
 process MERGE_GATK_TUMOR {
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: 'true'
+    label 'process_low'
     tag "${meta.id}"
-    cpus 2
-    memory '1GB'
-    time '1h'
 
     input:
         tuple val(group), val(meta), file(gatk)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}_gatk_tumor_merged.vcf"),  emit: tumor_vcf_merged
-        path "versions.yml",                                                    emit: versions
+        tuple val(group), val(meta), file("*_gatk_tumor_merged.vcf"),   emit: tumor_vcf_merged
+        path "versions.yml",                                            emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        mergeGATK_tumor.pl $gatk > ${meta.id}_gatk_tumor_merged.vcf
+        mergeGATK_tumor.pl $gatk > ${prefix}_gatk_tumor_merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -535,8 +615,9 @@ process MERGE_GATK_TUMOR {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}_gatk_tumor_merged.vcf
+        touch ${prefix}_gatk_tumor_merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
