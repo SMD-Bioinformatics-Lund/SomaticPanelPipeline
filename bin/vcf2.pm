@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 package vcf2;
 use strict;
 use Data::Dumper;

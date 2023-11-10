@@ -4,6 +4,7 @@
 nextflow.enable.dsl = 2
 
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
+include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
@@ -11,7 +12,6 @@ include { CNV_CALLING                   } from '../subworkflows/local/cnv_callin
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
-include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
@@ -32,7 +32,7 @@ Channel
     .set{ gatk_ref}
 
 
-workflow SOLID_GMS {
+workflow SPP_COMMON {
 
     ch_versions = Channel.empty()
 
@@ -131,9 +131,6 @@ workflow SOLID_GMS {
 
 }
 
-
-
-
 workflow.onComplete {
 
     def msg = """\
@@ -155,7 +152,7 @@ workflow.onComplete {
         .stripIndent()
 
     base = csv.getBaseName()
-    logFile = file("/fs1/results/cron/logs/" + base + ".complete")
+    logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
     logFile.text = msg
     logFile.append(error)
 }

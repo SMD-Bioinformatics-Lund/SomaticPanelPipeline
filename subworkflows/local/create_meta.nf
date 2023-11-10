@@ -5,17 +5,17 @@ include { CSV_CHECK      } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
 	take:
-		csv
+		csv		// file(csv)
 
 	main:
-		//CSV_CHECK ( csv )
-		csv.splitCsv( header:true, sep:',' ).set { csvmap }
+		CSV_CHECK ( csv )
+		checkedCsv = CSV_CHECK.out.csv.splitCsv( header:true, sep:',').set { csvmap }
 
 		fastq     = csvmap.map { create_fastq_channel(it) }
 		meta      = csvmap.map { create_samples_channel(it) }
 
 	emit:
-		fastq           // channel: [ val(meta), [ reads ] ]
+		fastq        // channel: [ val(meta), [ reads ] ]
 		meta         // channel: [ sample_id, sex, phenotype, paternal_id, maternal_id, case_id ]
 
 }
@@ -24,7 +24,7 @@ workflow CHECK_INPUT {
 def create_fastq_channel(LinkedHashMap row) {
 	// create meta map
 	def meta = [:]
-	meta.id                 = row.id
+	meta.id					= row.id
 	meta.group              = row.group
 	meta.diagnosis          = row.diagnosis
 	meta.type               = row.type
@@ -37,7 +37,7 @@ def create_fastq_channel(LinkedHashMap row) {
 	sub = false
 	if (meta.reads && params.sample) {  
 		if (meta.reads.toInteger() > params.sample_val) {
-			sub = params.sample_val / meta.reads.toInteger()
+			sub = (params.sample_val / meta.reads.toInteger()).round(2)
 		}
 		else {
 			sub = false

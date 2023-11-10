@@ -1,31 +1,30 @@
 process MELT {
-    label "process_low"
+    label "process_medium", "error_retry"
     tag "${meta.id}"
-
-    when:
-        params.melt
 
     input:
         tuple val(group), val(meta), file(bam), file(bai), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV)
 
     output:
-        tuple val(group), val(meta), val("melt"), file("${meta.id}.melt.merged.vcf"),  emit: melt_vcf
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta), val("melt"), file("*.melt.merged.vcf"),    emit: melt_vcf
+        path "versions.yml",                                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${meta.id}"
         """
         java -jar /opt/MELTv2.2.2/MELT.jar Single \\
             -bamfile $bam \\
-            -r 150 \\
-            -h $params.genome_file \\
-            -n /opt/MELTv2.2.2/add_bed_files/Hg38/Hg38.genes.bed \\
-            -z 500000 \\
-            -d 50 -t /opt/mei_list \\
+            $args \\
             -w . \\
             -c $MEAN_DEPTH \\
             -cov $COV_DEV \\
             -e $INS_SIZE
-        merge_melt.pl $params.meltheader ${meta.id}
+
+        merge_melt.pl ${params.meltheader} ${meta.id}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -34,8 +33,9 @@ process MELT {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}.melt.merged.vcf
+        touch ${prefix}.melt.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

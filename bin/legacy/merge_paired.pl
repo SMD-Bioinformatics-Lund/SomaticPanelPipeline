@@ -44,7 +44,7 @@ while ( my $var_t = $vcf->next_var() ) {
                 }
             }
             else {
-               # if ($st )
+                # if ($st )
                 print $var_t->{vcf_str}."\t$gtn";
             }
         }

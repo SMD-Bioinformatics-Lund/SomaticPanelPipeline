@@ -11,3 +11,7 @@ test.dag*
 git.hash
 *.csv
 TEST_CMD.sh
+Code_style.md
+TODO.md
+*_test.config
+logs/

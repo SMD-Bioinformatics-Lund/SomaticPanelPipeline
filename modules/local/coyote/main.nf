@@ -1,17 +1,15 @@
 process COYOTE {
-    publishDir "${params.crondir}/coyote", mode: 'copy', overwrite: true
-    cpus 1
-    time '10m'
+    label "process_single"
     tag "$group"
 
     input:
         tuple val(group), val(meta), file(vcf), file(importy)
 
     output:
-        tuple val(group), file("${process_group}.coyote"), emit: coyote_import
+        tuple val(group), file("*.coyote"), emit: coyote_import
 
     when:
-        !params.noupload
+        task.ext.when == null || task.ext.when
 
     script:
         process_group = group
@@ -36,8 +34,7 @@ process COYOTE {
         cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
         lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
         purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
-        tmp = cnvseg + fusions + biomarkers + cnvplot + lowcov + purity
-        tmp = tmp - null
+        tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
         import_command = tmp.join(' ')
 
         //echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
@@ -75,8 +72,7 @@ process COYOTE {
         cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
         lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
         purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
-        tmp = cnvseg + fusions + biomarkers + cnvplot + lowcov + purity
-        tmp = tmp - null
+        tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
         import_command = tmp.join(' ')
 
         """        

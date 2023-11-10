@@ -10,9 +10,9 @@ include { VCFANNO                  } from '../../modules/local/filters/main'
 
 workflow SNV_ANNOTATE {
     take: 
-        agg_vcf
-        concat_vcfs
-        meta
+        agg_vcf         // channel: [mandatory] [ val(group), val(meta), file(agg.vcf) ]
+        concat_vcfs     // channel: [mandatory] [ val(group), val(vc), file(vcf.gz) ]
+        meta            // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
         ch_versions = Channel.empty()
@@ -58,8 +58,8 @@ workflow SNV_ANNOTATE {
         ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
 
     emit:
-        germline_variants   =   FILTER_FOR_CNV.out.vcf_only_germline
-        finished_vcf        =   MARK_GERMLINES.out.vcf_germline
-        versions            =   ch_versions
+        germline_variants   =   FILTER_FOR_CNV.out.vcf_only_germline    // channel: [ val(group), val(vc), file(vcf.gz) ]
+        finished_vcf        =   MARK_GERMLINES.out.vcf_germline         // channel: [ val(group), val(vc), file(vcf.gz) ]
+        versions            =   ch_versions                             // channel: [ file(versions) ]
 
 }

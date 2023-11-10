@@ -32,8 +32,8 @@ while ( my $v = $vcf->next_var() ) {
 
     my( $repeat_units_num, $repeat_seq ) = (0, "");
     if( $v->{INFO}->{RPA} and $v->{INFO}->{RU} ) {
-	$repeat_units_num = min( split /,/, $v->{INFO}->{RPA} );
-	$repeat_seq = ($v->{INFO}->{RU} or "");
+		$repeat_units_num = min( split /,/, $v->{INFO}->{RPA} );
+		$repeat_seq = ($v->{INFO}->{RU} or "");
     }
     	    
     

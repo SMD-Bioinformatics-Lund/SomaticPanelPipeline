@@ -1,4 +1,6 @@
 process CNVKITREF {
+    label 'process_very_high_memory'
+    label 'process_many_cpus'
 
     input:
         tuple val(name), val(id), file(bam), file(bai)
@@ -6,17 +8,21 @@ process CNVKITREF {
         path(bedfile)
 
     output:
-        tuple val(name), file("${name}_cnvkit_${part}.cnn"),    emit: cnvkit_ref
-        path "versions.yml",                                    emit: versions
+        tuple val(name), file("*_cnvkit_${part}.cnn"),  emit: cnvkit_ref
+        path "versions.yml",                            emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${name}"
         """
         cnvkit.py batch --normal *.bam \\
             --targets ${bedfile} \\
-            --annotate ${params.refflat} \\
-            --fasta ${params.genome_file} \\
-            --output-reference ${name}_cnvkit_${part}.cnn \\
-            --output-dir results/ -p ${task.cpus}
+            $args \\
+            --output-reference ${prefix}_cnvkit_${part}.cnn \\
+            --output-dir results/ 
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -26,9 +32,10 @@ process CNVKITREF {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${name}"
         """
         echo $bedfile $part
-        touch ${name}_cnvkit_${part}.cnn
+        touch ${prefix}_cnvkit_${part}.cnn
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -37,117 +44,34 @@ process CNVKITREF {
         END_VERSIONS
         """
 }
-
-
-process CNVKIT {
-    publishDir "${params.outdir}/${params.subdir}/cnvkit", mode: 'copy', overwrite: true, pattern: '*.cnvkit'
-    publishDir "${params.outdir}/${params.subdir}/cnvkit/segments", mode: 'copy', overwrite: true, pattern: '*.call.cns'
-    publishDir "${params.outdir}/${params.subdir}/cnvkit/HRD", mode: 'copy', overwrite: true, pattern: '*.HRD'
-    publishDir "${params.outdir}/${params.subdir}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
-    cpus 1
-    time '1h'
-    tag "$id"
-    //scratch true
-    //stageInMode 'copy'
-    //stageOutMode 'copy'
-    container = '/fs1/resources/containers/cnvkit099.sif'
-    
-    input:
-        //tuple val(gr), val(id), val(type), file(bam), file(bai), file(bqsr), val(purity), val(vc), file(vcf)
-        tuple val(gr), val(id), val(type), file(bam), file(bai), file(bqsr), val(purity), file(vcf), file(tbi)
-
-    output:
-        tuple val(gr), val(id), val(type), file("${gr}.${id}_logr_ballele.cnvkit"),     emit: baflogr
-        tuple val(gr), val(id), val(type), file("${id}.HRD"), file("${id}.purity.HRD"), emit: cnvkit_hrd
-        tuple val(gr), val(id), val(type), file("${gr}.${id}.cnvkit_overview.png"),     emit: cnvkit_overview_png
-        tuple val(gr), val(id), val(type), file("${gr}.${id}.call.cns"),                emit: cnvkitsegment
-        tuple val(gr), val(id), val(type), file("${gr}.${id}.call.purity.cns"),         emit: cnvkitsegment_purity
-        path "versions.yml",                                                            emit: versions
-
-    when:
-        params.cnvkit
-
-    script:
-        //freebayes_idx = vc.findIndexOf{ it == 'freebayes' }
-        call = "cnvkit.py call results_backbone/*sort.cns -v $vcf -o ${gr}.${id}.call.cns"
-        if (purity) {
-            call = call + "\ncnvkit.py call results_backbone/*sort.cns -v $vcf --purity $purity -o ${gr}.${id}.call.purity.cns"
-        }
-
-        """
-        set +eu
-        source activate py2
-        set -eu
-
-        cnvkit.py batch $bam -r $params.cnvkit_reference -d results/
-        cnvkit.py batch $bam -r /fs2/viktor/CNVkit/ref_SOLID_v3/solidv3_17normals_exons.cnn -d results_exons/
-        cnvkit.py batch $bam -r /fs2/viktor/CNVkit/ref_SOLID_v3/solidv3_17normals_backbone.cnn -d results_backbone/
-        $call
-        cnvkit.py scatter -s results_backbone/*sort.cn{s,r} -o ${gr}.${id}.cnvkit_overview.png -v ${vcf} -i $id
-        cp results_backbone/*sort.cnr ${gr}.${id}.cnr
-        cp results_backbone/*sort.cns ${gr}.${id}.cns
-        cnvkit.py export nexus-ogt -o 11-FF-HRD-GMSSTv1-0-210203.nexus -o ${gr}.${id}_logr_ballele.cnvkit ${gr}.${id}.cnr ${vcf}
-        generate_gens_data_from_cnvkit.pl ${gr}.${id}.cnr $vcf $id
-        python /fs1/viktor/SomaticPanelPipeline/bin/HRD.py ${gr}.${id}.call.cns tmp > ${id}.HRD
-        python /fs1/viktor/SomaticPanelPipeline/bin/HRD.py ${gr}.${id}.call.purity.cns tmp > ${id}.purity.HRD
-        echo "gens load sample --sample-id $id --genome-build 38 --baf ${params.gens_accessdir}/${id}.baf.bed.gz --coverage ${params.gens_accessdir}/${id}.cov.bed.gz" > ${id}.gens
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
-            python: \$(python --version | sed -e 's/Python //g')
-        END_VERSIONS
-        """
-
-    stub:
-        """
-        set +eu
-        source activate py2
-        set -eu
-
-        touch ${gr}.${id}_logr_ballele.cnvkit
-        touch ${id}.HRD"), file("${id}.purity.HRD
-        touch ${gr}.${id}.cnvkit_overview.png
-        touch ${gr}.${id}.call.cns
-        touch ${gr}.${id}.call.purity.cns
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
-            python: \$(python --version | sed -e 's/Python //g')
-        END_VERSIONS
-        """
-}
-
 
 process CNVKIT_BATCH {
-    publishDir "${params.outdir}/${params.subdir}/cnvkit", mode: 'copy', overwrite: true
-    cpus 2
-    time '1h'
+    label "process_low"
+    label "stage"
+    label "scratch"
     tag "${meta.id}"
-    scratch true
-    stageInMode 'copy'
-    stageOutMode 'copy'
-    container = '/fs1/resources/containers/cnvkit099.sif'
-    
+
     input:
         tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
         val(reference)
         val(part)
 
     output:
-        tuple val(group), val(meta), file("${group}.${meta.id}.${part}.cns"), val(part),    emit: cnvkit_cns
-        tuple val(group), val(meta), file("${group}.${meta.id}.${part}.cnr"), val(part),    emit: cnvkit_cnr
-        path "versions.yml",                                                                emit: versions
+        tuple val(group), val(meta), file("*.${part}.cns"), val(part),  emit: cnvkit_cns
+        tuple val(group), val(meta), file("*.${part}.cnr"), val(part),  emit: cnvkit_cnr
+        path "versions.yml",                                            emit: versions
         
     when:
-        params.cnvkit
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args   ?: ''
+        def prefix  = task.ext.prefix ?: "${group}.${meta.id}"
+
         """
         cnvkit.py batch $bam -r $reference -d results/
-        cp results/*sort.cnr ${group}.${meta.id}.${part}.cnr
-        cp results/*sort.cns ${group}.${meta.id}.${part}.cns
+        cp results/*sort.cnr ${prefix}.${part}.cnr
+        cp results/*sort.cns ${prefix}.${part}.cns
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -157,8 +81,11 @@ process CNVKIT_BATCH {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${group}.${meta.id}"
         """
-        touch ${group}.${meta.id}.${part}.cns ${group}.${meta.id}.${part}.cnr
+        touch ${prefix}.${part}.cns 
+        touch ${prefix}.${part}.cnr
+
         echo $reference
 
         cat <<-END_VERSIONS > versions.yml
@@ -171,28 +98,26 @@ process CNVKIT_BATCH {
 
 
 process CNVKIT_PLOT {
-    publishDir "${params.outdir}/${params.subdir}/plots", mode: 'copy', overwrite: true, pattern: '*.png'
-    cpus 1
-    time '1h'
+    label 'process_single'
+    label "stage"
+    label "scratch"
     tag "${meta.id}"
-    scratch true
-    stageInMode 'copy'
-    stageOutMode 'copy'
-    container = '/fs1/resources/containers/cnvkit099.sif'
     
     input:
         tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
 
     output:
-        tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.cnvkit_overview.png"),    emit: cnvkitplot
-        path "versions.yml",                                                                                emit: versions
+        tuple val(group), val(meta), val(part), file("*.${part}.cnvkit_overview.png"),  emit: cnvkitplot
+        path "versions.yml",                                                            emit: versions
 
     when:
-        params.cnvkit
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix  = task.ext.prefix ?: "${group}.${meta.id}"
+
         """
-        cnvkit.py scatter -s *.cn{s,r} -o ${group}.${meta.id}.${part}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
+        cnvkit.py scatter -s *.cn{s,r} -o ${prefix}.${part}.cnvkit_overview.png -v ${vcf} -i ${meta.id}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -202,8 +127,10 @@ process CNVKIT_PLOT {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${group}.${meta.id}"
+
         """
-        touch ${group}.${meta.id}.${part}.cnvkit_overview.png
+        touch ${prefix}.${part}.cnvkit_overview.png
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -214,31 +141,26 @@ process CNVKIT_PLOT {
 }
 
 process CNVKIT_GENS {
-    publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz'
-    cpus 1
-    time '1h'
+    label 'process_single'
     tag "${meta.id}"
-    container = '/fs1/resources/containers/cnvkit099.sif'
-    
+
     input:
         tuple val(group), val(meta), file(cnr), val(part), file(vcf), file(tbi)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.${part}.baf.bed.gz"), file("${meta.id}.${part}.cov.bed.gz"),  emit: cnvkit_gens
-        path "versions.yml",                                                                                        emit: versions
+        tuple val(group), val(meta), file("*.${part}.baf.bed.gz"), file("*.${part}.cov.bed.gz"),    emit: cnvkit_gens
+        path "versions.yml",                                                                        emit: versions
         
     when:
-        params.cnvkit
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args   ?: ''
+        def prefix  = task.ext.prefix ?: "${meta.id}"
         """
-        set +eu
-        source activate py2
-        set -eu
-
         generate_gens_data_from_cnvkit.pl $cnr $vcf ${meta.id}
-        mv ${meta.id}.baf.bed.gz ${meta.id}.${part}.baf.bed.gz
-        mv ${meta.id}.cov.bed.gz ${meta.id}.${part}.cov.bed.gz
+        mv ${meta.id}.baf.bed.gz ${prefix}.${part}.baf.bed.gz
+        mv ${meta.id}.cov.bed.gz ${prefix}.${part}.cov.bed.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -248,14 +170,11 @@ process CNVKIT_GENS {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${meta.id}"
         """
-        set +eu
-        source activate py2
-        set -eu
-
-        touch ${meta.id}.${part}.baf.bed.gz 
-        touch ${meta.id}.${part}.cov.bed.gz 
-        touch ${meta.id}.gens
+        touch ${prefix}.${part}.baf.bed.gz 
+        touch ${prefix}.${part}.cov.bed.gz 
+        touch ${prefix}.gens
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -266,41 +185,38 @@ process CNVKIT_GENS {
 }
 
 process CNVKIT_CALL {
-    publishDir "${params.outdir}/${params.subdir}/cnvkit/segments/", mode: 'copy', overwrite: true, pattern: '*call*.cns'
-    publishDir "${params.outdir}/${params.subdir}/svvcf/", mode: 'copy', overwrite: true, pattern: '*.vcf'
-    cpus 1
-    time '1h'
+    label 'process_single'
     tag "${meta.id}"
-    container = '/fs1/resources/containers/cnvkit099.sif'
 
     input:
         tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
-        tuple val(tc)
+        val (tc)
 
     output:
-        tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns"),              emit: cnvkitsegment
-        tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${part}_logr_ballele.cnvkit"),    emit: cnvkit_baflogr
-        tuple val(group), val(part), file("${meta.id}.${meta.type}.${part}.cnvkit.vcf"),                    emit: cnvkit_vcf
-        path "versions.yml",                                                                                emit: versions
+        tuple val(group), val(meta), val(part), file("*.${part}.call*.cns"),            emit: cnvkitsegment
+        tuple val(group), val(meta), val(part), file("*.${part}_logr_ballele.cnvkit"),  emit: cnvkit_baflogr
+        tuple val(group), val(part), file("*.${part}.cnvkit.vcf"),                      emit: cnvkit_vcf
+        path "versions.yml",                                                            emit: versions
 
     when:
-        params.cnvkit
+        task.ext.when == null || task.ext.when
 
     script:
-        call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns"
-        callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${meta.id}.${meta.type}.${part}.cnvkit.vcf"
+        def args     = task.ext.args ?: ""
+        def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
+        def prefix2  = task.ext.prefix2 ?: "${meta.id}.${meta.type}"
+
+        call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns"
+        callvcf = "cnvkit.py export vcf ${prefix}.${part}.call.cns -i '${meta.id}' > ${prefix2}.${part}.cnvkit.vcf"
         if (meta.purity && tc == "true") {
-            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns"
-            callvcf = "cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${meta.id}.${meta.type}.${part}.cnvkit.vcf"
+            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns"
+            callvcf = "cnvkit.py export vcf ${prefix}.${part}.call.purity.cns -i '${meta.id}' > ${prefix2}.${part}.cnvkit.vcf"
         }
 
         """
-        set +eu
-        source activate py2
-        set -eu
         $call
         $callvcf
-        cnvkit.py export nexus-ogt -o ${group}.${meta.id}.${part}_logr_ballele.cnvkit ${cnr} ${vcf}
+        cnvkit.py export nexus-ogt -o ${prefix}.${part}_logr_ballele.cnvkit ${cnr} ${vcf}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -310,20 +226,19 @@ process CNVKIT_CALL {
         """
 
     stub:
-        call = "cnvkit.py call $cns -v $vcf -o ${group}.${meta.id}.${part}.call.cns \\ cnvkit.py export vcf ${group}.${meta.id}.${part}.call.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
-        if (meta.purity) {
-            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${group}.${meta.id}.${part}.call.purity.cns \\ cnvkit.py export vcf ${group}.${meta.id}.${part}.call.purity.cns -i '${meta.id}' > ${group}.${meta.id}.${meta.type}.${part}.vcf"
+        def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
+        def prefix2  = task.ext.prefix2 ?: "${meta.id}.${meta.type}"
+
+        call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns \\ cnvkit.py export vcf ${prefix}.${part}.call.cns -i '${meta.id}' > ${prefix2}.${part}.vcf"
+        if (meta.purity && tc == "true") {
+            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns \\ cnvkit.py export vcf ${prefix}.${part}.call.purity.cns -i '${meta.id}' > ${prefix2}.${part}.vcf"
         }
 
         """
-        set +eu
-        source activate py2
-        set -eu
-
         echo $call
-        touch ${group}.${meta.id}.${part}.call.purity.cns
-        touch ${group}.${meta.id}.${part}_logr_ballele.cnvkit 
-        touch ${meta.id}.${meta.type}.${part}.cnvkit.vcf
+        touch ${prefix}.${part}.call.purity.cns
+        touch ${prefix}.${part}_logr_ballele.cnvkit 
+        touch ${prefix2}.${part}.cnvkit.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -334,16 +249,22 @@ process CNVKIT_CALL {
 }
 
 process MERGE_GENS {
-    publishDir "${params.outdir}/${params.subdir}/gens", mode: 'copy', overwrite: true, pattern: '*.bed.gz*'
-    publishDir "${params.outdir}/cron/gens", mode: 'copy', overwrite: true, pattern: '*.gens'
-    
+    label 'process_single'
+
     input:
         tuple val(group), val(meta), file(baf), file(cov)
 
     output:
         tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), optional: true,    emit: merged_gens
-        tuple val(group), val(meta), file("${meta.id}.gens"),                                       emit: dbload
+        tuple val(group), val(meta), file("*.gens"),                                                emit: dbload
         path "versions.yml",                                                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+    
+    script:
+        def args     = task.ext.args ?: ""
+        def prefix   = task.ext.prefix ?: "${meta.id}"
 
     shell:
         '''
@@ -384,6 +305,7 @@ process MERGE_GENS {
         '''
 
     stub:
+        def prefix   = task.ext.prefix ?: "${meta.id}"
         """
         touch ${meta.id}.merged.sorted.cov.bed.gz 
         touch ${meta.id}.merged.sorted.baf.bed.gz 
