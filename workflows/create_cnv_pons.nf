@@ -7,12 +7,12 @@ include { CHECK_INPUT                     } from '../subworkflows/local/create_i
 include { BED_INTERVALS                   } from '../subworkflows/local/bed_intervals'
 include { CALL_COHORT                     } from '../subworkflows/local/call_cohort'
 include { CNVKITREFS                      } from '../subworkflows/local/cnvkit_refs'
-include { CUSTOM_DUMPSOFTWAREVERSIONS     } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS     } from '../modules/local/custom/dumpsoftwareversions/main'
 
 csv = file(params.csv)
 
 
-workflow CREATE_REF {
+workflow SPP_CREATE_CNVPON {
 
     ch_versions = Channel.empty()
 
@@ -40,7 +40,8 @@ workflow CREATE_REF {
     ch_versions = ch_versions.mix(CALL_COHORT.out.versions)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+        CHECK_INPUT.out.meta
     )
 
 }

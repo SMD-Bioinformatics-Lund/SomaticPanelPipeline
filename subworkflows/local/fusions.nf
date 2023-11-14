@@ -9,9 +9,9 @@ include { GENEFUSE_JSON_TO_VCF                 } from '../../modules/local/filte
 
 workflow FUSIONS {
 	take: 
-        fastq                // val(group), val(meta), file(r1), file(r2)
-		meta                 // map: (csv meta info)
-		bam_markdup          // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
+        fastq                // channel: [mandatory] [ val(group), val(meta), file(r1), file(r2) ]
+		meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
+		bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(bai), file(bqsr) ]
 
     main:
         ch_versions = Channel.empty()
@@ -46,10 +46,8 @@ workflow FUSIONS {
             output = Channel.empty()
         }
 
-        
-
     emit:
-        fusions     =   output
-        versions    =   ch_versions
+        fusions     =   output          // channel: [ val(group), file(merged.annotated.vcf) ]
+        versions    =   ch_versions     // channel: [ file(versions) ]
 
 }

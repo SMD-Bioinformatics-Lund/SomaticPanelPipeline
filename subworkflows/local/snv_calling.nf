@@ -7,14 +7,15 @@ include { CONCATENATE_VCFS         } from '../../modules/local/concatenate_vcfs/
 include { AGGREGATE_VCFS           } from '../../modules/local/concatenate_vcfs/main'
 include { MELT                     } from '../../modules/local/melt/main'
 include { SVDB_MERGE_SINGLES       } from '../../modules/local/svdb/main'
+include { BEDTOOLS_INTERSECT       } from '../../modules/local/filters/main'
 
 workflow SNV_CALLING {
     take: 
-        bam_umi             // tuple val(group), val(meta), file("umi.bam"), file("umi.bam.bai")
-        bam_dedup           // tuple val(group), val(meta), file("dedup.bam"), file("dedup.bam.bai")
-        beds
-        meta
-        qc_values           // tuple val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV)
+        bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
+        bam_dedup       // channel: [mandatory] [ val(group), val(meta), file("dedup.bam"), file("dedup.bam.bai") ]
+        beds            // channel: [mandatory] [ file(bed) ]
+        meta            // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
+        qc_values       // channel: [mandatory] [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
 
     main:
         ch_versions = Channel.empty()
@@ -32,14 +33,19 @@ workflow SNV_CALLING {
 
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
         ch_versions         = ch_versions.mix(MELT.out.versions.first())
+        BEDTOOLS_INTERSECT ( 
+            MELT.out.melt_vcf,
+            params.regions_bed
+        )
+        ch_versions         = ch_versions.mix(BEDTOOLS_INTERSECT.out.versions.first())
 
         if ( meta.filter( it -> it[1].type == "N" ) ) {
-            SVDB_MERGE_SINGLES ( MELT.out.melt_vcf.groupTuple() )
+            SVDB_MERGE_SINGLES ( BEDTOOLS_INTERSECT.out.vcf_intersected.groupTuple() )
             MELT_MERGED     = SVDB_MERGE_SINGLES.out.singles_merged_vcf
             ch_versions     = ch_versions.mix(SVDB_MERGE_SINGLES.out.versions.first())
         }
         else {
-            MELT_MERGED     = MELT.out.melt_vcf
+            MELT_MERGED     = BEDTOOLS_INTERSECT.out.vcf_intersected
         }
 
         // Prepare vcf parts for concatenation //
@@ -59,8 +65,8 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(AGGREGATE_VCFS.out.versions.first())
 
     emit:
-        concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs
-        agg_vcf     =   AGGREGATE_VCFS.out.vcf_concat
-        versions    =   ch_versions
+        concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
+        agg_vcf     =   AGGREGATE_VCFS.out.vcf_concat           // channel: [ val(group), val(meta), file(agg.vcf) ]
+        versions    =   ch_versions                             // channel: [ file(versions) ]
 
 }

@@ -6,8 +6,8 @@ include { CNVKITREF as CNVKITREF_BB     } from '../../modules/local/cnvkit/main'
 
 workflow CNVKITREFS {
     take:
-        sample              // val(id), file(cram), file(crai), file(bai)
-        cnvkit_name         // val(name)
+        sample              // channel: [mandatory] [ val(id), file(cram), file(crai), file(bai) ]
+        cnvkit_name         // channel: [mandatory] [ val(name) ]
 
     main:
         ch_versions = Channel.empty()
@@ -39,6 +39,6 @@ workflow CNVKITREFS {
         }
         
     emit:
-        reference   =   CNVKITREF.out.cnvkit_ref
-        versions     =   ch_versions
+        reference   =   CNVKITREF.out.cnvkit_ref    // channel: [ val(name), file(cnvkit.cnn) ]
+        versions    =   ch_versions                 // channel: [ file(versions) ]
 }

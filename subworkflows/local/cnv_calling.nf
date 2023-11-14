@@ -1,6 +1,5 @@
 #!/usr/bin/env nextflow
 
-include { CNVKIT                               } from '../../modules/local/cnvkit/main'
 include { CNVKIT_BATCH                         } from '../../modules/local/cnvkit/main'
 include { CNVKIT_GENS                          } from '../../modules/local/cnvkit/main'
 include { CNVKIT_PLOT                          } from '../../modules/local/cnvkit/main'
@@ -28,11 +27,11 @@ include { FILTER_MANTA as FILTER_MANTA_NORMAL  } from '../../modules/local/filte
 
 workflow CNV_CALLING {
     take: 
-        bam_umi              // val(group), val(meta), file(bam), file(bai), file(bqsr) umi deduped bam
-        germline_variants    // val(group), file(vcf), file(tbi)
-        meta                 // map: (csv meta info)
-        bam_markdup          // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
-        gatk_ref             // val(interger), val(part_of_genome) used for germline gatk-calling
+        bam_umi              // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr.table) ]
+        germline_variants    // channel: [mandatory] [ val(group), file(vcf), file(tbi) ]
+        meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
+        bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(dedup_bam), file(dedup_bai)]  ]
+        gatk_ref             // channel: [mandatory] [ val(interger), val(part_of_genome) used for germline gatk-calling ]
 
     main:
         ch_versions = Channel.empty()
@@ -160,7 +159,6 @@ workflow CNV_CALLING {
 
         // Join tumor vcf
         GATK_TUMOR = MERGE_GATK_TUMOR.out.tumor_vcf_merged
-
         // as manta is groupTupled, its output needs to be separated from meta, and rejoined or it wont be able to be mixable for SVDB
         MANTA_TUMOR = MANTA.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
 
@@ -171,12 +169,12 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(JOIN_TUMOR.out.versions)
 
     emit:
-        gatcov_plot =   GATKCOV_CALL.out.gatcov_plot
-        cnvkit_plot =   cnvkitplot
-        cnvkit_hrd  =   cnvkit_hrd
-        tumor_vcf   =   JOIN_TUMOR.out.merged_vcf
-        normal_vcf  =   JOIN_NORMAL.out.merged_vcf
-        gens        =   MERGE_GENS.out.dbload
-        versions    =   ch_versions 
+        gatcov_plot =   GATKCOV_CALL.out.gatcov_plot    // channel: [ val(group), file(modeled.png) ]
+        cnvkit_plot =   cnvkitplot                      // channel: [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
+        cnvkit_hrd  =   cnvkit_hrd                      // channel: [ val(group), val(meta), val(part), file(call.cns) ]
+        tumor_vcf   =   JOIN_TUMOR.out.merged_vcf       // channel: [ val(group), val(vc), file(tumor.merged.vcf) ]
+        normal_vcf  =   JOIN_NORMAL.out.merged_vcf      // channel: [ val(group), val(vc), file(normal.merged.vcf) ]
+        gens        =   MERGE_GENS.out.dbload           // channel: [ val(group), val(meta), file(gens) ]
+        versions    =   ch_versions                     // channel: [ file(versions) ]
 
 }

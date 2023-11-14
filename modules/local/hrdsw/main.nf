@@ -1,23 +1,27 @@
 process CNVKIT2OVAHRDSCAR {
-    cpus 1
-    time '1h'
+    label "process_single"
     tag "$id"
 
     input:
         tuple val(group), val(id), val(type), file(segments)
 
     output:
-        tuple val(group), val(id), val(type), val(caller), file("${id}.cnvkit.ovaHRDscar.txt"), emit: ovaHRDscar_segments
-        path "versions.yml",                                                                    emit: versions
+        tuple val(group), val(id), val(type), val(caller), file("*.cnvkit.ovaHRDscar.txt"), emit: ovaHRDscar_segments
+        path "versions.yml",                                                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${id}"
+
         caller = "cnvkit"
         if (segments =~ /purity/) {
             caller = "cnvkitpurity"
         }
 
         """
-        cnvkit2HRD.pl $segments $id > ${id}.cnvkit.ovaHRDscar.txt
+        cnvkit2HRD.pl $segments $id > ${prefix}.cnvkit.ovaHRDscar.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -26,13 +30,14 @@ process CNVKIT2OVAHRDSCAR {
         """
     
     stub:
+        def prefix = task.ext.prefix ?: "${id}"
         caller = "cnvkit"
         if (segments =~ /purity/) {
             caller = "cnvkitpurity"
         }
 
         """
-        touch ${id}.cnvkit.ovaHRDscar.txt
+        touch ${prefix}.cnvkit.ovaHRDscar.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -42,9 +47,9 @@ process CNVKIT2OVAHRDSCAR {
 
 }
 
+
 process CNVKIT2SCARHRD {
-    cpus 1
-    time '1h'
+    label "process_single"
     tag "$id"
 
     input:
@@ -54,12 +59,16 @@ process CNVKIT2SCARHRD {
         tuple val(group), val(meta), val(caller), file("${meta.id}.cnvkit.scarHRD.txt"),    emit: scarHRD_segments
         path "versions.yml",                                                                emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         ploidyv = "NA"
         caller = "cnvkit"
 
         """
-        cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${meta.id}.cnvkit.scarHRD.txt
+        cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${prefix}.cnvkit.scarHRD.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -68,10 +77,11 @@ process CNVKIT2SCARHRD {
         """  
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         ploidyv = "NA"
         caller = "cnvkit"
         """
-        touch ${meta.id}.cnvkit.scarHRD.txt
+        touch ${prefix}.cnvkit.scarHRD.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -80,99 +90,28 @@ process CNVKIT2SCARHRD {
         """ 
 }
 
-process ASCAT2SCARHRD {
-    publishDir "${params.outdir}/${params.subdir}/ASCAT3.0/segments", mode: 'copy', overwrite: true, pattern: '*.txt'
-    cpus 1
-    time '1h'
-    tag "$id"
-
-    input:
-        tuple val(group), val(id), val(type), file(logr), file(baf) //val(ploidy)
-
-    output:
-        tuple val(group), val(id), val(type), val("ascat"), file("${id}.ascat.scarHRD.txt"),    emit: scarHRD_segments
-        path "versions.yml",                                                                    emit: versions
-
-    script:
-        //ploidyv = ploidy.getText().trim()
-        ploidyv = "NA"
-
-        """
-        ascat2HRD.pl $logr $baf $id $ploidyv > ${id}.ascat.scarHRD.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-
-    stub:
-        ploidyv = "NA"
-
-        """
-        touch ${id}.ascat.scarHRD.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-
-}
-
-process ASCAT2OVAHRDSCAR {
-    publishDir "${params.outdir}/${params.subdir}/ASCAT3.0/segments", mode: 'copy', overwrite: true, pattern: '*.txt'
-    cpus 1
-    time '1h'
-    tag "$id"
-
-    input:
-        tuple val(group), val(id), val(type), file(logr), file(baf)
-
-    output:
-        tuple val(group), val(id), val(type), val("ascat"), file("${id}.ascat.ovaHRDscar.txt"), emit: ovaHRDscar_segments
-        path "versions.yml",                                                                    emit: versions
-
-    script:
-        """
-        ascat2HRD.pl $logr $baf $id > ${id}.ascat.ovaHRDscar.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-
-    stub:
-        """
-        touch ${id}.ascat.ovaHRDscar.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-}
-
 
 process SCARHRD {
-    publishDir "${params.outdir}/${params.subdir}/scarHRD/", mode: 'copy', overwrite: true, pattern: '*.txt'
-    cpus 1
-    time '1h'
+    label "process_single"
     tag "${meta.id}"
-    container = '/fs1/resources/containers/scarHRD.sif'
 
     input:
         tuple val(group), val(meta), val(sc), file(segments)
 
     output:
-        tuple val(group), file("${meta.id}_${sc}_scarHRD_results.txt"), emit: scarHRD_score
-        path "versions.yml",                                            emit: versions
+        tuple val(group), file("*_scarHRD_results.txt"),    emit: scarHRD_score
+        path "versions.yml",                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${meta.id}"
+
         """
         Rscript /fs1/viktor/SomaticPanelPipeline_dsl2/bin/Run_scarHRD.R $segments
-        mv ${meta.id}_HRDresults.txt ${meta.id}_${sc}_scarHRD_results.txt
+        mv ${meta.id}_HRDresults.txt ${prefix}_${sc}_scarHRD_results.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -181,8 +120,9 @@ process SCARHRD {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}_${sc}_scarHRD_results.txt
+        touch ${prefix}_${sc}_scarHRD_results.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -192,6 +132,7 @@ process SCARHRD {
 
 }
 
+// TODO SHOULD BE REMOVED?
 process OVAHRDSCAR {
     publishDir "${params.outdir}/${params.subdir}/ovaHRDscar/", mode: 'copy', overwrite: true, pattern: '*.txt'
     cpus 1

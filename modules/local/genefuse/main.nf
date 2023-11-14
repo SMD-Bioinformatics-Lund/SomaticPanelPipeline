@@ -1,29 +1,29 @@
 process GENEFUSE {
-    cpus 30
-    memory '70GB'
-    publishDir "${params.outdir}/${params.subdir}/fusions", mode: 'copy', overwrite: true
-    time '1h'
+    label 'process_very_high'
+    label 'error_ignore'
     tag "${meta.id}"
-    container = "/fs1/resources/containers/genefuse-0.8.0.sif"
-    errorStrategy 'ignore'
 
     input:
         tuple val(group), val(meta), file(r1), file(r2)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.genefuse.json"),  emit: genefuse_json
-        tuple val(group), val(meta), file("${meta.id}.html"),           emit: genefuse_html
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), file("*.genefuse.json"),   emit: genefuse_json
+        tuple val(group), val(meta), file("*.html"),            emit: genefuse_html
+        path "versions.yml",                                    emit: versions
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
         genefuse -t $task.cpus \\
-            -r $params.genome_file \\
-            -f $params.genefuse_reference \\
+            $args \\
             -1 $r1 \\
             -2 $r2 \\
-            -h ${meta.id}.html \\
-            -j ${meta.id}.genefuse.json
+            -h ${prefix}.html \\
+            -j ${prefix}.genefuse.json
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -32,9 +32,10 @@ process GENEFUSE {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        touch ${meta.id}.genefuse.json 
-        touch ${meta.id}.html
+        touch ${prefix}.genefuse.json 
+        touch ${prefix}.html
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

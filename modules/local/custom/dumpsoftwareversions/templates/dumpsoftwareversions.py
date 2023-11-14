@@ -59,7 +59,9 @@ def main():
     }
 
     with open("$versions") as f:
-        versions_by_process = yaml.load(f, Loader=yaml.BaseLoader) | versions_this_module
+        versions_by_process = (
+            yaml.load(f, Loader=yaml.BaseLoader) | versions_this_module
+        )
 
     # aggregate versions by the module name (derived from fully-qualified process name)
     versions_by_module = {}
@@ -89,12 +91,12 @@ def main():
         "data": _make_versions_html(versions_by_module),
     }
 
-    with open("software_versions.yml", "w") as f:
+    with open("$prefix" + ".software_versions.yml", "w") as f:
         yaml.dump(versions_by_module, f, default_flow_style=False)
-    with open("software_versions_mqc.yml", "w") as f:
+    with open("$prefix" + ".software_versions_mqc.yml", "w") as f:
         yaml.dump(versions_mqc, f, default_flow_style=False)
 
-    with open("versions.yml", "w") as f:
+    with open("$prefix" + ".versions.yml", "w") as f:
         yaml.dump(versions_this_module, f, default_flow_style=False)
 
 

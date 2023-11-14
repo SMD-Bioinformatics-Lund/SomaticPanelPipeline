@@ -1,19 +1,24 @@
 process CSV_CHECK {
+    label 'process_single'
 
     input:
         path samplesheet
 
     output:
-        path '*.csv'       , emit: cool
+        path "*.checked.csv", emit: csv
 
+    when:
+        task.ext.when == null || task.ext.when
 
-    script: // This script is bundled with the pipeline, in nf-core/raredisease/bin/
+    script:
+        def prefix = task.ext.prefix ?: "${samplesheet.baseName}"
         """
-        echo bla > bla.csv
-        """
+        check_samplesheet.py -c ${samplesheet} -o samplecheck.txt
 
-    stub: // This script is bundled with the pipeline, in nf-core/raredisease/bin/
-        """
-        echo bla > bla.csv
+        if [[ -e "samplecheck.txt" ]]; then
+            cp ${samplesheet} "${prefix}.checked.csv"
+        else
+            echo "samplecheck.txt does not exist"
+        fi
         """
 }

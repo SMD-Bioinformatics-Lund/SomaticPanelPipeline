@@ -10,7 +10,7 @@ include { CNV_CALLING                   } from '../subworkflows/local/cnv_callin
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { QC                            } from '../subworkflows/local/qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/nf-core/custom/dumpsoftwareversions/main'
+include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
 println(params.genome_file)
 genome_file = file(params.genome_file)
@@ -97,7 +97,8 @@ workflow SOLID_GMS {
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+        meta
     )
 }
 
@@ -128,7 +129,7 @@ workflow.onComplete {
         .stripIndent()
 
     base = csv.getBaseName()
-    logFile = file("/fs1/results/cron/logs/" + base + ".complete")
+    logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
     logFile.text = msg
     logFile.append(error)
 }

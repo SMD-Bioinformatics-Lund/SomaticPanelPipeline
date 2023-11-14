@@ -9,10 +9,10 @@ include { BIOMARKERS_TO_JSON          } from '../../modules/local/filters/main'
 
 workflow BIOMARKERS {
     take: 
-        meta                   // meta info for sample(s)
-        cnvkitsegments         // val(group), val(meta), val(part(backbone)), file("${group}.${meta.id}.${part}.call*.cns")
-        bam_umi                // val(group), val(meta), file(bam), file(bai), file(bqsr) umi deduped bam
-        bam_dedup              // val(group), val(meta), file(bam), file(bai), file(bqsr) markdup bam
+        meta                   // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
+        cnvkitsegments         // channel: [mandatory] [ val(group), val(meta), val(part(backbone)), file("${group}.${meta.id}.${part}.call*.cns") ]
+        bam_umi                // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr) ]
+        bam_dedup              // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(marked_bai), file(bqsr) ]
 
     main:
         ch_versions = Channel.empty()
@@ -43,18 +43,8 @@ workflow BIOMARKERS {
             output = Channel.empty()
         }
 
-
-        // OLD ALTERNATE HRD ALGORITHMS AND SEGMENTATIONS //
-        // CNVKIT2ASCAT ( baflogr )
-        // //ASCAT_252 ( CNVKIT2ASCAT.out.ascat_input )
-        // ASCAT_30 ( CNVKIT2ASCAT.out.ascat_input )
-        // CNVKIT2OVAHRDSCAR ( cnvkitsegments.mix(cnvkitsegment_purity) )
-        // ASCAT2SCARHRD ( ASCAT_30.out.baflogr ) //.join(ASCAT_30.out.ploidy, by:[0,1])
-        // ASCAT2OVAHRDSCAR ( ASCAT_30.out.baflogr )
-        // OVAHRDSCAR ( ASCAT2OVAHRDSCAR.out.ovaHRDscar_segments.mix(CNVKIT2OVAHRDSCAR.out.ovaHRDscar_segments) )
-
     emit:
-        biomarkers  =   output
-        versions    =   ch_versions
+        biomarkers  =   output          // channel: [ val(group), file(bio.json) ]
+        versions    =   ch_versions     // channel: [ file(versions) ]
 
 }

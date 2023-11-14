@@ -9,13 +9,13 @@ include { SCATTER_INTERVALS        } from '../../modules/local/GATK_references/m
 
 workflow BED_INTERVALS {
     take:
-        prefix         // val(prefix) name of reference
-        sample           // val(id), file(cram), file(crai), file(bai)
+        reference           // channel: [mandatory] [ val(reference_name) ]
+        sample              // channel: [mandatory] [ val(id), file(cram), file(crai), file(bai) ]
 
     main:
         ch_versions = Channel.empty()
         
-        PREPROCESSINTERVALS(prefix)
+        PREPROCESSINTERVALS(reference)
         ch_versions = ch_versions.mix(PREPROCESSINTERVALS.out.versions)
 
         ANNOTATE_GC(PREPROCESSINTERVALS.out.preprocessed)
@@ -39,8 +39,8 @@ workflow BED_INTERVALS {
         }
 
     emit:
-        intervals           =   REMOVE_ALT_CONTIGS.out.noaltcontigs
-        intervals_scattered =   scattered
-        counts              =   COUNT_READS.out.count_tsv
-        versions            =   ch_versions
+        intervals           =   REMOVE_ALT_CONTIGS.out.noaltcontigs // channel: [ val(reference), path(preprocessed.blacklisted.gcfiltered.noalt.interval_list) ]
+        intervals_scattered =   scattered                           // channel: [ val(reference), path(scatter/*) ]
+        counts              =   COUNT_READS.out.count_tsv           // channel: [ val(reference), val(id), file(tsv) ]
+        versions            =   ch_versions                         // channel: [ file(versions) ]
 }
