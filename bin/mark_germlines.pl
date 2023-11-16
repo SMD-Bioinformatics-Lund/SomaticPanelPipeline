@@ -12,24 +12,17 @@ my $MAX_VAF_NORMAL = 0.05;
 my $MIN_VAF_NORMAL = 0.35;
 my $MIN_VAF_TUMOR  = 0.45;
 my $MIN_DP = 100;
-my %genes_per_assay = (
-    'myeloid'=>{'CEBPA'=>1},
-    'lymphoid'=>{'CEBPA'=>1},
-    'PARP_inhib'=>{'ALL_GENES'=>1},
-    'solid'=>{'CEBPA'=>1, 'BRCA1'=>1, 'BRCA2'=>1}
-    );
-
 
 # Get command line options
 my %opt = ();
-GetOptions( \%opt, 'vcf=s', 'tumor-id=s', 'normal-id=s', 'assay=s', 'assay_json=s' );
+GetOptions( \%opt, 'vcf=s', 'tumor-id=s', 'normal-id=s', 'assay=s' );
 check_options( \%opt );
 
 # Default to myeloid genes, for backwards compatibility
-my %GENES = %{$genes_per_assay{'myeloid'}};
+my %GENES;
 my %assay_json;
-if( $opt{'assay_json'}) {
-    my $assay_json = read_json($opt{'assay_json'});
+if( $opt{'assay'}) {
+    my $assay_json = read_json($opt{'assay'});
     %assay_json = %$assay_json;
     %GENES = ();
     foreach my $gene ( @{ $assay_json{"genes"} }) {
@@ -37,10 +30,8 @@ if( $opt{'assay_json'}) {
     }
 }
 
-elsif( $opt{'assay'} ) {
-    my $assay = $opt{'assay'};
-    die "No genes set for assay: $assay\n" if !$genes_per_assay{$assay};
-    %GENES = %{$genes_per_assay{$assay}};
+else {
+    die "please provide a json defining what genes should be analyzed for GERMLINE inclusion";
 }
 
 my $vcf = vcf2->new('file'=>$opt{vcf} );
@@ -81,7 +72,7 @@ while ( my $var = $vcf->next_var() ) {
     }
 
     # if using exclusion criterias from assay_json reset germline if variant fail check
-    if( $opt{'assay_json'} && $germline) {
+    if( $assay_json{"inclusion_score"} && $germline) {
         $germline = mini_rank($var,\%assay_json);
     }
 
@@ -139,7 +130,7 @@ sub mini_rank {
     # otherwise find highest score acoring to rank->clinvar from JSON. 
     # This let's the user define some value and let other be 0. This is ugly?
     my $clinvar = 0;
-    if ($var->{INFO}->{CLNSIG}) {
+    if ($var->{INFO}->{CLNSIG} && $rank{"clinvar"}) {
         my @clinsig = split("/",$var->{INFO}->{CLNSIG});
         if (scalar(@clinsig) == 1) {
             if ($rank{"clinvar"}{$clinsig[0]}) {
@@ -155,24 +146,20 @@ sub mini_rank {
                 }
             }
         }
-
-
+    }
+    # add the clinvar score to score, Benign can disqualify the other two categories completely (is this ok?)
+    if ($clinvar) {
+        $score = $clinvar + $score;
     }
     ## check consequence ## ## check gnomad ##
     # save the most severe consequence defined in JSON
     # check if gnomad passes cutoff from JSON
     my $max_score = 0; my $gnomad = 0;
     for my $tx ( @{ $var->{INFO}->{CSQ} } ) {
-        if( $tx->{Consequence} ) {
-            foreach my $csq (@{$tx->{Consequence}} ) {
-                if ($rank{"consequence_score"}{$csq}) {
-                    if ( $rank{"consequence_score"}{$csq} > $max_score ) {
-                        $max_score = $rank{"consequence_score"}{$csq};
-                    }
-                }
-            }
+        if( $tx->{Consequence} && $rank{"consequence_cutoff"} && $rank{"consequence_score"}) {
+            $max_score = conseqeunce($tx->{Consequence},\%rank);
         }
-        if ( $tx->{gnomADg}) {
+        if ( $tx->{gnomADg} && $rank{"gnomad_cutoff"} ) {
             my @afs =  split(",",$tx->{gnomADg_AF});
             if ($afs[0] < $assay_json{"gnomad_cutoff"}) {
                 $gnomad = 1;
@@ -180,25 +167,39 @@ sub mini_rank {
         }
     }
     # add to score if most severe conseqeunce is within JSON cutoff
-    if ($max_score >= $assay_json{"consequence_cutoff"}) {
-        $score++;
+    if ( $assay_json{"consequence_cutoff"}) {
+        if ($max_score >= $assay_json{"consequence_cutoff"}) {
+            $score++;
+        }
     }
     # add to score if gnomad is below cutoff
     if ($gnomad >= 1) {
         $score++;
     }
-    # add the clinvar score to score, Benign can disqualify the other two categories completely (is this ok?)
-    if ($clinvar) {
-        $score = $clinvar + $score;
-    }
-    # if score 2 or more send back 1, and GERMLINE will still be true
-    if ($score > 1) {
+
+    # if score higher than or equal to inclusion score return true and retain GERMLINE status
+    if ($score >= $assay_json{"inclusion_score"}) {
         return 1;
     }
-    # if score 1 or lower, send back 0, and thus GERMLINE is no longer true
+    # else send back 0, and thus GERMLINE is no longer true
     else {
         return 0;
     }
+}
+
+sub conseqeunce {
+    my $tx = shift;
+    my $rank = shift;
+    my %rank = %$rank;
+    my $max_score = 0;
+    foreach my $csq (@{$tx} ) {
+        if ($rank{"consequence_score"}{$csq}) {
+            if ( $rank{"consequence_score"}{$csq} > $max_score ) {
+                $max_score = $rank{"consequence_score"}{$csq};
+            }
+        }
+    }
+    return $max_score;
 }
 
 sub check_options {

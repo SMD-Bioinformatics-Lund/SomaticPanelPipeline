@@ -211,6 +211,7 @@
         "YY1",
         "ZMYM3"
     ],
+    "inclusion_score" : 2,
     "gnomad_cutoff" : 0.01,
     "consequence_cutoff" : 5,
     "clinvar" : {
