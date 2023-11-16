@@ -39,7 +39,7 @@ process COYOTE {
 
         //echo "import_myeloid_to_coyote_vep_gms.pl --group $params.coyote_group \\
         """
-        echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group \\
+        echo "/data/bnf/scripts/import_DSL2_to_coyote.pl --group $params.coyote_group \\
             --vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
             --clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
             --build 38 \\
@@ -76,7 +76,7 @@ process COYOTE {
         import_command = tmp.join(' ')
 
         """        
-        echo "./import_myeloid_to_coyote_vep_gms_dev.pl --group $params.coyote_group 
+        echo "/data/bnf/scripts/import_DSL2_to_coyote.pl --group $params.coyote_group \\
             --vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
             --clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
             --build 38 \\
