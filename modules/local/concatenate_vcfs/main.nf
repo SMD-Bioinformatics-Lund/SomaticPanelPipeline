@@ -6,14 +6,19 @@ process CONCATENATE_VCFS {
         tuple val(vc), val(group), file(vcfs)
 
     output:
-        tuple val(group), val(vc), file("${group}_${vc}.vcf.gz"),    emit: concatenated_vcfs
-        path "versions.yml",                                         emit: versions
+        tuple val(group), val(vc), file("*_${vc}.vcf.gz"),    emit: concatenated_vcfs
+        path "versions.yml",                                  emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${group}"
         """
         vcf-concat $vcfs | vcf-sort -c | gzip -c > ${vc}.concat.vcf.gz
         vt decompose ${vc}.concat.vcf.gz -o ${vc}.decomposed.vcf.gz
-        vt normalize ${vc}.decomposed.vcf.gz -r $params.genome_file | vt uniq - -o ${group}_${vc}.vcf.gz
+        vt normalize ${vc}.decomposed.vcf.gz $args | vt uniq - -o ${prefix}_${vc}.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -24,8 +29,9 @@ process CONCATENATE_VCFS {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${group}_${vc}.vcf.gz
+        touch ${prefix}_${vc}.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -45,10 +51,15 @@ process AGGREGATE_VCFS {
         tuple val(group), val(vc), file(vcfs), val(meta)
 
     output:
-        tuple val(group), val(meta), file("${group}.agg.vcf"),      emit: vcf_concat
-        path "versions.yml",                                        emit: versions
+        tuple val(group), val(meta), file("*.agg.vcf"), emit: vcf_concat
+        path "versions.yml",                            emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${group}"
+
         sample_order = meta.id[0]
         if( meta.id.size() >= 2 ) {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
@@ -57,7 +68,7 @@ process AGGREGATE_VCFS {
         }
 
         """
-        aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${group}.agg.vcf
+        aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${prefix}.agg.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -66,13 +77,15 @@ process AGGREGATE_VCFS {
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${group}"
+
         if( meta.id.size() >= 2 ) {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
             """
             echo tumor:${meta.id[tumor_idx]} normal:${meta.id[normal_idx]}
-            touch ${group}.agg.vcf
+            touch ${prefix}.agg.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

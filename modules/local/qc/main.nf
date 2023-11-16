@@ -1,49 +1,51 @@
 process QC_TO_CDM {
-    cpus 1
-    publishDir "${params.crondir}/qc", mode: 'copy' , overwrite: 'true'
+    label 'process_single'
     tag "${meta.id}"
-    time '10m'
-    memory '50 MB'
 
     input:
         tuple val(group), val(meta), file(qc)
 
     output:
-        tuple val(group), val(meta), file("${meta.id}.cdmpy"), emit: cdm_done
+        tuple val(group), val(meta), file("*.cdm"), emit: cdm_done
 
     when:
-        !params.noupload
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdmpy
+        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${prefix}.cdm
         """
 
     stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${meta.id}.cdmpy
+        echo "--sequencing-run ${meta.sequencing_run} --sample-type ${meta.type} --sample-id ${meta.id} --assay $params.cdm --qc ${params.outdir}/${params.subdir}/QC/$qc --lims-id ${meta.clarity_sample_id}" > ${prefix}.cdm
         """
 }
 
 process LOWCOV {
-    cpus 1
-    memory '5 GB'
-    publishDir "${params.outdir}/${params.subdir}/QC", mode: 'copy', overwrite: 'true'
-    time '1h'
+    label 'process_medium'
     tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), file(bam), file(bai), file(dedup) //from bam_lowcov
 
     output:
-        tuple val(group), val(meta.type), file("${meta.id}.lowcov.bed"),    emit: lowcov_regions
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta.type), file("*.lowcov.bed"), emit: lowcov_regions
+        path "versions.yml",                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args     ?: ""
+        def args2   = task.ext.args2    ?: ""
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
         source activate sambamba
-        panel_depth.pl $bam ${params.regions_proteincoding} > lowcov.bed
-        overlapping_genes.pl lowcov.bed ${params.gene_regions} > ${meta.id}.lowcov.bed
+        panel_depth.pl $bam $args > lowcov.bed
+        overlapping_genes.pl lowcov.bed $args2 > ${prefix}.lowcov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -52,9 +54,10 @@ process LOWCOV {
         """
 
     stub:
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
         source activate sambamba
-        touch ${meta.id}.lowcov.bed
+        touch ${prefix}.lowcov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -64,8 +67,7 @@ process LOWCOV {
 }
 
 process QC_VALUES {
-    time '2m'
-    memory '50 MB'
+    label 'process_single'
     tag "${meta.id}"
 
     input:
@@ -74,6 +76,9 @@ process QC_VALUES {
     output:
         tuple val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV), emit: qc_melt_val
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
         // Collect qc-data if possible from normal sample, if only tumor; tumor
         def ins_dev

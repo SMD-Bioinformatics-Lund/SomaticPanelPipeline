@@ -1,20 +1,22 @@
 process PREPROCESSINTERVALS {
-    label 'gatk_small'
+    label 'process_low'
 
     input:
-        val(prefix)
+        val(reference)
 
     output:
-        tuple val(prefix), file("${prefix}.preprocessed.blacklisted.interval_list"),    emit: preprocessed
+        tuple val(ref), file("${reference}.preprocessed.blacklisted.interval_list"),    emit: preprocessed
         path "versions.yml",                                                            emit: versions
 
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
-        panel = ""
-        if (params.panel) {
-            panel = "-L ${params.interval_list}"
-        }
+        def args    = task.ext.args ?: ''
+        def panel   = $params.panel ? "-L ${params.interval_list}" : ''
+
         """
-        gatk PreprocessIntervals -R ${params.genome_file} --padding ${params.padding} -imr OVERLAPPING_ONLY -O ${prefix}.preprocessed.blacklisted.interval_list -XL ${params.blacklist} $panel
+        gatk PreprocessIntervals $args -O ${reference}.preprocessed.blacklisted.interval_list $panel
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -24,7 +26,7 @@ process PREPROCESSINTERVALS {
 
     stub:
         """
-        touch ${prefix}.preprocessed.blacklisted.interval_list
+        touch ${reference}.preprocessed.blacklisted.interval_list
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -34,18 +36,24 @@ process PREPROCESSINTERVALS {
 }
 
 process COUNT_READS {
-    
+    label 'process_low'
+
     input:
         tuple val(id), file(cram), file(crai), file(bai)
-        tuple val(prefix), path(bed)
+        tuple val(reference), path(bed)
 
     output:
-        tuple val(prefix), val(id), file("${id}.tsv"),  emit: count_tsv
-        path "versions.yml",                            emit: versions
+        tuple val(reference), val(id), file("*.tsv"),  emit: count_tsv
+        path "versions.yml",                           emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${id}"
         """
-        gatk CollectReadCounts -R ${params.genome_file} -imr OVERLAPPING_ONLY --format TSV -O ${id}.tsv -I $cram -L $bed
+        gatk CollectReadCounts $args -O ${prefix}.tsv -I $cram -L $bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -54,8 +62,9 @@ process COUNT_READS {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${id}"
         """
-        touch ${id}.tsv
+        touch ${prefix}.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -65,18 +74,23 @@ process COUNT_READS {
 }
 
 process ANNOTATE_GC {
-    label 'gatk_small'
+    label 'process_low'
 
     input:
-        tuple val(prefix), path(interval_list)
+        tuple val(reference), path(interval_list)
 
     output:
-        tuple val(prefix), file("${prefix}.annotated.tsv"), emit: annotated_intervals
-        path "versions.yml",                                emit: versions
+        tuple val(reference), file("*.annotated.tsv"), emit: annotated_intervals
+        path "versions.yml",                           emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
         """
-        gatk AnnotateIntervals -L $interval_list -R ${params.genome_file} -imr OVERLAPPING_ONLY -O ${prefix}.annotated.tsv
+        gatk AnnotateIntervals -L $interval_list $args -O ${prefix}.annotated.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -85,6 +99,7 @@ process ANNOTATE_GC {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${reference}"
         """
         touch ${prefix}.annotated.tsv
 
@@ -96,21 +111,32 @@ process ANNOTATE_GC {
 }
 
 process CORRECT_GC {
+    label 'process_min_cpus'
+    label 'process_very_high_memory'
 
     input:
-        tuple val(prefix), file(interval_list), file(annotated)
-        tuple val(prefix), val(id), file(tsvs)
+        tuple val(reference), file(interval_list), file(annotated)
+        tuple val(reference), val(id), file(tsvs)
 
     output:
-        tuple val(prefix), file("${prefix}.preprocessed.blacklisted.gcfiltered.interval_list"), emit: corrected_intervals
-        path "versions.yml",                                                                    emit: versions
-    
+        tuple val(reference), file("*.preprocessed.blacklisted.gcfiltered.interval_list"), emit: corrected_intervals
+        path "versions.yml",                                                               emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
-        gatk FilterIntervals -L $interval_list --annotated-intervals $annotated -imr OVERLAPPING_ONLY -O ${prefix}.preprocessed.blacklisted.gcfiltered.interval_list \\
-        $tsv_list
+        gatk FilterIntervals -L $interval_list \\
+            --annotated-intervals $annotated \\
+            $args \\
+            -O ${prefix}.preprocessed.blacklisted.gcfiltered.interval_list \\
+            $tsv_list
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -119,6 +145,7 @@ process CORRECT_GC {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${reference}"
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
@@ -133,41 +160,50 @@ process CORRECT_GC {
 }
 
 process REMOVE_ALT_CONTIGS {
-    label 'gatk_small'
+    label 'process_low'
 
     input:
-        tuple val(prefix), path(interval_list)
+        tuple val(reference), path(interval_list)
 
     output:
-        tuple val(prefix), path("${prefix}.preprocessed.blacklisted.gcfiltered.noalt.interval_list"), emit: noaltcontigs
+        tuple val(reference), path("*.preprocessed.blacklisted.gcfiltered.noalt.interval_list"), emit: noaltcontigs
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def prefix  = task.ext.prefix ?: "${reference}"
         """
         grep -vP "^[A-z,0-9]+_" $interval_list > ${prefix}.preprocessed.blacklisted.gcfiltered.noalt.interval_list
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${reference}"
         """
         touch ${prefix}.preprocessed.blacklisted.gcfiltered.noalt.interval_list
         """
 }
 
 process SCATTER_INTERVALS {
-    label 'gatk_small'
+    label 'process_low'
 
     input:
-        tuple val(prefix), path(interval_list)
+        tuple val(reference), path(interval_list)
         val(size)
 
     output:
-        tuple val(prefix), path("scatter/*"),   emit: scatter
-        path "versions.yml",                    emit: versions
+        tuple val(reference), path("scatter/*"),    emit: scatter
+        path "versions.yml",                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
+        def args    = task.ext.args ?: ''
         count = 0
         """
         mkdir scatter
-        gatk IntervalListTools --INPUT $interval_list --SUBDIVISION_MODE INTERVAL_COUNT --SCATTER_CONTENT $size --OUTPUT scatter
+        gatk IntervalListTools $args --INPUT $interval_list --SCATTER_CONTENT $size --OUTPUT scatter
         ls scatter/*/scattered.interval_list | wc -l
 
         cat <<-END_VERSIONS > versions.yml
@@ -192,26 +228,32 @@ process SCATTER_INTERVALS {
 }
 
 process COHORT_PLOIDY {
+    label 'process_medium'
 
     input:
-        tuple val(prefix), file(interval_list)
-        tuple val(prefix), val(id), file(tsvs)
+        tuple val(reference), file(interval_list)
+        tuple val(reference), val(id), file(tsvs)
 
     output:
-        tuple val(prefix), path("${prefix}_ploidy-model"), path("${prefix}_ploidy-calls/"), emit: ploidy
-        path "versions.yml",                                                                emit: versions
-    
+        tuple val(reference), path("*_ploidy-model"), path("*_ploidy-calls/"),  emit: ploidy
+        path "versions.yml",                                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
         gatk DetermineGermlineContigPloidy \\
-        -L $interval_list \\
-        --interval-merging-rule OVERLAPPING_ONLY \\
-        --contig-ploidy-priors ${params.priors} \\
-        --output . \\
-        --output-prefix ${prefix}_ploidy \\
-        $tsv_list
+            -L $interval_list \\
+            $args \\
+            --output . \\
+            --output-prefix ${prefix}_ploidy \\
+            $tsv_list
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -220,6 +262,7 @@ process COHORT_PLOIDY {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${reference}"
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
@@ -234,15 +277,23 @@ process COHORT_PLOIDY {
 }
 
 process COHORT_CALL {
+    label 'process_many_cpus'
+    label 'process_very_high_memory'
 
     input:
-        tuple val(prefix), val(id), file(tsvs), path(ploidy_model), path(ploidy_calls), file(scatter)
+        tuple val(reference), val(id), file(tsvs), path(ploidy_model), path(ploidy_calls), file(scatter)
 
     output:
-        tuple val(prefix), path("cohort_calls/cohort_${name}"), emit: calls
-        path "versions.yml",                                    emit: versions
-    
+        tuple val(reference), path("cohort_calls/cohort_${name}"),  emit: calls
+        path "versions.yml",                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         name = scatter.toString()
@@ -257,10 +308,10 @@ process COHORT_CALL {
             GermlineCNVCaller --run-mode COHORT \\
             -L ${scatter}/scattered.interval_list \\
             --contig-ploidy-calls $ploidy_calls \\
-            --interval-merging-rule OVERLAPPING_ONLY \\
+            $args \\
             --output cohort_calls \\
             --output-prefix cohort_${name} \\
-        $tsv_list
+            $tsv_list
         touch test
 
         cat <<-END_VERSIONS > versions.yml
@@ -270,6 +321,9 @@ process COHORT_CALL {
         """
 
     stub:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
@@ -289,19 +343,26 @@ process COHORT_CALL {
             gatk4: \$(echo \$(gatk --version 2>&1) | sed 's/^.*(GATK) v//; s/ .*\$//')
         END_VERSIONS
         """
-
 }
 
 process COHORT_CALL_PANEL {
+    label 'process_many_cpus'
+    label 'process_very_high_memory'
 
     input:
-        tuple val(prefix), val(id), file(tsvs), path(ploidy_model), path(ploidy_calls), file(intervals)
+        tuple val(reference), val(id), file(tsvs), path(ploidy_model), path(ploidy_calls), file(intervals)
 
     output:
-        tuple val(prefix), path("cohort_calls/${prefix}*"), emit: calls
-        path "versions.yml",                                emit: versions
-    
+        tuple val(reference), path("cohort_calls/${prefix}*"),  emit: calls
+        path "versions.yml",                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
@@ -315,10 +376,10 @@ process COHORT_CALL_PANEL {
             GermlineCNVCaller --run-mode COHORT \\
             -L $intervals \\
             --contig-ploidy-calls $ploidy_calls \\
-            --interval-merging-rule OVERLAPPING_ONLY \\
+            $args \\
             --output cohort_calls \\
             --output-prefix ${prefix} \\
-        $tsv_list
+            $tsv_list
         touch test
 
         cat <<-END_VERSIONS > versions.yml
@@ -328,6 +389,7 @@ process COHORT_CALL_PANEL {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${reference}"
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
@@ -350,17 +412,24 @@ process COHORT_CALL_PANEL {
 
 }
 
-
 process GATK_SOM_PON {
+    label 'process_many_cpus'
+    label 'process_very_high_memory'
 
     input:
-        tuple val(prefix), val(id), file(tsvs)
+        tuple val(reference), val(id), file(tsvs)
 
     output:
-        tuple val(prefix), path("${prefix}.somatic_gatk_pon.hdf5"), emit: somatic_pon
+        tuple val(reference), path("*.somatic_gatk_pon.hdf5"), emit: somatic_pon
         path "versions.yml",                                        emit: versions
-    
+
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args    = task.ext.args ?: ''
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
@@ -372,9 +441,9 @@ process GATK_SOM_PON {
         export OMP_NUM_THREADS=${task.cpus}
         gatk --java-options "-Djava.io.tmpdir=/local/scratch/" \\
             CreateReadCountPanelOfNormals \\
-            --minimum-interval-median-percentile 5.0 \\
+            $args \\
             -O ${prefix}.somatic_gatk_pon.hdf5 \\
-        $tsv_list
+            $tsv_list
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -383,6 +452,8 @@ process GATK_SOM_PON {
         """
 
     stub:
+        def prefix  = task.ext.prefix ?: "${reference}"
+
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """

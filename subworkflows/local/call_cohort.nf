@@ -8,9 +8,9 @@ include { GATK_SOM_PON            } from '../../modules/local/GATK_references/ma
 
 workflow CALL_COHORT {
     take:
-        intervals           // val(prefix), file(intervals) name of reference
-        intervals_scattered // val(prefix), file(scatters.tar)
-        counts              // val(prefix), file(id), file(tsv)
+        intervals           // channel: [mandatory] [ val(reference_name), file(intervals) ]
+        intervals_scattered // channel: [mandatory] [ val(reference_name), file(scatters.tar) ]
+        counts              // channel: [mandatory] [ val(reference_name), file(id), file(tsv) ]
 
     main:
         ch_versions = Channel.empty()
@@ -32,6 +32,6 @@ workflow CALL_COHORT {
         ch_versions = ch_versions.mix(GATK_SOM_PON.out.versions)
 
     emit:
-        ploidy      =   COHORT_PLOIDY.out.ploidy
-        versions    =   ch_versions
+        ploidy      =   COHORT_PLOIDY.out.ploidy    // channel: [ val(reference), path(ploidy-model/), path(ploidy-calls/) ]
+        versions    =   ch_versions                 // channel: [ file(versions) ]
 }

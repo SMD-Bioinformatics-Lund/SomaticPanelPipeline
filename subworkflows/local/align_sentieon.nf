@@ -8,8 +8,8 @@ include { SENTIEON_QC            } from '../../modules/local/sentieon/main'
 
 workflow ALIGN_SENTIEON {
     take: 
-        fastq_input
-        meta
+        fastq_input         // channel: [mandatory] [ val(meta), [ reads ] ]
+        meta                // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
         ch_versions = Channel.empty()
@@ -27,9 +27,9 @@ workflow ALIGN_SENTIEON {
         ch_versions = ch_versions.mix(SENTIEON_QC.out.versions)
 
     emit:
-        bam_lowcov  =   MARKDUP.out.bam_qc
-        bam_umi     =   BQSR_UMI.out.bam_varcall
-        qc_out      =   SENTIEON_QC.out.qc_cdm
-        bam_dedup   =   MARKDUP.out.bam_bqsr
-        versions    =   ch_versions 
+        bam_lowcov  =   MARKDUP.out.bam_qc          // channel: [ val(group), val(meta), file(bam), file(bai), file(dedup_metrics.txt) ]
+        bam_umi     =   BQSR_UMI.out.bam_varcall    // channel: [ val(group), val(meta), file(bam), file(bai), file(bqsr.table) ]
+        qc_out      =   SENTIEON_QC.out.qc_cdm      // channel: [ val(group), val(meta), file(QC) ]
+        bam_dedup   =   MARKDUP.out.bam_bqsr        // channel: [ val(group), val(meta), file(bam), file(bai)] 
+        versions    =   ch_versions                 // channel: [ file(versions) ]
 }

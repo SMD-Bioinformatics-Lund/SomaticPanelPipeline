@@ -128,7 +128,7 @@ workflow.onComplete {
         .stripIndent()
 
     base = csv.getBaseName()
-    logFile = file("/fs1/results/cron/logs/" + base + ".complete")
+    logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
     logFile.text = msg
     logFile.append(error)
 }
