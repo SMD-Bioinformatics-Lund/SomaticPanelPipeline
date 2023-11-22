@@ -156,7 +156,7 @@ process MARK_GERMLINES {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
             fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
-            mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
+            mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}p.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -183,7 +183,7 @@ process MARK_GERMLINES {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
             echo --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]}
-            touch ${prefix}.agg.pon.vep.markgerm.vcf
+            touch ${prefix}p.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
