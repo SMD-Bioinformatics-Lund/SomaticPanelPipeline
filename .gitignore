@@ -16,3 +16,4 @@ TODO.md
 *_test.config
 logs/
 bugs/
+*.nf-test.log
