@@ -17,3 +17,8 @@ TODO.md
 logs/
 bugs/
 *.nf-test.log
+*.sbatch
+*out*
+*err*
+.nf-test/
+tests_data/
