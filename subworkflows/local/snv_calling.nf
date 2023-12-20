@@ -11,7 +11,7 @@ include { BEDTOOLS_INTERSECT       } from '../../modules/local/filters/main'
 
 workflow SNV_CALLING {
     take: 
-        bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
+        bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai"), file(bqsr) ]
         bam_dedup       // channel: [mandatory] [ val(group), val(meta), file("dedup.bam"), file("dedup.bam.bai") ]
         beds            // channel: [mandatory] [ file(bed) ]
         meta            // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
