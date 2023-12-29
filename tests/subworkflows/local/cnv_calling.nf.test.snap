@@ -1,0 +1,375 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "23KF00457-lymf",
+                        "23KF00457-lymf.modeled.png:md5,ebdcb43baaec87f1c21e1ca028ecb0ca"
+                    ]
+                ],
+                "1": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23HL02304-lymf.full.cnvkit_overview.png:md5,692f31eb7694696dc8a7e5dc36a8df1e"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23KF00457-lymf.full.cnvkit_overview.png:md5,98ed01ebf0e42ef845a013a06e917196"
+                    ]
+                ],
+                "2": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23HL02304-lymf.full.call.cns:md5,89ff607243e39b755089c57edeb4a1f8"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23KF00457-lymf.full.call.cns:md5,e16e11d1a0a8c4d00e97d68fbad141bb"
+                    ]
+                ],
+                "3": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931"
+                        },
+                        "23KF00457-lymf.merged.vcf:md5,74b637cb83f961a5dec57dabd50ae827"
+                    ]
+                ],
+                "4": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042"
+                        },
+                        "23HL02304-lymf.merged.vcf:md5,9a1d2aa7607703f403c431f1cb326d0e"
+                    ]
+                ],
+                "5": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042",
+                            "sub": false
+                        },
+                        "23HL02304-lymf.gens:md5,0fbbcc189c959161fd185b2cdea21ecf"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931",
+                            "sub": false
+                        },
+                        "23KF00457-lymf.gens:md5,ea7454d938433fcec82ea437ffe23de0"
+                    ]
+                ],
+                "6": [
+                    "versions.yml:md5,018ddb4c96eef35e5e2e720d561d03f4",
+                    "versions.yml:md5,0697cd68eefd7255069c3a83dcca502a",
+                    "versions.yml:md5,07f95f17cff1a429b3e0b35805ba1d5c",
+                    "versions.yml:md5,13a446ed7030ab4a17c14f5bc7527634",
+                    "versions.yml:md5,1fda4f60bfe95ea089436f699d320962",
+                    "versions.yml:md5,500266ecc98ae912a55d839f945a1d62",
+                    "versions.yml:md5,500266ecc98ae912a55d839f945a1d62",
+                    "versions.yml:md5,539d0be537c2bd00597e03161872f4fd",
+                    "versions.yml:md5,539d0be537c2bd00597e03161872f4fd",
+                    "versions.yml:md5,5bd60b0fb6be653ac868948b08497ffa",
+                    "versions.yml:md5,5dc34433389076b90552203bb2292b0a",
+                    "versions.yml:md5,5dc34433389076b90552203bb2292b0a",
+                    "versions.yml:md5,6b7d1e8597b9ad11536f672fb5b4b443",
+                    "versions.yml:md5,754cb954e7cf84913057cb2ed71cff35",
+                    "versions.yml:md5,79860acd6f48febb737edf803d17628e",
+                    "versions.yml:md5,a4c7acedbd2d038140b22a759db54a7f",
+                    "versions.yml:md5,a4c7acedbd2d038140b22a759db54a7f",
+                    "versions.yml:md5,a9268c279c5eed202f1649cce0a7dd55",
+                    "versions.yml:md5,add82f6e2a469998d1def12d2e5803b6",
+                    "versions.yml:md5,add82f6e2a469998d1def12d2e5803b6",
+                    "versions.yml:md5,c738f8d325e549e3b4f6ff5f91600ce8",
+                    "versions.yml:md5,cb310e637b9b802111121ee1aa072d76",
+                    "versions.yml:md5,e75e8e4e0c160955745c3ef5672407e8",
+                    "versions.yml:md5,e75e8e4e0c160955745c3ef5672407e8",
+                    "versions.yml:md5,f39e98919628136d048929e93b714f33",
+                    "versions.yml:md5,fcf9cd81b182a832203eb69b36f4177b",
+                    "versions.yml:md5,fcf9cd81b182a832203eb69b36f4177b"
+                ],
+                "cnvkit_hrd": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23HL02304-lymf.full.call.cns:md5,89ff607243e39b755089c57edeb4a1f8"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23KF00457-lymf.full.call.cns:md5,e16e11d1a0a8c4d00e97d68fbad141bb"
+                    ]
+                ],
+                "cnvkit_plot": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23HL02304-lymf.full.cnvkit_overview.png:md5,692f31eb7694696dc8a7e5dc36a8df1e"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931",
+                            "sub": false
+                        },
+                        "full",
+                        "23KF00457-lymf.23KF00457-lymf.full.cnvkit_overview.png:md5,98ed01ebf0e42ef845a013a06e917196"
+                    ]
+                ],
+                "gatcov_plot": [
+                    [
+                        "23KF00457-lymf",
+                        "23KF00457-lymf.modeled.png:md5,ebdcb43baaec87f1c21e1ca028ecb0ca"
+                    ]
+                ],
+                "gens": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042",
+                            "sub": false
+                        },
+                        "23HL02304-lymf.gens:md5,0fbbcc189c959161fd185b2cdea21ecf"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931",
+                            "sub": false
+                        },
+                        "23KF00457-lymf.gens:md5,ea7454d938433fcec82ea437ffe23de0"
+                    ]
+                ],
+                "normal_vcf": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23HL02304-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "N",
+                            "clarity_sample_id": "CMD707A2651",
+                            "ffpe": "",
+                            "purity": false,
+                            "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                            "reads": "33966764",
+                            "clarity_pool_id": "122-341042"
+                        },
+                        "23HL02304-lymf.merged.vcf:md5,9a1d2aa7607703f403c431f1cb326d0e"
+                    ]
+                ],
+                "tumor_vcf": [
+                    [
+                        "23KF00457-lymf",
+                        {
+                            "id": "23KF00457-lymf",
+                            "group": "23KF00457-lymf",
+                            "diagnosis": "other",
+                            "type": "T",
+                            "clarity_sample_id": "CMD707A3447",
+                            "ffpe": "FFPE",
+                            "purity": false,
+                            "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                            "reads": "75970669",
+                            "clarity_pool_id": "122-355931"
+                        },
+                        "23KF00457-lymf.merged.vcf:md5,74b637cb83f961a5dec57dabd50ae827"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,018ddb4c96eef35e5e2e720d561d03f4",
+                    "versions.yml:md5,0697cd68eefd7255069c3a83dcca502a",
+                    "versions.yml:md5,07f95f17cff1a429b3e0b35805ba1d5c",
+                    "versions.yml:md5,13a446ed7030ab4a17c14f5bc7527634",
+                    "versions.yml:md5,1fda4f60bfe95ea089436f699d320962",
+                    "versions.yml:md5,500266ecc98ae912a55d839f945a1d62",
+                    "versions.yml:md5,500266ecc98ae912a55d839f945a1d62",
+                    "versions.yml:md5,539d0be537c2bd00597e03161872f4fd",
+                    "versions.yml:md5,539d0be537c2bd00597e03161872f4fd",
+                    "versions.yml:md5,5bd60b0fb6be653ac868948b08497ffa",
+                    "versions.yml:md5,5dc34433389076b90552203bb2292b0a",
+                    "versions.yml:md5,5dc34433389076b90552203bb2292b0a",
+                    "versions.yml:md5,6b7d1e8597b9ad11536f672fb5b4b443",
+                    "versions.yml:md5,754cb954e7cf84913057cb2ed71cff35",
+                    "versions.yml:md5,79860acd6f48febb737edf803d17628e",
+                    "versions.yml:md5,a4c7acedbd2d038140b22a759db54a7f",
+                    "versions.yml:md5,a4c7acedbd2d038140b22a759db54a7f",
+                    "versions.yml:md5,a9268c279c5eed202f1649cce0a7dd55",
+                    "versions.yml:md5,add82f6e2a469998d1def12d2e5803b6",
+                    "versions.yml:md5,add82f6e2a469998d1def12d2e5803b6",
+                    "versions.yml:md5,c738f8d325e549e3b4f6ff5f91600ce8",
+                    "versions.yml:md5,cb310e637b9b802111121ee1aa072d76",
+                    "versions.yml:md5,e75e8e4e0c160955745c3ef5672407e8",
+                    "versions.yml:md5,e75e8e4e0c160955745c3ef5672407e8",
+                    "versions.yml:md5,f39e98919628136d048929e93b714f33",
+                    "versions.yml:md5,fcf9cd81b182a832203eb69b36f4177b",
+                    "versions.yml:md5,fcf9cd81b182a832203eb69b36f4177b"
+                ]
+            }
+        ],
+        "timestamp": "2023-12-28T13:36:38.203837"
+    }
+}

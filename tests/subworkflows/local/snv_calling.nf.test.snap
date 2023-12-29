@@ -1,0 +1,109 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "23KF00457-lymf",
+                        "freebayes",
+                        "23KF00457-lymf_freebayes.vcf.gz:md5,cbaef071f81ada81985a128b64fbcdd9"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        "vardict",
+                        "23KF00457-lymf_vardict.vcf.gz:md5,0c1b72d34b3679885c15a2d1876b44bc"
+                    ]
+                ],
+                "1": [
+                    [
+                        "23KF00457-lymf",
+                        [
+                            {
+                                "id": "23KF00457-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "T",
+                                "clarity_sample_id": "CMD707A3447",
+                                "ffpe": "FFPE",
+                                "purity": false,
+                                "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                                "reads": "75970669",
+                                "clarity_pool_id": "122-355931"
+                            },
+                            {
+                                "id": "23HL02304-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "N",
+                                "clarity_sample_id": "CMD707A2651",
+                                "ffpe": "",
+                                "purity": false,
+                                "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                                "reads": "33966764",
+                                "clarity_pool_id": "122-341042"
+                            }
+                        ],
+                        "23KF00457-lymf.agg.vcf:md5,92846b12a078ab159ebb7d485be905c5"
+                    ]
+                ],
+                "2": [
+                    "versions.yml:md5,6ea93ef784f9862e2b15291a5645ef87",
+                    "versions.yml:md5,8ed730ff20acc48e51c2f3d27aa55418",
+                    "versions.yml:md5,aeec1d912f15cf291c8f14eb67bae9cb",
+                    "versions.yml:md5,d99037b14b59387f8e1cfdd5d85b3d78"
+                ],
+                "agg_vcf": [
+                    [
+                        "23KF00457-lymf",
+                        [
+                            {
+                                "id": "23KF00457-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "T",
+                                "clarity_sample_id": "CMD707A3447",
+                                "ffpe": "FFPE",
+                                "purity": false,
+                                "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                                "reads": "75970669",
+                                "clarity_pool_id": "122-355931"
+                            },
+                            {
+                                "id": "23HL02304-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "N",
+                                "clarity_sample_id": "CMD707A2651",
+                                "ffpe": "",
+                                "purity": false,
+                                "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                                "reads": "33966764",
+                                "clarity_pool_id": "122-341042"
+                            }
+                        ],
+                        "23KF00457-lymf.agg.vcf:md5,92846b12a078ab159ebb7d485be905c5"
+                    ]
+                ],
+                "concat_vcfs": [
+                    [
+                        "23KF00457-lymf",
+                        "freebayes",
+                        "23KF00457-lymf_freebayes.vcf.gz:md5,cbaef071f81ada81985a128b64fbcdd9"
+                    ],
+                    [
+                        "23KF00457-lymf",
+                        "vardict",
+                        "23KF00457-lymf_vardict.vcf.gz:md5,0c1b72d34b3679885c15a2d1876b44bc"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,6ea93ef784f9862e2b15291a5645ef87",
+                    "versions.yml:md5,8ed730ff20acc48e51c2f3d27aa55418",
+                    "versions.yml:md5,aeec1d912f15cf291c8f14eb67bae9cb",
+                    "versions.yml:md5,d99037b14b59387f8e1cfdd5d85b3d78"
+                ]
+            }
+        ],
+        "timestamp": "2023-12-27T14:53:17.371132"
+    }
+}

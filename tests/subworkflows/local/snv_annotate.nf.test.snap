@@ -1,0 +1,101 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "23KF00457-lymf",
+                        "23KF00457-lymf_vardict.germlines.vcf.gz:md5,f7138f2f0e9e0e4f82d807ebca434c07",
+                        "23KF00457-lymf_vardict.germlines.vcf.gz.tbi:md5,d9dfd3cd9c99e8d9826337a0f25ec3d4"
+                    ]
+                ],
+                "1": [
+                    [
+                        "23KF00457-lymf",
+                        [
+                            {
+                                "id": "23KF00457-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "T",
+                                "clarity_sample_id": "CMD707A3447",
+                                "ffpe": "FFPE",
+                                "purity": false,
+                                "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                                "reads": "75970669",
+                                "clarity_pool_id": "122-355931"
+                            },
+                            {
+                                "id": "23HL02304-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "N",
+                                "clarity_sample_id": "CMD707A2651",
+                                "ffpe": "",
+                                "purity": false,
+                                "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                                "reads": "33966764",
+                                "clarity_pool_id": "122-341042"
+                            }
+                        ],
+                        "23KF00457-lymfp.agg.pon.vep.markgerm.vcf:md5,2be9cb7e5bd89b0f0409df1697bfd9fe"
+                    ]
+                ],
+                "2": [
+                    "versions.yml:md5,447441600f33d603d04efa6c69b39312",
+                    "versions.yml:md5,5eac387af8f311f1148b27e581b26c40",
+                    "versions.yml:md5,9dc91772f1618ed8f72a15c81080a3f9",
+                    "versions.yml:md5,ac6eb10cce42fc03f0c8c8a4fea2a1a0",
+                    "versions.yml:md5,c036b17e0074ef1505056703563de79c"
+                ],
+                "finished_vcf": [
+                    [
+                        "23KF00457-lymf",
+                        [
+                            {
+                                "id": "23KF00457-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "T",
+                                "clarity_sample_id": "CMD707A3447",
+                                "ffpe": "FFPE",
+                                "purity": false,
+                                "sequencing_run": "231024_A01932_0295_AHK5TYDRX3",
+                                "reads": "75970669",
+                                "clarity_pool_id": "122-355931"
+                            },
+                            {
+                                "id": "23HL02304-lymf",
+                                "group": "23KF00457-lymf",
+                                "diagnosis": "other",
+                                "type": "N",
+                                "clarity_sample_id": "CMD707A2651",
+                                "ffpe": "",
+                                "purity": false,
+                                "sequencing_run": "230829_A01932_0262_AHJ75FDRX3",
+                                "reads": "33966764",
+                                "clarity_pool_id": "122-341042"
+                            }
+                        ],
+                        "23KF00457-lymfp.agg.pon.vep.markgerm.vcf:md5,2be9cb7e5bd89b0f0409df1697bfd9fe"
+                    ]
+                ],
+                "germline_variants": [
+                    [
+                        "23KF00457-lymf",
+                        "23KF00457-lymf_vardict.germlines.vcf.gz:md5,f7138f2f0e9e0e4f82d807ebca434c07",
+                        "23KF00457-lymf_vardict.germlines.vcf.gz.tbi:md5,d9dfd3cd9c99e8d9826337a0f25ec3d4"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,447441600f33d603d04efa6c69b39312",
+                    "versions.yml:md5,5eac387af8f311f1148b27e581b26c40",
+                    "versions.yml:md5,9dc91772f1618ed8f72a15c81080a3f9",
+                    "versions.yml:md5,ac6eb10cce42fc03f0c8c8a4fea2a1a0",
+                    "versions.yml:md5,c036b17e0074ef1505056703563de79c"
+                ]
+            }
+        ],
+        "timestamp": "2023-12-28T11:31:31.113895"
+    }
+}

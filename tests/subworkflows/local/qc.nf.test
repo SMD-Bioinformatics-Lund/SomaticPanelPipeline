@@ -1,0 +1,65 @@
+nextflow_workflow {
+
+    name "Test Workflow QC"
+    script "subworkflows/local/qc.nf"
+    workflow "QC"
+
+
+    setup {
+        
+        run("CHECK_INPUT") {
+            script "$projectDir/subworkflows/local/create_meta.nf"
+            workflow {
+                """
+                input[0] = file("$projectDir/tests-data/gmslymphomav3-0/23KF00457-lymf_gmslymphomav3-0.csv")
+                """
+            }
+        }
+
+        run("SAMPLE") {
+            script "$projectDir/subworkflows/local/sample.nf"
+            workflow {
+                """
+                input[0] = CHECK_INPUT.out.fastq
+                """
+            }
+        }
+
+
+        run("ALIGN_SENTIEON") {
+            script "$projectDir/subworkflows/local/align_sentieon.nf"
+            workflow {
+                """
+                input[0] =  SAMPLE.out.fastq_trim
+                input[1] =  CHECK_INPUT.out.meta
+                """
+            }
+        }
+
+    }
+
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                // define parameters here. Example:
+                // outdir = "tests/results"
+            }
+            workflow {
+                """
+                // define inputs of the workflow here. Example:
+                input[0] = ALIGN_SENTIEON.out.qc_out
+                input[1] = ALIGN_SENTIEON.out.bam_lowcov
+                """
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert snapshot(workflow.out).match()
+        }
+
+    }
+
+}

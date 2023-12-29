@@ -1,0 +1,29 @@
+{
+    "Should run without failures": {
+        "content": [
+            {
+                "0": [
+                    [
+                        "23KF00457-lymf",
+                        "23KF00457-lymf.cn-segments.panel.merged.bed:md5,d6e4deb765c8093c99ddac00032d5fbd"
+                    ]
+                ],
+                "1": [
+                    "versions.yml:md5,e7bc96983beab685bd0b0d10d12be108",
+                    "versions.yml:md5,e7bc96983beab685bd0b0d10d12be108"
+                ],
+                "segments": [
+                    [
+                        "23KF00457-lymf",
+                        "23KF00457-lymf.cn-segments.panel.merged.bed:md5,d6e4deb765c8093c99ddac00032d5fbd"
+                    ]
+                ],
+                "versions": [
+                    "versions.yml:md5,e7bc96983beab685bd0b0d10d12be108",
+                    "versions.yml:md5,e7bc96983beab685bd0b0d10d12be108"
+                ]
+            }
+        ],
+        "timestamp": "2023-12-28T14:46:47.942271"
+    }
+}

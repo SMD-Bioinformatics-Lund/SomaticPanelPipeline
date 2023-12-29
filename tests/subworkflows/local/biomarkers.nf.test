@@ -1,0 +1,131 @@
+nextflow_workflow {
+
+    name "Test Workflow BIOMARKERS"
+    script "subworkflows/local/biomarkers.nf"
+    workflow "BIOMARKERS"
+
+    setup {
+        
+        run("CHECK_INPUT") {
+            script "$projectDir/subworkflows/local/create_meta.nf"
+            workflow {
+                """
+                input[0] = file("$projectDir/tests-data/gmslymphomav3-0/23KF00457-lymf_gmslymphomav3-0.csv")
+                """
+            }
+        }
+
+        run("SAMPLE") {
+            script "$projectDir/subworkflows/local/sample.nf"
+            workflow {
+                """
+                input[0] = CHECK_INPUT.out.fastq
+                """
+            }
+        }
+
+        run("ALIGN_SENTIEON") {
+            script "$projectDir/subworkflows/local/align_sentieon.nf"
+            workflow {
+                """
+                input[0] =  SAMPLE.out.fastq_trim
+                input[1] =  CHECK_INPUT.out.meta
+                """
+            }
+        }
+
+        run("QC") {
+            script "$projectDir/subworkflows/local/qc.nf"
+            workflow {
+                """
+                input[0] = ALIGN_SENTIEON.out.qc_out
+                input[1] = ALIGN_SENTIEON.out.bam_lowcov
+                """
+            }
+        }
+
+        run("SNV_CALLING") {
+            script "$projectDir/subworkflows/local/snv_calling.nf"
+            
+
+            workflow {
+                """
+                Channel
+                    .fromPath("/fs1/resources/ref/hg38/bed/lymphoid-twist/v3/lymph_v3_mergedprobes_simple.bed")
+                    .ifEmpty { exit 1, "Regions bed file not found: /fs1/resources/ref/hg38/bed/lymphoid-twist/v3/lymph_v3_mergedprobes_simple.bed" }
+                    .splitText( by: 1000, file: 'bedpart.bed' )
+                    .set { beds }
+                
+                // define inputs of the workflow here. Example:
+                input[0] = ALIGN_SENTIEON.out.bam_umi.groupTuple()
+                input[1] = ALIGN_SENTIEON.out.bam_dedup
+                input[2] = beds                
+                input[3] = CHECK_INPUT.out.meta
+                input[4] = QC.out.melt_qc
+                """
+            }
+        }
+
+        run("SNV_ANNOTATE") {
+            script "$projectDir/subworkflows/local/snv_annotate.nf"
+
+            workflow {
+                """
+                // define inputs of the workflow here. Example:
+                input[0] = SNV_CALLING.out.agg_vcf
+                input[1] = SNV_CALLING.out.concat_vcfs
+                input[2] = CHECK_INPUT.out.meta 
+                """
+            }
+        }
+
+        run("CNV_CALLING") {
+            script "$projectDir/subworkflows/local/cnv_calling.nf"
+
+            workflow {
+                """
+                // define inputs of the workflow here. Example:
+                
+                Channel
+                    .fromPath("/fs1/resources/validation-samples/lymphoid/PoN/gatk/gatk_ref")
+                    .splitCsv(header:true)
+                    .map{ row-> tuple(row.i, row.refpart) }
+                    .set{ gatk_ref}
+                
+                input[0] = ALIGN_SENTIEON.out.bam_umi
+                input[1] = SNV_ANNOTATE.out.germline_variants
+                input[2] = CHECK_INPUT.out.meta
+                input[3] = ALIGN_SENTIEON.out.bam_dedup
+                input[4] = gatk_ref
+                """
+            }
+        }
+    }
+
+
+    test("Should run without failures") {
+
+        when {
+            params {
+                // define parameters here. Example:
+                // outdir = "tests/results"
+            }
+            workflow {
+                """
+                // define inputs of the workflow here. Example:
+                input[0] = CHECK_INPUT.out.meta
+                input[1] = CNV_CALLING.out.cnvkit_hrd
+                input[2] = ALIGN_SENTIEON.out.bam_umi
+                input[3] = ALIGN_SENTIEON.out.bam_dedup
+                """
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert snapshot(workflow.out).match()
+        }
+
+    }
+
+}
