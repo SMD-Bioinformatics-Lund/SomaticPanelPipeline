@@ -16,3 +16,7 @@ TODO.md
 *_test.config
 logs/
 bugs/
+.venv
+.env
+venv
+env
