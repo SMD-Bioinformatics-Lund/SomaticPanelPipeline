@@ -1,6 +1,4 @@
 process GENEFUSE {
-    label 'process_very_high'
-    label 'error_ignore'
     tag "${meta.id}"
 
     input:
