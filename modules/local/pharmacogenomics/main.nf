@@ -24,7 +24,7 @@ process PHARMACOGENOMICS {
             prefix = "${meta.group[normal_idx]}"
             """
             echo -e "clarity_sample_id,id,type,assay,group,bam,bai,purity" > ${prefix}.pgx${suffix}.csv
-            echo -e "${meta.clarity_sample_id[normal_idx]},${meta.id[normal_idx]},${meta.id[normal_idx]},N,GMS_PGx_Panel,${meta.group[normal_idx]},${args}/${normal_bam},${args}/${normal_bam}.bai,${meta.purity[normal_idx]}" >> ${prefix}.pgx${suffix}.csv
+            echo -e "${meta.clarity_sample_id[normal_idx]},${meta.id[normal_idx]},N,GMS_PGx_Panel,${meta.group[normal_idx]},${args}/${normal_bam}.bam,${args}/${normal_bam}.bam.bai,${meta.purity[normal_idx]}" >> ${prefix}.pgx${suffix}.csv
 
             echo -e "/fs2/sw/bnf-scripts/start_nextflow_analysis.pl $args3/${prefix}.pgx${suffix}.csv " > ${prefix}.pgx${suffix}.sh
 
@@ -35,7 +35,7 @@ process PHARMACOGENOMICS {
             prefix  = "${meta.group[0]}"
             """
             echo -e "clarity_sample_id,id,type,assay,group,bam,bai,purity" > ${prefix}.pgx${suffix}.csv
-            echo -e "${meta.clarity_sample_id[0]},${meta.id[0]},${meta.id[0]},${meta.type[0]},GMS_PGx_Panel,${meta.group[0]},${args}/${bam},${args}/${bam}.bai,${meta.purity[0]}" >> ${prefix}.pgx${suffix}.csv
+            echo -e "${meta.clarity_sample_id[0]},${meta.id[0]},${meta.type[0]},GMS_PGx_Panel,${meta.group[0]},${args}/${bam}.bam,${args}/${bam}.bam.bai,${meta.purity[0]}" >> ${prefix}.pgx${suffix}.csv
 
             echo -e "/fs2/sw/bnf-scripts/start_nextflow_analysis.pl $args3/${prefix}.pgx${suffix}.csv " > ${prefix}.pgx${suffix}.sh
             """
@@ -54,7 +54,7 @@ process PHARMACOGENOMICS {
             prefix      = "${meta.group[normal_idx]}"
             """
             echo -e "clarity_sample_id,id,type,assay,group,bam,bai,purity" > ${prefix}.pgx${suffix}.csv
-            echo -e "${meta.clarity_sample_id[normal_idx]},${meta.id[normal_idx]},${meta.id[normal_idx]},N,GMS_PGx_Panel,${meta.group[normal_idx]},${args}/${normal_bam},${args}/${normal_bam}.bai,${meta.purity[normal_idx]}" >> ${prefix}.pgx${suffix}.csv
+            echo -e "${meta.clarity_sample_id[normal_idx]},${meta.id[normal_idx]},N,GMS_PGx_Panel,${meta.group[normal_idx]},${args}/${normal_bam}.bam,${args}/${normal_bam}.bam.bai,${meta.purity[normal_idx]}" >> ${prefix}.pgx${suffix}.csv
 
             echo -e "#/fs2/sw/bnf-scripts/start_nextflow_analysis.pl $args3/${prefix}.pgx${suffix}.csv " > ${prefix}.pgx${suffix}.sh
             """
@@ -64,7 +64,7 @@ process PHARMACOGENOMICS {
             prefix  = "${meta.group[0]}"
             """
             echo -e "clarity_sample_id,id,type,assay,group,bam,bai,purity" > ${prefix}.pgx${suffix}.csv
-            echo -e "${meta.clarity_sample_id[0]},${meta.id[0]},${meta.id[0]},${meta.type[0]},GMS_PGx_Panel,${meta.group[0]},${args}/${bam},${args}/${bam}.bai,${meta.purity[0]}" >> ${prefix}.pgx${suffix}.csv
+            echo -e "${meta.clarity_sample_id[0]},${meta.id[0]},${meta.type[0]},GMS_PGx_Panel,${meta.group[0]},${args}/${bam}.bam,${args}/${bam}.bam.bai,${meta.purity[0]}" >> ${prefix}.pgx${suffix}.csv
 
             echo -e "#/fs2/sw/bnf-scripts/start_nextflow_analysis.pl $args3/${prefix}.pgx${suffix}.csv " > ${prefix}.pgx${suffix}.sh
             """
