@@ -66,12 +66,15 @@ workflow SPP_COMMON {
     )
     .set { pgx_files }
 
+    ch_mapped.dedup_bam_is_metrics.groupTuple().view()
+    ch_mapped.bam_umi.groupTuple().view()
     SNV_CALLING ( 
         ch_mapped.bam_umi.groupTuple(),
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
-        ch_qc.melt_qc
+        ch_qc.melt_qc,
+        ch_mapped.dedup_bam_is_metrics.groupTuple(),
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
