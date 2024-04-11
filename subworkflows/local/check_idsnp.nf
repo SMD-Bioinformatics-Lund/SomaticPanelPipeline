@@ -7,23 +7,21 @@ include { SNP_CHECK              } from '../../modules/local/idSnp/main'
 
 workflow ID_SNP {
     take:
-        bam_dedup                                                   // channel: [ val(group), val(meta), file(bam), file(bai)] 
-
-
+        bam_dedup     // channel: [ val(group), val(meta), file(bam), file(bai)] 
+        meta        // channel: [ id, group, phenotype, paternal_id, maternal_id, case_id ]                                      
+        
     main:
         ch_versions = Channel.empty()
+        ch_versions.view()
 
-        if( meta.id.size() >= 2 ) {
+        if ( meta.filter( it -> it[0].size >=2 ) ) {
             ALLELE_CALL (bam_dedup)
             ch_versions = ch_versions.mix(ALLELE_CALL.out.versions)
             
             SNP_CHECK(ALLELE_CALL.out.sample_id_vcf.groupTuple())
             ch_versions = ch_versions.mix(SNP_CHECK.out.versions)
         }
-        else {
-            
-        }
-        
+    
 
     emit:
         idsnp               =   SNP_CHECK.out.idsnp_checked         // channel: [ val(group), val(meta), file(snpid) ]

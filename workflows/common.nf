@@ -7,7 +7,7 @@ include { CHECK_INPUT                   } from '../subworkflows/local/create_met
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
-include { IDSNP                         } from '../subworkflows/local/check_idsnp.nf'
+include { ID_SNP                         } from '../subworkflows/local/check_idsnp.nf'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
@@ -62,12 +62,12 @@ workflow SPP_COMMON {
     ch_versions = ch_versions.mix(ch_qc.versions)
 
     // Check for IDSNP
-
-    IDSNP (
-        ch_mapped.bam_umi.groupTuple()
+    ID_SNP (
+        ch_mapped.bam_dedup.groupTuple(),
+        CHECK_INPUT.out.meta
     )
     .set { ch_idsnp }
-    ch_versions = ch_versions.mix(ch_id.versions)
+    ch_versions = ch_versions.mix(ch_idsnp.versions)
 
     // Create PGx CSV file
     PHARMACOGENOMICS (

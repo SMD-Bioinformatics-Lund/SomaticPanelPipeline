@@ -49,6 +49,7 @@ process SNP_CHECK {
 
     output:
         tuple val(group), val(meta), file("*.csv"), emit: idsnp_checked
+        path "versions.yml",                        emit:   versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -79,6 +80,51 @@ process SNP_CHECK {
         tumor_id    = meta.id[tumor_idx]
         """ 
         touch s$tumor_id_c$normal.csv
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+}
+
+process PROVIDER {
+    label 'process_single'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bai)
+        // path(ref_bed)
+        // path(ref_bedXY)
+        // tuple val(sample), path(bam), path(bai)
+    
+    output:
+        tuple val(group), val(meta), file("*.genotype"), emit: genotype_checked
+        path "versions.yml", emit: versions  // Emit version information in YAML format
+    
+    when:
+        task.ext.when == null || task.ext.when
+        
+    script:
+        def prefix  = task.ext.prefix ?: "${meta.id}"
+        // Actual script
+        """
+        provider.pl \\
+            --out $prefix \\
+            --bam $bam \\
+            args
+    
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+
+    // Stub section for simplified testing
+    stub:
+        def prefix  = task.ext.prefix ?: "${meta.id}"
+        """
+        touch $prefix.genotypes
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
