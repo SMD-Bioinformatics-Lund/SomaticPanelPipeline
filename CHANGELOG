@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### ???
+### Patch
+- VAF in FORMAT field should be Float, not Integer
+
 ### 2.1.2
 ### Bugfix
 - cnvkit 0/0 genotypes wrongly was presented as 0/1

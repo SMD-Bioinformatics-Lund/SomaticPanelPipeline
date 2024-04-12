@@ -44,7 +44,7 @@ sub print_header {
     print '##INFO=<ID=variant_callers,Number=.,Type=String,Description="List of variant callers which detected the variant">'."\n";
     print '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">'."\n";
     print '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read Depth">'."\n";
-    print '##FORMAT=<ID=VAF,Number=1,Type=Integer,Description="ALT allele observation fraction">'."\n";
+    print '##FORMAT=<ID=VAF,Number=1,Type=Float,Description="ALT allele observation fraction">'."\n";
     print '##FORMAT=<ID=VD,Number=1,Type=Integer,Description="ALT allele observation count">'."\n";
     foreach( @$filters ) {
 	print "##FILTER=<ID=$_,Description=\"$_\">\n";
