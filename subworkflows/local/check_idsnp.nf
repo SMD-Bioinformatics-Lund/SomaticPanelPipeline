@@ -12,12 +12,13 @@ workflow ID_SNP {
         
     main:
         ch_versions = Channel.empty()
-        ch_versions.view()
 
-        if ( meta.filter( it -> it[0].size >=2 ) ) {
+        if ( meta.filter( it -> it[0].size() >=2 ) ) {
             ALLELE_CALL (bam_dedup)
             ch_versions = ch_versions.mix(ALLELE_CALL.out.versions)
-            
+	    
+	    //ALLELE_CALL.out.sample_id_vcf.view()
+
             SNP_CHECK(ALLELE_CALL.out.sample_id_vcf.groupTuple())
             ch_versions = ch_versions.mix(SNP_CHECK.out.versions)
         }

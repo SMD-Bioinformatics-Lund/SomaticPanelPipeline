@@ -17,14 +17,11 @@ process ALLELE_CALL {
         def args    = task.ext.args  ?: ""
         def args2   = task.ext.args2 ?: ""
         """
-        bcftools mpileup \\
-                 $args $bam \\ | 
-        bcftools call \\
-                 $arg2 > ${prefix}.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+        bcftools mpileup $args $bam | bcftools call $args2 > ${prefix}.vcf
+	
+	cat <<-END_VERSIONS > versions.yml
+	"${task.process}":
+	    bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
         END_VERSIONS
         """
 
@@ -45,7 +42,7 @@ process SNP_CHECK {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(tumorvcf), file(normalvcf)
+        tuple val(group), val(meta), file(vcfs)
 
     output:
         tuple val(group), val(meta), file("*.csv"), emit: idsnp_checked
@@ -59,6 +56,8 @@ process SNP_CHECK {
         normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
         normal_id   = meta.id[normal_idx]
         tumor_id    = meta.id[tumor_idx]
+	normalvcf   = vcfs[normal_idx]
+	tumorvcf    = vcfs[tumor_idx]
 
         """
         idsnp_controller-myeolid_specific.pl \\
@@ -79,7 +78,7 @@ process SNP_CHECK {
         normal_id   = meta.id[normal_idx]
         tumor_id    = meta.id[tumor_idx]
         """ 
-        touch s$tumor_id_c$normal.csv
+        touch s${tumor_id}_c${normal_id}.csv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

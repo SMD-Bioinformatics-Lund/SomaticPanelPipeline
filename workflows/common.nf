@@ -61,9 +61,10 @@ workflow SPP_COMMON {
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
 
+
     // Check for IDSNP
     ID_SNP (
-        ch_mapped.bam_dedup.groupTuple(),
+        ch_mapped.bam_dedup,
         CHECK_INPUT.out.meta
     )
     .set { ch_idsnp }
