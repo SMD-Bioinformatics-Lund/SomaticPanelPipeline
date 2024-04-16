@@ -93,25 +93,21 @@ process PROVIDER {
 
     input:
         tuple val(group), val(meta), file(bam), file(bai)
-        // path(ref_bed)
-        // path(ref_bedXY)
-        // tuple val(sample), path(bam), path(bai)
+
     
     output:
-        tuple val(group), val(meta), file("*.genotype"), emit: genotype_checked
-        path "versions.yml", emit: versions  // Emit version information in YAML format
+        tuple val(group), val(meta), file("*.genotypes"),    emit: genotype_checked
+        path "versions.yml",                                emit: versions  // Emit version information in YAML format
     
     when:
         task.ext.when == null || task.ext.when
         
     script:
         def prefix  = task.ext.prefix ?: "${meta.id}"
+        def args    = task.ext.args  ?: ""
         // Actual script
         """
-        provider.pl \\
-            --out $prefix \\
-            --bam $bam \\
-            args
+        provider.pl  --bam $bam  $args  --out $prefix 
     
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -122,8 +118,9 @@ process PROVIDER {
     // Stub section for simplified testing
     stub:
         def prefix  = task.ext.prefix ?: "${meta.id}"
+
         """
-        touch $prefix.genotypes
+        touch ${prefix}.genotype
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
