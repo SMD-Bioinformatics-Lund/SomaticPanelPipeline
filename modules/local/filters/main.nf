@@ -296,6 +296,47 @@ process COYOTE_SEGMENTS {
         """
 }
 
+process COYOTE_SEGMENTS_JSON {
+    label "process_single"
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(bed)
+    
+    output:
+        tuple val(group), val(meta), file("*panelmatched.json"),  emit: json_panel
+        path "versions.yml",                                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args   = task.ext.args   ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
+        def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
+
+        """
+        cnvJSON.py $bed $args ${meta.id}
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+        END_VERSIONS
+        """
+
+    stub:
+        def args   = task.ext.args   ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
+        """
+        echo $bed $args ${meta.id} > ${meta.id}cnvs_panelmatched.json
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+        END_VERSIONS
+        """
+}
+
 process MERGE_SEGMENTS {
     label "process_single"
     tag "$group"

@@ -3,7 +3,8 @@
 include { ANNOTATE_VEP                          } from '../../modules/local/filters/main'
 include { COYOTE_SEGMENTS                       } from '../../modules/local/filters/main'
 include { MERGE_SEGMENTS                        } from '../../modules/local/filters/main'
-
+include { INTERSECT as GENE_INTERSECT           } from '../../modules/local/bedtools/main'
+include { COYOTE_SEGMENTS_JSON                  } from '../../modules/local/filters/main'
 
 workflow CNV_ANNOTATE {
 	take: 
@@ -13,6 +14,8 @@ workflow CNV_ANNOTATE {
 	main:
 		ch_versions = Channel.empty()
 
+		GENE_INTERSECT ( tumor.mix(normal), params.gene_gtf )
+		COYOTE_SEGMENTS_JSON ( GENE_INTERSECT.out.intersected )
 		COYOTE_SEGMENTS ( tumor.mix(normal) )
 		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions)
 
