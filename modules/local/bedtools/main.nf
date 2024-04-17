@@ -15,7 +15,7 @@ process INTERSECT {
     script:
         def args = task.ext.args ?: ''
         prefix = task.ext.prefix ?: "${meta.id}.${meta.type}"
-        suffix = task.ext.suffix ?: ''
+        suffix = task.ext.suffix ?: 'bed'
         """
         bedtools intersect $args -a $vcf -b $intersect > ${prefix}.intersected.${suffix}
 
@@ -27,7 +27,7 @@ process INTERSECT {
     stub:
         def args = task.ext.args ?: ''
         prefix = task.ext.prefix ?: "${meta.id}.${meta.type}"
-        suffix = task.ext.suffix ?: ''
+        suffix = task.ext.suffix ?: 'bed'
         """
         echo $intersect $args > ${prefix}.intersected.${suffix}
 

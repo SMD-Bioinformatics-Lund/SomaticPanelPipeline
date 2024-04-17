@@ -2,6 +2,7 @@
 import logging
 import json
 import sys
+import argparse
 from pprint import pprint
 """
 Each variant needs this format. Could have less information depending on variantcaller
@@ -48,6 +49,35 @@ callers
 
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
+
+def main():
+    parser = argparse.ArgumentParser(description="turn bedlike vcf into JSON for coyote CNVs")
+    parser.add_argument("--normal", action="store_true", help="Set this flag to True.")
+    parser.add_argument("--bed", type=str, help="Set this flag to True.")
+    parser.add_argument("--panel", type=str, help="Set this flag to True.")
+    parser.add_argument("--id", type=str, help="Set this flag to True.")
+
+    args = parser.parse_args()
+
+    file_name = args.bed
+    panel_file = args.panel
+    sample_id = args.id
+    panel_genes = read_panel_genes(panel_file)
+    variants = read_bedlike_vcf(file_name,panel_genes)
+    json_all = sample_id+"_cnvs.json"
+    json_matched = sample_id+"_cnvs_panelmatched.json"
+    variants_matched = {}
+    for var in variants:
+        if args.normal:
+            variants[var]["NORMAL"] = 1
+        if "has_match" in variants[var]:
+            del variants[var]["has_match"]
+            variants_matched[var] = variants[var]
+    with open(json_all, 'w') as json_file:
+        json.dump(variants, json_file, indent=4)
+
+    with open(json_matched, 'w') as json_file:
+        json.dump(variants_matched, json_file, indent=4)
 
 def read_bedlike_vcf(file_name,panel_genes):
     variants = {}
@@ -163,20 +193,6 @@ def collate_genes(genes,panel_genes):
             genes_list.append(tmp)
     return genes_list,has_match
 
-file_name = sys.argv[1]
-panel_file = sys.argv[2]
-sample_id = sys.argv[3]
-panel_genes = read_panel_genes(panel_file)
-variants = read_bedlike_vcf(file_name,panel_genes)
-json_all = sample_id+"_cnvs.json"
-json_matched = sample_id+"_cnvs_panelmatched.json"
-variants_matched = {}
-for var in variants:
-    if "has_match" in variants[var]:
-        del variants[var]["has_match"]
-        variants_matched[var] = variants[var]
-with open(json_all, 'w') as json_file:
-    json.dump(variants, json_file)
+if __name__ == "__main__":
+    main()
 
-with open(json_matched, 'w') as json_file:
-    json.dump(variants_matched, json_file)
