@@ -11,10 +11,12 @@ workflow ADD_TO_DB {
         gatcov_plot     // channel: [optional] [ val(group), file(plot) ]
         fusions         // channel: [optional] [ val(group), file(vcf) ]
         biomarkers      // channel: [optional] [ val(group), file(json) ]
+        cnvkit_plot     // channel: [optional] [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
 
     main:
         lc = lowcov.map{ val-> tuple(val[0], val[2] ) }
         optional = lc.mix(segments,gatcov_plot,biomarkers,fusions).groupTuple()
+        optional.view()
         COYOTE { vcf.join(optional) }
 
     emit:
