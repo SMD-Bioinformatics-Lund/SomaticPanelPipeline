@@ -383,17 +383,32 @@ process MERGE_JSON {
         def args   = task.ext.args   ?: ''
         def prefix = task.ext.prefix ?: "${group}"
         segments = segments.join(' ')
-        """
-        jq $args $segments > ${group}.cnvs.merged.json
-        """
+        if (meta.id.size() >= 2) {
+            """
+            jq $args $segments > ${group}.cnvs.merged.json
+            """
+        }
+        else {
+            """
+            cat $segments > ${group}.cnvs.merged.json
+            """
+        }
+
 
     stub:
         def args   = task.ext.args   ?: ''
         def prefix = task.ext.prefix ?: "${group}"
         segments = segments.join(' ')
-        """
-        echo jq $args $segments > ${group}.cnvs.merged.json
-        """
+        if (meta.id.size() >= 2) {
+            """
+            echo jq $args $segments > ${group}.cnvs.merged.json
+            """
+        }
+        else {
+            """
+            echo $segments > ${group}.cnvs.merged.json
+            """
+        }
 
 }
 

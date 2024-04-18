@@ -19,17 +19,13 @@ workflow CNV_ANNOTATE {
 		COYOTE_SEGMENTS_JSON ( GENE_INTERSECT.out.intersected )
 		COYOTE_SEGMENTS ( tumor.mix(normal) )
 		MERGE_SEGMENTS ( COYOTE_SEGMENTS.out.filtered.groupTuple() )
-		COYOTE_JSON = COYOTE_SEGMENTS_JSON.out.json_panel.map{ val-> tuple(val[0], val[2] ) }
-		merge = 1
-		merge = normal.ifEmpty(0)
-		if (merge == 1) {
-			MERGE_JSON ( COYOTE_SEGMENTS_JSON.out.json_panel.groupTuple() )
-			COYOTE_JSON = MERGE_JSON.out.merged
-		}
+		MERGE_JSON ( COYOTE_SEGMENTS_JSON.out.json_panel.groupTuple() )
+		COYOTE_JSON = MERGE_JSON.out.merged
+
 		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions)
 
 	emit:
 		segments 	= 	MERGE_SEGMENTS.out.merged	// channel: [ val(group), file(cn-segments.panel.merged.bed) ]
-		s_json      =   COYOTE_JSON                 // channel: [ val(group), file(panel.json) ]
+		s_json      =   MERGE_JSON.out.merged       // channel: [ val(group), file(panel.json) ]
 		versions    =   ch_versions 				// channel: [ file(versions) ]
 }

@@ -147,11 +147,11 @@ process COYOTE_YAML {
             }
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
-        cnvseg_idx = importy.findIndexOf{ it =~ 'panel' }
-        fusions_idx = importy.findIndexOf{ it =~ 'annotated' }
-        biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
-        cnvplot_idx = importy.findIndexOf{ it =~ 'png' }
-        lowcov_idx = importy.findIndexOf{ it =~ 'lowcov' }
+        cnvseg_idx = importy.findIndexOf{ it =~ 'cnvs.merged.json' }
+        fusions_idx = importy.findIndexOf{ it =~ 'merged.annotated.vcf' }
+        biomarkers_idx = importy.findIndexOf{ it =~ 'bio.json' }
+        cnvplot_idx = importy.findIndexOf{ it =~ 'modeled.png' }
+        lowcov_idx = importy.findIndexOf{ it =~ 'lowcov.bed' }
 
         // add matching flags //
         cnvseg = cnvseg_idx >= 0 ? importy[cnvseg_idx].collect {'cnv: /access/' + params.subdir + '/cnv/' + it } : null
