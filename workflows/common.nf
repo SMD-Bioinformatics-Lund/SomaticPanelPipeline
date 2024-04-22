@@ -128,6 +128,7 @@ workflow SPP_COMMON {
         ch_vcf_anno.finished_vcf,
         ch_qc.lowcov.filter { item -> item[1] == 'T' },
         ch_cnv.segments,
+        ch_cnv.s_json,
         ch_cnvcalled.gens,
         ch_cnvcalled.gatcov_plot,
         ch_fusion.fusions,
@@ -152,6 +153,7 @@ workflow.onComplete {
         Success     : ${workflow.success}
         scriptFile  : ${workflow.scriptFile}
         workDir     : ${workflow.workDir}
+        csv         : ${params.csv}
         exit status : ${workflow.exitStatus}
         errorMessage: ${workflow.errorMessage}
         errorReport :
