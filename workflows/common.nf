@@ -66,8 +66,6 @@ workflow SPP_COMMON {
     )
     .set { pgx_files }
 
-    ch_mapped.dedup_bam_is_metrics.groupTuple().view()
-    ch_mapped.bam_umi.groupTuple().view()
     SNV_CALLING ( 
         ch_mapped.bam_umi.groupTuple(),
         ch_mapped.bam_dedup,

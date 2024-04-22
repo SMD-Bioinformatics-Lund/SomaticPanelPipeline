@@ -17,10 +17,18 @@ workflow ADD_TO_DB {
 
     main:
         lc = lowcov.map{ val-> tuple(val[0], val[2] ) }
-        optional = lc.mix(segments,gatcov_plot,biomarkers,fusions).groupTuple()
-        optional.view()
-        s_json.view()
-        optional_json = lc.mix(s_json,gatcov_plot,biomarkers,fusions).groupTuple()
+        cnvkit_plot.groupTuple().set { cnvkit_plot_ch }
+        cnvkit_plot_ch.map { tuple ->
+            if (tuple[1].size() >= 2) {
+                int idx = tuple[1].findIndexOf { it['type'] == 'T' || it['type'] == 'tumor' }
+                [tuple[0], tuple[3][idx]]
+            } else {
+                [tuple[0], tuple[3][0]]
+            }
+        }.set { cnvkit_png }
+
+        optional = lc.mix(segments,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
+        optional_json = lc.mix(s_json,gatcov_plot,biomarkers,fusions, cnvkit_png).groupTuple()
         COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }
 

@@ -69,9 +69,7 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(CONCATENATE_VCFS.out.versions.first())
 
         // Aggregate all callers to one VCF
-        CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()).view()
         AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()) }
-        
 
         ch_versions         = ch_versions.mix(AGGREGATE_VCFS.out.versions.first())
 
