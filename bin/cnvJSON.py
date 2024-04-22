@@ -145,7 +145,7 @@ def get_varinfo(info,gt):
     if "FOLD_CHANGE_LOG" in info:
         varinfo["ratio"] = float(info["FOLD_CHANGE_LOG"])
     if "SVLEN" in info:
-        varinfo["size"] = int(info["SVLEN"])
+        varinfo["size"] = abs(int(info["SVLEN"]))
     if "PR" in gt:
         varinfo["PR"] = gt["PR"]
     if "SR" in gt:
