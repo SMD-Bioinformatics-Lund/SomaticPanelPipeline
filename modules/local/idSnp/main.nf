@@ -19,9 +19,9 @@ process ALLELE_CALL {
         """
         bcftools mpileup $args $bam | bcftools call $args2 > ${prefix}.vcf
 	
-	cat <<-END_VERSIONS > versions.yml
-	"${task.process}":
-	    bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+	    cat <<-END_VERSIONS > versions.yml
+	    "${task.process}":
+	        bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
         END_VERSIONS
         """
 
@@ -82,6 +82,7 @@ process SNP_CHECK {
             END_VERSIONS
             """
         }
+
     stub:
         tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
@@ -128,7 +129,7 @@ process PROVIDER {
     script:
         def prefix  = task.ext.prefix ?: "${meta.id}"
         def args    = task.ext.args  ?: ""
-        // Actual script
+
         """
         provider.pl  --bam $bam  $args  --out $prefix 
     
@@ -137,8 +138,7 @@ process PROVIDER {
             perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
-
-    // Stub section for simplified testing
+        
     stub:
         def prefix  = task.ext.prefix ?: "${meta.id}"
 
