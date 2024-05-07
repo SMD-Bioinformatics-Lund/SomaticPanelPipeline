@@ -69,16 +69,6 @@ workflow SPP_COMMON {
     .set { ch_idsnp }
     ch_versions = ch_versions.mix(ch_idsnp.versions)
     
-    // CHECK_INPUT.out.meta.groupTuple
-    value = ch_mapped.bam_dedup.groupTuple().map { it -> it[1].size() }
-    //ch_mapped.bam_dedup.combine(value).set { ch_id_bams }
-    //ch_id_bams.view()
-    value.view()
-    //println(params.idsnp)
-
-    // CHECK_INPUT.out.meta.view() if ( value.map { it == 2 } )      
-
-
     // Create PGx CSV file
     PHARMACOGENOMICS (
         ch_mapped.bam_umi.groupTuple(),

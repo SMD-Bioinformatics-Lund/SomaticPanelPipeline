@@ -18,10 +18,10 @@ process ALLELE_CALL {
         def args2   = task.ext.args2 ?: ""
         """
         bcftools mpileup $args $bam | bcftools call $args2 > ${prefix}.vcf
-	
-	    cat <<-END_VERSIONS > versions.yml
-	    "${task.process}":
-	        bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+        
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
         END_VERSIONS
         """
 
@@ -46,7 +46,7 @@ process SNP_CHECK {
 
     output:
         tuple val(group), file("*.csv"),            emit: idsnp_checked
-        path "versions.yml",                        emit:   versions
+        path "versions.yml", optional: true         ,emit:   versions
 
     when:
         task.ext.when == null || task.ext.when
