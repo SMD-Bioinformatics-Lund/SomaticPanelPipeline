@@ -1,5 +1,10 @@
 ## Changelog ##
 
+### 2.1.3
+### Features 
+- Qualtiy contorl of ID-SNP genotyping of case and control sample  
+- Check for the pairedness of the case and control sample using IDControl SNPs
+
 ### 2.1.2
 ### Bugfix
 - cnvkit 0/0 genotypes wrongly was presented as 0/1
