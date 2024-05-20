@@ -115,7 +115,12 @@ while ( my $v = $vcf->next_var() ) {
 				$n_VAF = $gt->{VAF};
 			}
 			else {
-				$n_VAF = $min/$n_DP;
+				if ($n_DP == 0) {
+					$n_VAF = 0;
+				}
+				else {
+					$n_VAF = $min/$n_DP;
+				}
 			}
 			
 		}

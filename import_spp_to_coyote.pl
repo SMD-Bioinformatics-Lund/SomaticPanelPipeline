@@ -46,7 +46,6 @@ my $client = MongoDB->connect();
 # Prepare data to insert into sample collection
 my $samples = $client->ns("coyote.samples");
 $id = check_id($id,\@groups);
-print STDERR "Sample already in database, changing ID to $id\n";
 my %sample_data = ( 'name'=>$id, 'groups'=>\@groups, 'time_added'=>DateTime->now, 'vcf_files'=>[$vcf] );
 if ( scalar @QC > 0 ) {
     $sample_data{QC} = \@QC;
@@ -336,16 +335,18 @@ sub read_mane {
 sub check_id {
 	my ($id,$groups) = @_;
 	
-	my $find = $samples->find( {"name" => {'$regex' => $id } }, {"groups"=> $groups } );
+	my $find = $samples->find( {"name" => $id } , {"groups"=> $groups } );
 	my $count = 1;
 	while( my $id_ = $find->next ) {
 		$count ++;
 	}
 	if ($count == 1) {
+		print "Sample does not exist in the database, Adding $id to the database.\n";
 		return $id;
 	}
 	else {
 		$id = $id."-$count";
+		print STDERR "Sample already exist in the database, changing ID to $id\n";
 		return $id;
 	}
 }
