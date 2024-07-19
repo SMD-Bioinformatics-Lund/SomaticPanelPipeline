@@ -1,7 +1,8 @@
 ## Changelog ##
 
-### 2.1.2
-- the subsample fraction is set to 0.99 so that seqtk doesn't fail at fraction 1.00 
+### dsl2-v1.1.1
+### Bugfix
+- the subsample fraction is set to 0.99 so that seqtk doesn't fail at 1.00 
 
 ### ???
 ### Patch
