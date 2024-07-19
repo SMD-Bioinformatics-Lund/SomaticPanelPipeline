@@ -1,5 +1,8 @@
 ## Changelog ##
 
+### 2.1.2
+- the subsample fraction is set to 0.99 so that seqtk doesn't fail at fraction 1.00 
+
 ### ???
 ### Patch
 - VAF in FORMAT field should be Float, not Integer
