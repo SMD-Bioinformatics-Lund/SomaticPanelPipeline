@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### dsl2-v1.1.1
+### Bugfix
+- the subsample fraction is set to 0.99 so that seqtk doesn't fail at 1.00 
+
 ### ???
 ### Patch
 - VAF in FORMAT field should be Float, not Integer
