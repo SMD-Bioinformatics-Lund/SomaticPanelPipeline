@@ -11,70 +11,97 @@ use Data::Dumper;
 my $MAX_VAF_NORMAL = 0.05;
 my $MIN_VAF_NORMAL = 0.35;
 my $MIN_VAF_TUMOR  = 0.45;
-my $MIN_DP = 100;
+my $MIN_DP         = 100;
 
 # Get command line options
 my %opt = ();
-GetOptions( \%opt, 'vcf=s', 'tumor-id=s', 'normal-id=s', 'assay=s' );
+GetOptions( \%opt, 'vcf=s', 'tumor-id=s', 'normal-id=s' );
 check_options( \%opt );
 
 # Default to myeloid genes, for backwards compatibility
 my %GENES;
-my %assay_json;
-if( $opt{'assay'}) {
-    my $assay_json = read_json($opt{'assay'});
-    %assay_json = %$assay_json;
-    %GENES = ();
-    foreach my $gene ( @{ $assay_json{"genes"} }) {
-        $GENES{$gene} = 1;
-    }
-}
-
-else {
-    die "please provide a json defining what genes should be analyzed for GERMLINE inclusion";
-}
 
 my $vcf = vcf2->new('file'=>$opt{vcf} );
 
 my $nid = ( $opt{'normal-id'} or 0 );
 my $tid = ( $opt{'tumor-id'} or 0 );
 
-print_header($opt{vcf});
+#print_header($opt{vcf});
 
+my %consequence_score = (
+    "frameshift_variant"                => 11,
+    "transcript_ablation"               => 10,
+    "initiator_codon_variant"           => 9,
+    "stop_gained"                       => 8,
+    "start_lost"                        => 8,
+    "stop_lost"                         => 8,
+    "splice_acceptor_variant"           => 8,
+    "splice_donor_variant"              => 8,
+    "inframe_deletion"                  => 7,
+    "transcript_amplification"          => 5,
+    "splice_region_variant"             => 5,
+    "missense_variant"                  => 5,
+    "protein_altering_variant"          => 5,
+    "inframe_insertion"                 => 5,
+    "incomplete_terminal_codon_variant" => 5,
+    "non_coding_transcript_exon_variant"=> 3,
+    "synonymous_variant"                => 2,
+    "mature_mirna_variant"              => 1,
+    "non_coding_transcript_variant"     => 1,
+    "regulatory_region_variant"         => 1,
+    "upstream_gene_variant"             => 1,
+    "regulatory_region_amplification"   => 1,
+    "tfbs_amplification"                => 1,
+    "5_prime_UTR_variant"               => 1,
+    "intron_variant"                    => 1,
+    "3_prime_UTR_variant"               => 1,
+    "feature_truncation"                => 1,
+    "TF_binding_site_variant"           => 1,
+    "stop_retained_variant"             => 1,
+    "feature_elongation"                => 1,
+    "regulatory_region_ablation"        => 1,
+    "tfbs_ablation"                     => 1,
+    "coding_sequence_variant"           => 1,
+    "downstream_gene_variant"           => 1,
+    "NMD_transcript_variant"            => 1,
+    "intergenic_variant"                => 0
+);
+
+my %clinvar_score = (
+        "Benign" => -2,
+        "Pathogenic" => 1,
+        "Likely_pathogenic" => 1
+);
+my $inclusion_score    = 2;
+my $gnomad_cutoff      = 0.01;
+my $consequence_cutoff = 5;
 
 while ( my $var = $vcf->next_var() ) {
 
-    # Check if variant is in one of the selected genes
-    my $in_relevant_gene = 0;
-    for my $tx ( @{ $var->{INFO}->{CSQ} } ) {
-        if( $GENES{ $tx->{SYMBOL} } or $GENES{'ALL_GENES'} ) {
-            $in_relevant_gene = 1;
-            last;
-        }
-    }
-
-    my $germline = 0;
+    my $germline      = 0;
     my $germline_risk = 0;
-    my $not_germline = 0;
+    my $not_germline  = 0;
     
     # check whether it seems like a germline variant depending on VAF of variant
     for my $gt ( @{$var->{GT}}) {
         # If normal samples. Set GERMLINE filter if VAF > $MIN_VAF_NORMAL and in relevant gene
         if( $nid and $gt->{_sample_id} eq $nid ) {
-            $germline = 1 if( $gt->{VAF} > $MIN_VAF_NORMAL and $gt->{DP} > $MIN_DP and $in_relevant_gene);
+            $germline = 1 if( $gt->{VAF} > $MIN_VAF_NORMAL and $gt->{DP} > $MIN_DP );
             $not_germline = 1 if $gt->{VAF} < $MAX_VAF_NORMAL and $gt->{DP} > $MIN_DP;
         }
-        
+        # Should we really do this? it just creates some false confidence that we can say something is germline in unpaired
         # If tumor samples. Set GERMLINE_RISK filter if VAF > $MIN_VAF_TUMOR
-        if( $tid and $gt->{_sample_id} eq $tid ) {
-            $germline_risk = 1 if( $gt->{VAF} > $MIN_VAF_TUMOR and $gt->{DP} > $MIN_DP );
-        }
+        # if( $tid and $gt->{_sample_id} eq $tid ) {
+        #     $germline_risk = 1 if( $gt->{VAF} > $MIN_VAF_TUMOR and $gt->{DP} > $MIN_DP );
+        # }
     }
 
-    # if using exclusion criterias from assay_json reset germline if variant fail check
-    if( $assay_json{"inclusion_score"} && $germline) {
-        $germline = mini_rank($var,\%assay_json);
+    # try to limit GERMLINE variants
+    my $score_results;
+    if ($germline) {
+        ($germline,$score_results) = mini_rank($var);
     }
+    
 
     # Add GERMLINE filter and remove FAIL_NVAF for confirmed relevant germlines
     if ( $germline ) {
@@ -83,6 +110,8 @@ while ( my $var = $vcf->next_var() ) {
             push @new_filters, $_ unless $_ eq "FAIL_NVAF"; 
         }
         $var->{FILTER} = join(";", @new_filters);
+        #vcfstr($var);
+        #print $var->{CHROM}.":".$var->{POS}
     }
     
 
@@ -93,7 +122,7 @@ while ( my $var = $vcf->next_var() ) {
         $var->{FILTER} = join(";", @filters);
     }
 
-    vcfstr($var);
+    #vcfstr($var);
 }
 
 
@@ -121,27 +150,27 @@ sub read_json {
 
 sub mini_rank {
     my $var = shift;
-    my $rank = shift;
-    my %rank = %$rank;
     my $score = 0;
-
+    my %score_results;
     ## check clinvar ##
     # if only one annotation handle differently, this is to support sole Benign annotations
     # otherwise find highest score acoring to rank->clinvar from JSON. 
     # This let's the user define some value and let other be 0. This is ugly?
-    my $clinvar = 0;
-    if ($var->{INFO}->{CLNSIG} && $rank{"clinvar"}) {
+    my $clinvar = 0; my $clinvar_effect;
+    if ($var->{INFO}->{CLNSIG}) {
         my @clinsig = split("/",$var->{INFO}->{CLNSIG});
         if (scalar(@clinsig) == 1) {
-            if ($rank{"clinvar"}{$clinsig[0]}) {
-                $clinvar = $rank{"clinvar"}{$clinsig[0]};
+            if ($clinvar_score{$clinsig[0]}) {
+                $clinvar = $clinvar_score{$clinsig[0]};
+                $clinvar_effect = $clinsig[0];
             }
         }
         else {
             foreach my $match (@clinsig) {
-                if ($rank{"clinvar"}{$match}) {
-                    if ($rank{"clinvar"}{$match} > $clinvar) {
-                        $clinvar = $rank{"clinvar"}{$match};
+                if ($clinvar_score{$match}) {
+                    if ($clinvar_score{$match} > $clinvar) {
+                        $clinvar = $clinvar_score{$match};
+                        $clinvar_effect = $match;
                     }                    
                 }
             }
@@ -150,56 +179,62 @@ sub mini_rank {
     # add the clinvar score to score, Benign can disqualify the other two categories completely (is this ok?)
     if ($clinvar) {
         $score = $clinvar + $score;
+        $score_results{"clinvar"}{"score"} = $score;
+        $score_results{"clinvar"}{"effect"} = $clinvar_effect;
     }
     ## check consequence ## ## check gnomad ##
     # save the most severe consequence defined in JSON
     # check if gnomad passes cutoff from JSON
-    my $max_score = 0; my $gnomad = 0;
+    my $max_score = 0; my $gnomad = 0; my $max_csq; my $gnomad_af = 0;
     for my $tx ( @{ $var->{INFO}->{CSQ} } ) {
-        if( $tx->{Consequence} && $rank{"consequence_cutoff"} && $rank{"consequence_score"}) {
-            $max_score = conseqeunce($tx->{Consequence},\%rank);
-        }
-        if ( $tx->{gnomADg} && $rank{"gnomad_cutoff"} ) {
-            my @afs =  split(",",$tx->{gnomADg_AF});
-            if ($afs[0] < $assay_json{"gnomad_cutoff"}) {
-                $gnomad = 1;
+        ($max_score,$max_csq) = conseqeunce($tx->{Consequence});
+        if ( $tx->{gnomADg_AF} ) {
+            my @afs = split(",",$tx->{gnomADg_AF});
+            if ($afs[0]) {
+                if ($afs[0] < $gnomad_cutoff) {
+                    $gnomad = 1;
+                    $gnomad_af = $afs[0];
+                }
             }
         }
     }
     # add to score if most severe conseqeunce is within JSON cutoff
-    if ( $assay_json{"consequence_cutoff"}) {
-        if ($max_score >= $assay_json{"consequence_cutoff"}) {
-            $score++;
-        }
+
+    if ($max_score >= $consequence_cutoff ) {
+        $score++;
+        $score_results{"csq"}{"score"} = $max_score;
+        $score_results{"csq"}{"effect"} = $max_csq;
     }
     # add to score if gnomad is below cutoff
-    if ($gnomad >= 1) {
+    if ($gnomad > 0) {
         $score++;
+        $score_results{"gnomad"}{"score"} = $gnomad;
+        $score_results{"gnomad"}{"af"} = $gnomad_af;
     }
-
     # if score higher than or equal to inclusion score return true and retain GERMLINE status
-    if ($score >= $assay_json{"inclusion_score"}) {
-        return 1;
+    if ($score >= $inclusion_score ) {
+        print Dumper(%score_results);
+        return 1,\%score_results;
     }
     # else send back 0, and thus GERMLINE is no longer true
     else {
-        return 0;
+        return 0,\%score_results;
     }
 }
 
 sub conseqeunce {
     my $tx = shift;
-    my $rank = shift;
-    my %rank = %$rank;
     my $max_score = 0;
+    my $max_effect;
     foreach my $csq (@{$tx} ) {
-        if ($rank{"consequence_score"}{$csq}) {
-            if ( $rank{"consequence_score"}{$csq} > $max_score ) {
-                $max_score = $rank{"consequence_score"}{$csq};
+        if ($consequence_score{$csq}) {
+            if ( $consequence_score{$csq} > $max_score ) {
+                $max_score = $consequence_score{$csq};
+                $max_effect = $csq;
             }
         }
     }
-    return $max_score;
+    return $max_score,$max_effect;
 }
 
 sub check_options {
