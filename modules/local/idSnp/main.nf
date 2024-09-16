@@ -52,6 +52,8 @@ process SNP_CHECK {
         task.ext.when == null || task.ext.when
 
     script:
+        
+        def args    = task.ext.args  ?: ""
         tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
         normal_id   = meta.id[normal_idx]
@@ -65,7 +67,9 @@ process SNP_CHECK {
                 --vcf_sample $tumorvcf  \\
                 --vcf_control $normalvcf \\
                 --sample  $tumor_id \\
-                --control $normal_id 
+                --control $normal_id \\
+                $args
+    
         
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

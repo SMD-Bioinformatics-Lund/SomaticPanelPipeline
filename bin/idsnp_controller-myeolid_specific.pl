@@ -5,17 +5,20 @@ use Getopt::Long;
 use Data::Dumper;
 
 our %opt;
-GetOptions( \%opt, 'vcf_sample=s', 'vcf_control=s', 'sample=s', 'control=s',
-    'help' );
+GetOptions( \%opt, 'vcf_sample=s', 'vcf_control=s', 'sample=s', 'control=s', 'rs_bed=s', 'help' );
 my $SCORE   = -20;
-my $MARKERS = 111; # originally 44 but has been cut down to 40 as off 2024-02-02
+
+my $MARKERS = 0; # originally 44 but has been cut down to 40 as off 2024-02-02 again but cound from the vcf seems more logical
+
+# my $MARKERS = 111; 
 
 print_usage(
     "ERROR: --vcf_sample, --vcf_control, --sample and --control required!\n")
   unless $opt{vcf_sample}
   and $opt{vcf_control}
   and $opt{sample}
-  and $opt{control};
+  and $opt{control}
+  and $opt{rs_bed};
 
 unless ( -e $opt{vcf_sample} ) {
     print "ERROR: SAMPLE VCF file not found\n";
@@ -23,6 +26,15 @@ unless ( -e $opt{vcf_sample} ) {
 }
 
 #unless( -e $opt{vcf_control} ) { print "ERROR: CONTROL VCF file not found\n"; exit; }
+
+if ( defined( $opt{rs_bed} ) ) {
+  open( my $rsbed, '<', "$opt{rs_bed}" ) or die "Could not open file";
+  while (<$rsbed>) {
+    $MARKERS++;
+    }
+  close($rsbed);
+}
+
 
 my %data;
 
@@ -65,7 +77,6 @@ if ( defined( $opt{vcf_sample} ) ) {
               $reff + $refr + $altf + $altr;
             $data{$identifier}{ $opt{sample} }{dp_ref} = $reff + $refr;
             $data{$identifier}{ $opt{sample} }{dp_alt} = $altf + $altr;
-
         }
     }
     close sVCF;
@@ -170,15 +181,18 @@ close OUT;
 sub print_usage {
     print "$_[0]\n\n" if $_[0];
     print
-"USAGE: idsnp_controller.pl --vcf_sample <VCF FILE> --vcf_control <VCF FILE> --sample <ID> --control <ID>\n\n";
+"USAGE: idsnp_controller.pl --vcf_sample <VCF FILE> --vcf_control <VCF FILE> --sample <ID> --control <ID> --rs_bed <rsId BED FILE>\n\n";
     print
 "    --vcf_sample     FILE       Path to SAMPLE VCF file \(required\)\n\n";
     print
 "    --vcf_control    FILE       Path to CONTROL VCF file \(required\)\n\n";
     print
-      "    --sample         ID         ID to SAMPLE VCF file \(required\)\n\n";
+"    --sample         ID         ID to SAMPLE VCF file \(required\)\n\n";
     print
-      "    --control        ID         ID to CONTROL VCF file \(required\)\n\n";
-    print "    --help                      Will print this message\n\n";
+"    --control        ID         ID to CONTROL VCF file \(required\)\n\n";
+    print
+"    --rs_bed        FILE       Path to bed file from rsID used for comaprision \(required\)\n\n";
+    print 
+"    --help                      Will print this message\n\n";
     exit(0);
 }    # print_usage
