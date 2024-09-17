@@ -6,7 +6,7 @@ process ALLELE_CALL {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta), file("*.vcf"), emit:   sample_id_vcf
+        tuple val(group), val(meta), file("*final.vcf"), emit:   sample_id_vcf
         path "versions.yml",                        emit:   versions
 
     when:
@@ -19,7 +19,7 @@ process ALLELE_CALL {
         def args3   = task.ext.args3 ?: ""
         """
         bcftools mpileup $args $bam | bcftools call $args2 > ${prefix}.raw.vcf
-        bcftools annotate $args3 ${prefix}.raw.vcf -o ${prefix}.vcf ${prefix}.raw.vcf
+        bcftools annotate $args3 -o ${prefix}.final.vcf ${prefix}.raw.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
