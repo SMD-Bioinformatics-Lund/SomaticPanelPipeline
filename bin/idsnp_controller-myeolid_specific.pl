@@ -57,10 +57,9 @@ if ( defined( $opt{vcf_sample} ) ) {
             for my $index ( 0 .. $#cols ) { $labels{ $cols[$index] } = $index; }
         }
         else {
-#my $identifier = "".$cols[ $labels{'#CHROM'} ]."_".$cols[$labels{POS}]."_".$cols[$labels{REF}]."_".$cols[$labels{ALT}]."";
-            my $identifier = ""
-              . $cols[ $labels{'#CHROM'} ] . "_"
-              . $cols[ $labels{POS} ] . "";
+            my $identifier = "".$cols[ $labels{'#CHROM'} ]."_".$cols[$labels{POS}]."_".$cols[$labels{ID}]."";
+            #my $identifier = "". $cols[ $labels{'#CHROM'} ] . "_". $cols[ $labels{POS} ] . "";
+            my $id = $cols[ $labels{ID} ];
             my $gt = ( split( /:/, $cols[ $labels{FORMAT} + 1 ] ) )[0];
             my @info = split( /;/, $cols[ $labels{INFO} ] );
             my ( $reff, $refr, $altf, $altr );
@@ -101,10 +100,9 @@ if ( defined( $opt{vcf_control} ) ) {
             for my $index ( 0 .. $#cols ) { $labels{ $cols[$index] } = $index; }
         }
         else {
-#my $identifier = "".$cols[ $labels{'#CHROM'} ]."_".$cols[$labels{POS}]."_".$cols[$labels{REF}]."_".$cols[$labels{ALT}]."";
-            my $identifier = ""
-              . $cols[ $labels{'#CHROM'} ] . "_"
-              . $cols[ $labels{POS} ] . "";
+            my $identifier = "".$cols[ $labels{'#CHROM'} ]."_".$cols[$labels{POS}]."_".$cols[$labels{ID}]."";
+            #my $identifier = "". $cols[ $labels{'#CHROM'} ] . "_". $cols[ $labels{POS} ] . "";
+            my $id = $cols[ $labels{ID} ];
             my $gt = ( split( /:/, $cols[ $labels{FORMAT} + 1 ] ) )[0];
             my @info = split( /;/, $cols[ $labels{INFO} ] );
             my ( $reff, $refr, $altf, $altr );

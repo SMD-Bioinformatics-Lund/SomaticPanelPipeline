@@ -16,9 +16,11 @@ process ALLELE_CALL {
         def prefix  = task.ext.prefix ?: "${meta.id}"
         def args    = task.ext.args  ?: ""
         def args2   = task.ext.args2 ?: ""
+        def args3   = task.ext.args3 ?: ""
         """
-        bcftools mpileup $args $bam | bcftools call $args2 > ${prefix}.vcf
-        
+        bcftools mpileup $args $bam | bcftools call $args2 > ${prefix}.raw.vcf
+        bcftools annotate $args3 ${prefix}.raw.vcf -o ${prefix}.vcf ${prefix}.raw.vcf
+
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')

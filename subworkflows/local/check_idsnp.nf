@@ -2,7 +2,6 @@
 
 include { ALLELE_CALL            } from '../../modules/local/idSnp/main'
 include { SNP_CHECK              } from '../../modules/local/idSnp/main'
-include { PROVIDER               } from '../../modules/local/idSnp/main'
 
 workflow ID_SNP {
     take:
@@ -11,9 +10,6 @@ workflow ID_SNP {
         
     main:
         ch_versions = Channel.empty()
-        
-        PROVIDER (bam_dedup)
-        ch_versions = ch_versions.mix(PROVIDER.out.versions)
 
         ALLELE_CALL (bam_dedup)
         ch_versions = ch_versions.mix(ALLELE_CALL.out.versions)
@@ -23,7 +19,6 @@ workflow ID_SNP {
 
     emit:
         idsnp               =   SNP_CHECK.out.idsnp_checked         // channel: [ val(group), val(meta), file(snpid) ]
-        genotype            =   PROVIDER.out.genotype_checked       // channel: [ val(group), val(meta), file("*.genotypes") ]
         versions            =   ch_versions                         // channel: [ file(versions) ]
 }
 
