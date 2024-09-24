@@ -47,7 +47,7 @@ process SNP_CHECK {
         tuple val(group), val(meta), file(vcfs)
 
     output:
-        tuple val(group), file("*.csv"),            emit: idsnp_checked
+        tuple val(group), file("*.json"),            emit: idsnp_checked
         path "versions.yml", optional: true         ,emit:   versions
 
     when:
@@ -71,7 +71,10 @@ process SNP_CHECK {
                 --sample  $tumor_id \\
                 --control $normal_id \\
                 $args
-    
+
+            cp s${tumor_id}_c${normal_id}.json >  ${tumor_id}.json
+            cp s${tumor_id}_c${normal_id}.json >  ${normal_id}.json
+            rm -r s${tumor_id}_c${normal_id}.json
         
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -81,6 +84,7 @@ process SNP_CHECK {
         } else {
             """
             echo "Not applicable" > s${tumor_id}.csv
+            echo  "{ "Pairedness" :  "False"} > ${tumor_id}.json
             
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

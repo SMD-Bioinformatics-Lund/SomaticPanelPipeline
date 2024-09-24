@@ -182,6 +182,7 @@ close OUT;
 my $jsonOut = "s" . $opt{sample} . "_c" . $opt{control} . ".json";
 my $pp = ( $match / $MARKERS ) * 100; 
 my %finalresult = (
+    Pairedness => "True",
     MatchedSnps => $match,
     MismatchSnps => $mismatch,
     MisingSnps => $missing_data,
