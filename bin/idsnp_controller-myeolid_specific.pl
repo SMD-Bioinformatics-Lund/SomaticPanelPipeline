@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Data::Dumper;
+use JSON;
 
 our %opt;
 GetOptions( \%opt, 'vcf_sample=s', 'vcf_control=s', 'sample=s', 'control=s', 'rs_bed=s', 'help' );
@@ -165,6 +166,7 @@ for my $id ( sort keys %data ) {
     }
     else { print OUT "\tMISMATCH\n"; $mismatch++; }
 }
+
 my $missing_data = $MARKERS - $total;
 print OUT "\n\# missing data: $missing_data calls out of $MARKERS \("
   . sprintf( "%.2f", ( $missing_data / $MARKERS ) * 100 ) . "\)\n";
@@ -175,6 +177,19 @@ print OUT "\# total matches: $match out of all markers\($MARKERS\) \("
   . sprintf( "%.2f", ( $match / $MARKERS ) * 100 ) . "\)\n";
 
 close OUT;
+
+
+my $jsonOut = "s" . $opt{sample} . "_c" . $opt{control} . ".json";
+my $pp = ( $match / $MARKERS ) * 100; 
+my %finalresult = (
+    MatchedSnps => $match,
+    MismatchSnps => $mismatch,
+    MisingSnps => $missing_data,
+    Pairedpercent =>  sprintf( "%.2f", $pp),
+    IdSnp => $total
+);
+save_json_file (\%finalresult, $jsonOut);
+
 
 sub print_usage {
     print "$_[0]\n\n" if $_[0];
@@ -194,3 +209,16 @@ sub print_usage {
 "    --help                      Will print this message\n\n";
     exit(0);
 }    # print_usage
+
+
+sub save_json_file {
+    ## Save the results in the json format for dummping in the database
+
+    my ($data_ref, $filename) = @_;
+    my $json = JSON->new->allow_nonref;
+    my $json_text = $json->pretty->encode($data_ref);
+    open(my $fh, '>', $filename) or die "Could not open file '$filename' $!";
+        print $fh $json_text;
+    close $fh;
+    print "Data has been written to $filename\n";
+}
