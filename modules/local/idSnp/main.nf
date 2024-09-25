@@ -65,7 +65,7 @@ process SNP_CHECK {
 
         if(meta.id.size() == 2) {
             """
-            idsnp_controller-myeolid_specific.pl \\
+            perl idsnp_controller-myeolid_specific.pl \\
                 --vcf_sample $tumorvcf  \\
                 --vcf_control $normalvcf \\
                 --sample  $tumor_id \\
@@ -74,7 +74,7 @@ process SNP_CHECK {
 
             cp s${tumor_id}_c${normal_id}.json >  ${tumor_id}.json
             cp s${tumor_id}_c${normal_id}.json >  ${normal_id}.json
-            rm -r s${tumor_id}_c${normal_id}.json
+            rm s${tumor_id}_c${normal_id}.json
         
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -84,7 +84,7 @@ process SNP_CHECK {
         } else {
             """
             echo "Not applicable" > s${tumor_id}.csv
-            echo  "{ "Pairedness" :  "False"} > ${tumor_id}.json
+            echo  "{ "Pairedness" :  "False"}" > ${tumor_id}.json
             
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
