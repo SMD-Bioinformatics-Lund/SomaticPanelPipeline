@@ -2,6 +2,7 @@
 
 include { ALLELE_CALL            } from '../../modules/local/idSnp/main'
 include { SNP_CHECK              } from '../../modules/local/idSnp/main'
+include { PAIR_CDM               } from '../../modules/local/idSnp/main'
 
 workflow ID_SNP {
     take:
@@ -16,6 +17,8 @@ workflow ID_SNP {
 
         SNP_CHECK(ALLELE_CALL.out.sample_id_vcf.groupTuple())
         ch_versions = ch_versions.mix(SNP_CHECK.out.versions)
+
+        PAIR_CDM (SNP_CHECK.out.idsnp_checked)
 
     emit:
         genotype            =   ALLELE_CALL.out.sample_id_vcf       // channel: [ val(group), val(meta), file("*.genotypes") ]
