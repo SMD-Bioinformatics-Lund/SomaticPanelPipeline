@@ -65,15 +65,15 @@ process SNP_CHECK {
 
         if(meta.id.size() == 2) {
             """
-            perl idsnp_controller-myeolid_specific.pl \\
+            idsnp_controller-myeolid_specific.pl \\
                 --vcf_sample $tumorvcf  \\
                 --vcf_control $normalvcf \\
                 --sample  $tumor_id \\
                 --control $normal_id \\
                 $args
 
-            cp s${tumor_id}_c${normal_id}.json >  ${tumor_id}.json
-            cp s${tumor_id}_c${normal_id}.json >  ${normal_id}.json
+            cp s${tumor_id}_c${normal_id}.json  ${tumor_id}.json
+            cp s${tumor_id}_c${normal_id}.json  ${normal_id}.json
             rm s${tumor_id}_c${normal_id}.json
         
             cat <<-END_VERSIONS > versions.yml
