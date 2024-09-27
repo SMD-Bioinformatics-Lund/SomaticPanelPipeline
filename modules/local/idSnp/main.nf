@@ -84,7 +84,7 @@ process SNP_CHECK {
         } else {
             """
             echo "Not applicable" > s${tumor_id}.csv
-            echo  "{ "Pairedness" :  "False"}" > ${tumor_id}.json
+            echo  "{ "Info" :  "False"}" > ${tumor_id}.json
             
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -115,7 +115,7 @@ process SNP_CHECK {
         
             """
             echo "Not applicable" > s${tumor_id}.csv
-            echo  "{ "Pairedness" :  "False"}" > ${tumor_id}.json
+            echo  "{ "Info" :  "False"}" > ${tumor_id}.json
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
