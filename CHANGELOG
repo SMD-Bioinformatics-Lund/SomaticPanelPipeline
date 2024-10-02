@@ -1,5 +1,12 @@
 ## Changelog ##
 
+### dsl2-v1.2
+### Bugfix
+- IDSNP analysis for all the Somatic panel assay
+- Genotype and pairedness quality control information for both paired and unpaired samples
+    - Unpaired samples have pairedness as false
+- Pairedness and genotype information can be acted upon by cron job
+
 ### dsl2-v1.1.1
 ### Bugfix
 - the subsample fraction is set to 0.99 so that seqtk doesn't fail at 1.00 
