@@ -6,8 +6,9 @@ process ALLELE_CALL {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta), file("*final.vcf"),    emit:   sample_id_vcf
-        path "versions.yml",                                emit:   versions
+        tuple val(group), val(meta), file("*final.vcf"),        emit:   sample_id_vcf
+        tuple val(group), val(meta), file("*genotypes.json"),   emit:   sample_id_genotypes
+        path "versions.yml",                                    emit:   versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -20,6 +21,8 @@ process ALLELE_CALL {
         """
         bcftools mpileup $args $bam | bcftools call $args2   > ${prefix}.raw.vcf
         bcftools annotate $args3 -o ${prefix}.final.vcf ${prefix}.raw.vcf
+        bcftools query -f '%ID\\t[%GT]\\n' ${prefix}.final.vcf > ${prefix}.genotypes
+        genotype2json.py ${prefix}.genotypes ${prefix}.genotypes.json
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -31,6 +34,7 @@ process ALLELE_CALL {
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
         touch ${prefix}.final.vcf
+        touch ${prefix}.genotypes.json
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -125,13 +129,13 @@ process SNP_CHECK {
         }
 }
 
-
 process PAIR_CDM {
     label 'process_single'
     tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), file(jsons)
+        tuple val(group), val(meta), file(genotypes)
 
     output:
         tuple val(group), val(meta), file("*.pairscore"), emit: isnsp_cdm_done
@@ -149,19 +153,24 @@ process PAIR_CDM {
         tumor_id    = meta.id[tumor_idx]
 	    normaljson  = jsons[normal_idx]
 	    tumorjson    = jsons[tumor_idx]
+        normalgenotype = genotypes [normal_idx]
+        tumorgenotype = genotypes[tumor_idx]
 
         """
-        echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson}" > ${meta.id[tumor_idx]}.pairscore
-            
-        echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${normaljson}" > ${meta.id[normal_idx]}.pairscore
+        echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson} --genotype ${params.outdir}/${params.subdir}/QC/${tumorgenotype}" > ${meta.id[tumor_idx]}.pairscore
+
+             
+        echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${normaljson} --genotype ${params.outdir}/${params.subdir}/QC/${normalgenotype}"> ${meta.id[normal_idx]}.pairscore
         """
 
       } else {
         tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         tumor_id    = meta.id[tumor_idx]
 	    tumorjson    = jsons[tumor_idx]
+        tumorgenotype = genotypes[tumor_idx]
+
         """
-        echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson}" > ${meta.id[tumor_idx]}.pairscore
+        echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson} --genotype ${params.outdir}/${params.subdir}/QC/${tumorgenotype}" > ${meta.id[tumor_idx]}.pairscore
         """
       }
     
@@ -175,17 +184,21 @@ process PAIR_CDM {
             tumor_id    = meta.id[tumor_idx]
 	        normaljson  = jsons[normal_idx]
 	        tumorjson    = jsons[tumor_idx]
+            normalgenotype = genotypes [normal_idx]
+            tumorgenotype = genotypes[tumor_idx]
              """
-             echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson}" > ${meta.id[tumor_idx]}.pairscore
+             echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson} --genotype ${params.outdir}/${params.subdir}/QC/${tumorgenotype}" > ${meta.id[tumor_idx]}.pairscore
              
-             echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${normaljson}" > ${meta.id[normal_idx]}.pairscore
+             echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${normaljson} --genotype ${params.outdir}/${params.subdir}/QC/${normalgenotype}"> ${meta.id[normal_idx]}.pairscore
             """
         } else {
             tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             tumor_id    = meta.id[tumor_idx]
 	        tumorjson    = jsons[tumor_idx]
+            tumorgenotype = genotypes[tumor_idx]
+
             """
-            echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson}" > ${meta.id[tumor_idx]}.pairscore
+            echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --pairedness ${params.outdir}/${params.subdir}/QC/${tumorjson} --genotype ${params.outdir}/${params.subdir}/QC/${tumorgenotype}" > ${meta.id[tumor_idx]}.pairscore
             """
         }
 
