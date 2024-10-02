@@ -38,6 +38,9 @@ def create_fastq_channel(LinkedHashMap row) {
 	if (meta.reads && params.sample) {  
 		if (meta.reads.toInteger() > params.sample_val) {
 			sub = (params.sample_val / meta.reads.toInteger()).round(2)
+			if (sub == 1.00){
+				sub = 0.99
+			}
 		}
 		else {
 			sub = false
