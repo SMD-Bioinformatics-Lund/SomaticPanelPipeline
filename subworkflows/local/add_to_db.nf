@@ -1,6 +1,5 @@
 #!/usr/bin/env nextflow
 
-include { COYOTE               } from '../../modules/local/coyote/main'
 include { COYOTE_YAML          } from '../../modules/local/coyote/main'
 
 workflow ADD_TO_DB {
@@ -19,11 +18,10 @@ workflow ADD_TO_DB {
         optional = lc.mix(segments,gatcov_plot,biomarkers,fusions).groupTuple()
         s_json.view()
         optional_json = lc.mix(s_json,gatcov_plot,biomarkers,fusions).groupTuple()
-        COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }
 
     emit:
-        coyotedone = COYOTE.out.coyote_import   // channel: [ val(group), file(coyote) ]
+        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
         
 }
 
