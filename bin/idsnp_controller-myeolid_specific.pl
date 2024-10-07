@@ -12,8 +12,6 @@ my $SCORE   = -20;
 
 my $MARKERS = 0; # originally 44 but has been cut down to 40 as off 2024-02-02 again but cound from the vcf seems more logical
 
-# my $MARKERS = 111; 
-
 print_usage(
     "ERROR: --vcf_sample, --vcf_control, --sample and --control required!\n")
   unless $opt{vcf_sample}
@@ -26,8 +24,6 @@ unless ( -e $opt{vcf_sample} ) {
     print "ERROR: SAMPLE VCF file not found\n";
     exit;
 }
-
-#unless( -e $opt{vcf_control} ) { print "ERROR: CONTROL VCF file not found\n"; exit; }
 
 if ( defined( $opt{rs_bed} ) ) {
   open( my $rsbed, '<', "$opt{rs_bed}" ) or die "Could not open file";
@@ -60,7 +56,6 @@ if ( defined( $opt{vcf_sample} ) ) {
         }
         else {
             my $identifier = "".$cols[ $labels{'#CHROM'} ]."_".$cols[$labels{POS}]."_".$cols[$labels{ID}]."";
-            #my $identifier = "". $cols[ $labels{'#CHROM'} ] . "_". $cols[ $labels{POS} ] . "";
             my $id = $cols[ $labels{ID} ];
             my $gt = ( split( /:/, $cols[ $labels{FORMAT} + 1 ] ) )[0];
             my @info = split( /;/, $cols[ $labels{INFO} ] );
@@ -85,6 +80,10 @@ if ( defined( $opt{vcf_sample} ) ) {
 
 # control vcf
 if ( defined( $opt{vcf_control} ) ) {
+
+    unless ( -e $opt{vcf_control} ) {
+        die "Error: Control VCF file '$opt{vcf_control}' does not exist.\n";
+    }
 
     if ( $opt{vcf_control} =~ /gz$/ ) {
         open( cVCF, "zcat $opt{vcf_control} |" )
@@ -125,8 +124,6 @@ if ( defined( $opt{vcf_control} ) ) {
     }
     close cVCF;
 }
-
-#print Dumper(\%data); exit;
 
 # summary table
 my ( $total, $match, $mismatch ) = ( 0, 0, 0 );
@@ -206,7 +203,7 @@ sub print_usage {
     print
 "    --control        ID         ID to CONTROL VCF file \(required\)\n\n";
     print
-"    --rs_bed        FILE       Path to bed file from rsID used for comaprision \(required\)\n\n";
+"    --rs_bed        FILE       Path to bed file from rsID used for comparision \(required\)\n\n";
     print 
 "    --help                      Will print this message\n\n";
     exit(0);
