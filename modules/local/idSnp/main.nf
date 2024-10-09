@@ -69,7 +69,7 @@ process SNP_CHECK {
 
         if(meta.id.size() == 2) {
             """
-            idsnp_controller-myeolid_specific.pl \\
+            idsnp_controller.pl \\
                 --vcf_sample $tumorvcf  \\
                 --vcf_control $normalvcf \\
                 --sample  $tumor_id \\
