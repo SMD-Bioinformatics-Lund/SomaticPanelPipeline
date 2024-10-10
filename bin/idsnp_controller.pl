@@ -180,12 +180,12 @@ close OUT;
 my $jsonOut = "s" . $opt{sample} . "_c" . $opt{control} . ".json";
 my $pp = ( $match / $MARKERS ) * 100; 
 my %finalresult = (
-    Info => "True",
-    MatchedSnps => $match,
-    MismatchSnps => $mismatch,
-    MisingSnps => $missing_data,
-    Pairedpercent =>  sprintf( "%.2f", $pp),
-    IdSnp => $total
+    is_paired_sample      => JSON::true,
+    pct_matching_snps     => 0 + sprintf("%.2f", $pp),
+    nbr_non_matching_snps => int($mismatch),  
+    nbr_matching_snps     => int($match),  
+    nbr_missing_snps      => int($missing_data),  
+    total_nbr_id_snps     => int($total)  
 );
 save_json_file (\%finalresult, $jsonOut);
 
