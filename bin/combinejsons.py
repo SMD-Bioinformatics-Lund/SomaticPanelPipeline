@@ -21,7 +21,7 @@ def combine_json_files(info_json_file, genotype_json_file, output_file):
     # Combine the data by appending the genotype JSON
     combined_data = {
         **info_data,
-        "isnp_genotype": genotype_data
+        "id_snp_genotypes": genotype_data
     }
 
     # Save the combined data to the output file
