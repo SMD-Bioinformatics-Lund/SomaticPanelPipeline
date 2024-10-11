@@ -186,9 +186,9 @@ process PAIRGEN_CDM {
 	        normaljson  = jsons[normal_idx]
 	        tumorjson    = jsons[tumor_idx]
              """
-             echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --idsnp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
+             echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
              
-             echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --idsnp ${params.outdir}/${params.subdir}/QC/${normaljson} "> ${meta.id[normal_idx]}.pairgen
+             echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${normaljson} "> ${meta.id[normal_idx]}.pairgen
             """
         } else {
             tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
