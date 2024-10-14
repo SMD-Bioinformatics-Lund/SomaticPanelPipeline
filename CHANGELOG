@@ -1,5 +1,11 @@
 ## Changelog ##
 
+### dsl2-v1.1.3
+### update 
+- Idsnp qc for all Somatic panel pipelies
+- QC data compatabile to CDM
+
+
 ### dsl2-v1.1.2
 ### update PON
 - updated solid SNV PONs to include more samples
