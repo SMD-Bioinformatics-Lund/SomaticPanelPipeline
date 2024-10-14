@@ -13,16 +13,21 @@ def save_json_file(data, file_path):
         json.dump(data, file, indent=4)
 
 # Main function to combine the Info JSON and the genotype JSON
-def combine_json_files(info_json_file, genotype_json_file, output_file):
+def combine_json_files(info_json_file, genotype_json_file, partner_run_json_file, output_file):
     # Load the Info and genotype JSON files
     info_data = load_json_file(info_json_file)
     genotype_data = load_json_file(genotype_json_file)
-
+    
     # Combine the data by appending the genotype JSON
     combined_data = {
         **info_data,
         "id_snp_genotypes": genotype_data
     }
+
+    # If partner_run_json_file is provided, include it in the combined data
+    if partner_run_json_file:
+        partner_run = load_json_file(partner_run_json_file)
+        combined_data["partner_info"] = partner_run
 
     # Save the combined data to the output file
     save_json_file(combined_data, output_file)
@@ -35,6 +40,7 @@ def parse_args():
     # Add arguments for the input JSON files and the output file
     parser.add_argument('info_json_file', help='Path to the Info JSON file')
     parser.add_argument('genotype_json_file', help='Path to the genotype JSON file')
+    parser.add_argument('--partner_run_json_file', help='Path to the partner sample run JSON file (optional)', default=None)
     parser.add_argument('output_file', help='Path to the output combined JSON file')
 
     return parser.parse_args()
@@ -44,4 +50,4 @@ if __name__ == "__main__":
     args = parse_args()
 
     # Call the function to combine the JSON files
-    combine_json_files(args.info_json_file, args.genotype_json_file, args.output_file)
+    combine_json_files(args.info_json_file, args.genotype_json_file, args.partner_run_json_file, args.output_file)

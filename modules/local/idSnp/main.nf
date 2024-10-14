@@ -58,15 +58,20 @@ process SNP_CHECK {
 
     script:
         
-        def args    = task.ext.args  ?: ""
-        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal_id   = meta.id[normal_idx]
-        tumor_id    = meta.id[tumor_idx]
-	    normalvcf   = vcfs[normal_idx]
-	    tumorvcf    = vcfs[tumor_idx]
-        norGTjson  = genotypes[normal_idx]
-        tumGTjson   = genotypes[tumor_idx]
+        def args                    = task.ext.args  ?: ""
+        tumor_idx                   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_idx                  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+        normal_id                   = meta.id[normal_idx]
+        tumor_id                    = meta.id[tumor_idx]
+                    
+        tumor_seq_run               = meta.sequencing_run[tumor_idx]
+        normal_seq_run               = meta.sequencing_run[normal_idx]
+
+	    normalvcf                   = vcfs[normal_idx]
+	    tumorvcf                    = vcfs[tumor_idx]
+
+        norGTjson                   = genotypes[normal_idx]
+        tumGTjson                   = genotypes[tumor_idx]
 
         if(meta.id.size() == 2) {
             """
@@ -80,8 +85,13 @@ process SNP_CHECK {
             cp s${tumor_id}_c${normal_id}.json  ${tumor_id}.json
             cp s${tumor_id}_c${normal_id}.json  ${normal_id}.json
             rm s${tumor_id}_c${normal_id}.json
-            combinejsons.py  ${tumor_id}.json ${tumGTjson} ${tumor_id}.idsnp
-            combinejsons.py  ${normal_id}.json ${norGTjson} ${normal_id}.idsnp
+            today_date=\$(date +"%Y-%m-%d")
+
+            echo '{"partner" : "${tumor_id}","sequencing_run" : "${tumor_seq_run}","analysis_date" : "'\${today_date}'" }' > ${normal_id}_partner_info.json
+            echo '{"partner" : "${normal_id}","sequencing_run" : "${normal_seq_run}","analysis_date" : "'\${today_date}'" }' > ${tumor_id}_partner_info.json
+            
+            combinejsons.py  ${tumor_id}.json ${tumGTjson} --partner_run_json_file  ${tumor_id}_partner_info.json ${tumor_id}.idsnp
+            combinejsons.py  ${normal_id}.json ${norGTjson} --partner_run_json_file ${normal_id}_partner_info.json ${normal_id}.idsnp
         
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
