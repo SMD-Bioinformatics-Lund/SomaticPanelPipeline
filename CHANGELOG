@@ -1,5 +1,10 @@
 ## Changelog ##
 
+### dsl2-v1.1.4
+### patch 
+- Change date format in id SNP qc metadata to UTC / ISO 8601 format
+
+
 ### dsl2-v1.1.3
 ### update 
 - Idsnp qc for all Somatic panel pipelies
