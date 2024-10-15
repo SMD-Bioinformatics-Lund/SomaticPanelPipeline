@@ -85,7 +85,7 @@ process SNP_CHECK {
             cp s${tumor_id}_c${normal_id}.json  ${tumor_id}.json
             cp s${tumor_id}_c${normal_id}.json  ${normal_id}.json
             rm s${tumor_id}_c${normal_id}.json
-            today_date=\$(date +"%Y-%m-%d")
+            today_date=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
             echo '{"partner" : "${tumor_id}","sequencing_run" : "${tumor_seq_run}","analysis_date" : "'\${today_date}'" }' > ${normal_id}_partner_info.json
             echo '{"partner" : "${normal_id}","sequencing_run" : "${normal_seq_run}","analysis_date" : "'\${today_date}'" }' > ${tumor_id}_partner_info.json
