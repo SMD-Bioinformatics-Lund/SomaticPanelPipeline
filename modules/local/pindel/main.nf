@@ -32,7 +32,7 @@ process PINDEL_CONFIG {
             """
         }
         else {
-            tumor_idx = type.findIndexOf{ it == 'tumor' || it == 'T' }
+            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             ins_tumor = ins_size[tumor_idx]
             bam_tumor = bams[tumor_idx]
             id_tumor = meta[tumor_idx].id
