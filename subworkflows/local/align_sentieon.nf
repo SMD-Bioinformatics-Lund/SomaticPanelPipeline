@@ -27,9 +27,10 @@ workflow ALIGN_SENTIEON {
         ch_versions = ch_versions.mix(SENTIEON_QC.out.versions)
 
     emit:
-        bam_lowcov  =   MARKDUP.out.bam_qc          // channel: [ val(group), val(meta), file(bam), file(bai), file(dedup_metrics.txt) ]
-        bam_umi     =   BQSR_UMI.out.bam_varcall    // channel: [ val(group), val(meta), file(bam), file(bai), file(bqsr.table) ]
-        qc_out      =   SENTIEON_QC.out.qc_cdm      // channel: [ val(group), val(meta), file(QC) ]
-        bam_dedup   =   MARKDUP.out.bam_bqsr        // channel: [ val(group), val(meta), file(bam), file(bai)] 
-        versions    =   ch_versions                 // channel: [ file(versions) ]
+        bam_lowcov              =   MARKDUP.out.bam_qc                      // channel: [ val(group), val(meta), file(bam), file(bai), file(dedup_metrics.txt) ]
+        bam_umi                 =   BQSR_UMI.out.bam_varcall                // channel: [ val(group), val(meta), file(bam), file(bai), file(bqsr.table) ]
+        qc_out                  =   SENTIEON_QC.out.qc_cdm                  // channel: [ val(group), val(meta), file(QC) ]
+        dedup_bam_is_metrics    =   SENTIEON_QC.out.dedup_bam_is_metrics    // channel: [ val(group), val(meta), file(is_metrics.txt) ]    
+        bam_dedup               =   MARKDUP.out.bam_bqsr                    // channel: [ val(group), val(meta), file(bam), file(bai)] 
+        versions                =   ch_versions                             // channel: [ file(versions) ]
 }

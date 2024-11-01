@@ -20,3 +20,5 @@ bugs/
 .env
 venv
 env
+configs/nextflow.hopper_test.config
+*log

@@ -24,7 +24,8 @@ process COYOTE {
         cnvseg_idx = importy.findIndexOf{ it =~ 'panel' }
         fusions_idx = importy.findIndexOf{ it =~ 'annotated' }
         biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
-        cnvplot_idx = importy.findIndexOf{ it =~ 'png' }
+        cnvplot_idx = importy.findIndexOf{ it =~ 'modeled.png' }
+        cnvkit_idx = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
         lowcov_idx = importy.findIndexOf{ it =~ 'lowcov' }
 
         // add matching flags //
@@ -32,6 +33,11 @@ process COYOTE {
         fusions = fusions_idx >= 0 ? importy[fusions_idx].collect {'--transloc /access/' + params.subdir + '/fusions/' + it } : null
         biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'--biomarkers /access/' + params.subdir + '/biomarkers/' + it } : null
         cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
+
+        if ( cnvplot == null && cnvkit_idx >= 0 ){
+            cnvplot = importy[cnvkit_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it }
+        }
+
         lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
         purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
         tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
@@ -62,7 +68,8 @@ process COYOTE {
         cnvseg_idx = importy.findIndexOf{ it =~ 'panel' }
         fusions_idx = importy.findIndexOf{ it =~ 'annotated' }
         biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
-        cnvplot_idx = importy.findIndexOf{ it =~ 'png' }
+        cnvplot_idx = importy.findIndexOf{ it =~ 'modeled.png' }
+        cnvkit_idx = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
         lowcov_idx = importy.findIndexOf{ it =~ 'lowcov' }
 
         // add matching flags //
@@ -70,6 +77,11 @@ process COYOTE {
         fusions = fusions_idx >= 0 ? importy[fusions_idx].collect {'--transloc /access/' + params.subdir + '/fusions/' + it } : null
         biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'--biomarkers /access/' + params.subdir + '/biomarkers/' + it } : null
         cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
+
+        if ( cnvplot == null && cnvkit_idx >= 0 ){
+            cnvplot = importy[cnvkit_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it }
+        } 
+
         lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
         purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
         tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
@@ -113,7 +125,8 @@ process COYOTE_YAML {
         cnvseg_idx = importy.findIndexOf{ it =~ 'panel' }
         fusions_idx = importy.findIndexOf{ it =~ 'annotated' }
         biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
-        cnvplot_idx = importy.findIndexOf{ it =~ 'png' }
+        cnvplot_idx = importy.findIndexOf{ it =~ 'modeled.png' }
+        cnvkit_idx = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
         lowcov_idx = importy.findIndexOf{ it =~ 'lowcov' }
 
         // add matching flags //
@@ -121,6 +134,9 @@ process COYOTE_YAML {
         fusions = fusions_idx >= 0 ? importy[fusions_idx].collect {'transloc: /access/' + params.subdir + '/fusions/' + it } : null
         biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'biomarkers: /access/' + params.subdir + '/biomarkers/' + it } : null
         cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it } : null
+        if ( cnvplot == null && cnvkit_idx >= 0 ){
+            cnvplot = importy[cnvkit_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it }
+        } 
         lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'lowcov: /access/' + params.subdir + '/QC/' + it } : null
         purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { 'purity: ' + it} : null
         tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
@@ -151,6 +167,7 @@ process COYOTE_YAML {
         fusions_idx = importy.findIndexOf{ it =~ 'merged.annotated.vcf' }
         biomarkers_idx = importy.findIndexOf{ it =~ 'bio.json' }
         cnvplot_idx = importy.findIndexOf{ it =~ 'modeled.png' }
+        cnvkit_idx = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
         lowcov_idx = importy.findIndexOf{ it =~ 'lowcov.bed' }
 
         // add matching flags //
@@ -158,6 +175,9 @@ process COYOTE_YAML {
         fusions = fusions_idx >= 0 ? importy[fusions_idx].collect {'transloc: /access/' + params.subdir + '/fusions/' + it } : null
         biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'biomarkers: /access/' + params.subdir + '/biomarkers/' + it } : null
         cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it } : null
+        if ( cnvplot == null && cnvkit_idx >= 0 ){
+            cnvplot = importy[cnvkit_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it }
+        } 
         lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'lowcov: /access/' + params.subdir + '/QC/' + it } : null
         purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { 'purity: ' + it} : null
         tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
