@@ -1,6 +1,6 @@
 ## Changelog ##
 
-### dsl2-v1.1.4
+### dsl2-v1.1.5
 ### patch 
 - Change date format in id SNP qc metadata to UTC / ISO 8601 format
 
@@ -10,6 +10,9 @@
 - Idsnp qc for all Somatic panel pipelies
 - QC data compatabile to CDM
 
+### dsl2-v1.1.3
+### myeloid verif
+- pindel added and tested
 
 ### dsl2-v1.1.2
 ### update PON

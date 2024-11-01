@@ -17,7 +17,7 @@ GetOptions( \%opt, 'vcf=s', 'id=s', 'clarity-sample-id=s', 'clarity-pool-id=s', 
 my( $vcf, $id ) = ( $opt{vcf}, $opt{id} );
 my @groups = split /,/, $opt{group};
 #my @groups = ("mody");
-
+my $genome_build = ( $opt{build} or "37" );
 # Read QC data
 my @QC;
 if( $opt{qc} ) {
@@ -46,7 +46,8 @@ my $client = MongoDB->connect();
 # Prepare data to insert into sample collection
 my $samples = $client->ns("coyote.samples");
 $id = check_id($id,\@groups);
-my %sample_data = ( 'name'=>$id, 'groups'=>\@groups, 'time_added'=>DateTime->now, 'vcf_files'=>[$vcf] );
+print STDERR "Sample already in database, changing ID to $id\n";
+my %sample_data = ( 'name'=>$id, 'groups'=>\@groups, 'time_added'=>DateTime->now, 'vcf_files'=>[$vcf], 'genome_build'=>$genome_build );
 if ( scalar @QC > 0 ) {
     $sample_data{QC} = \@QC;
 }
@@ -335,18 +336,16 @@ sub read_mane {
 sub check_id {
 	my ($id,$groups) = @_;
 	
-	my $find = $samples->find( {"name" => $id } , {"groups"=> $groups } );
+	my $find = $samples->find( {"name" => {'$regex' => $id } }, {"groups"=> $groups } );
 	my $count = 1;
 	while( my $id_ = $find->next ) {
 		$count ++;
 	}
 	if ($count == 1) {
-		print "Sample does not exist in the database, Adding $id to the database.\n";
 		return $id;
 	}
 	else {
 		$id = $id."-$count";
-		print STDERR "Sample already exist in the database, changing ID to $id\n";
 		return $id;
 	}
 }

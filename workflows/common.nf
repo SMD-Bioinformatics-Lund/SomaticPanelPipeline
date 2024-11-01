@@ -80,7 +80,8 @@ workflow SPP_COMMON {
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
-        ch_qc.melt_qc
+        ch_qc.melt_qc,
+        ch_mapped.dedup_bam_is_metrics.groupTuple(),
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
@@ -138,7 +139,8 @@ workflow SPP_COMMON {
         ch_cnvcalled.gens,
         ch_cnvcalled.gatcov_plot,
         ch_fusion.fusions,
-        ch_bio.biomarkers
+        ch_bio.biomarkers,
+        ch_cnvcalled.cnvkit_plot
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
