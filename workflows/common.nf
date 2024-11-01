@@ -1,12 +1,13 @@
 #!/usr/bin/env nextflow
 
-
 nextflow.enable.dsl = 2
 
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
+include { ID_SNP                        } from '../subworkflows/local/check_idsnp.nf'
+//include { PAIR_CHECK                    } from '../subworkflows/local/check_pair.nf'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
@@ -59,7 +60,15 @@ workflow SPP_COMMON {
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
-
+    
+    // Genotype the idSnps probes
+    ID_SNP (
+	        ch_mapped.bam_dedup,
+            CHECK_INPUT.out.meta
+	      )
+    .set { ch_idsnp }
+    ch_versions = ch_versions.mix(ch_idsnp.versions)
+    
     // Create PGx CSV file
     PHARMACOGENOMICS (
         ch_mapped.bam_umi.groupTuple(),
