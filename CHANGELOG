@@ -1,5 +1,10 @@
 ## Changelog ##
 
+### dsl2-v1.1.6
+### myeloid hotfixes
+- GENS for full coverage to export and indexing
+- contamination for paired tumor into python script
+
 ### dsl2-v1.1.5
 ### myeloid verif
 - pindel added and tested
