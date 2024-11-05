@@ -3,6 +3,8 @@
 include { FREEBAYES                } from '../../modules/local/freebayes/main'
 include { VARDICT                  } from '../../modules/local/vardict/main'
 include { TNSCOPE                  } from '../../modules/local/sentieon/main'
+include { PINDEL_CONFIG            } from '../../modules/local/pindel/main'
+include { PINDEL_CALL              } from '../../modules/local/pindel/main'
 include { CONCATENATE_VCFS         } from '../../modules/local/concatenate_vcfs/main'
 include { AGGREGATE_VCFS           } from '../../modules/local/concatenate_vcfs/main'
 include { MELT                     } from '../../modules/local/melt/main'
@@ -16,9 +18,15 @@ workflow SNV_CALLING {
         beds            // channel: [mandatory] [ file(bed) ]
         meta            // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
         qc_values       // channel: [mandatory] [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
+        dedup_bam_is_metrics    // channel: [mandatory] [ val(group), val(meta), file(dedup_bam), file(dedup_bai), file(is_metrics) ]
 
     main:
         ch_versions = Channel.empty()
+
+        // Pindel
+        PINDEL_CONFIG ( dedup_bam_is_metrics )
+        PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
+        ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
         // Variantcallers //
         // split by bed-file to speed up calling //
@@ -61,7 +69,8 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(CONCATENATE_VCFS.out.versions.first())
 
         // Aggregate all callers to one VCF
-        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.mix(MELT_MERGED).groupTuple().join(meta.groupTuple()) }
+        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()) }
+
         ch_versions         = ch_versions.mix(AGGREGATE_VCFS.out.versions.first())
 
     emit:

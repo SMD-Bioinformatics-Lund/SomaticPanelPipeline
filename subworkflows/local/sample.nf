@@ -4,6 +4,7 @@ include { SEQTK                } from '../../modules/local/seqtk/main'
 include { FASTP                } from '../../modules/local/fastp/main'
 
 
+
 workflow SAMPLE {
     take:
         fastq       // channel: [ val(meta), [ reads ] ]

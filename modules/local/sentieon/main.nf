@@ -199,7 +199,7 @@ process SENTIEON_QC {
         tuple val(group), val(meta), file(bam), file(bai), file(dedup)
 
     output:
-        tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),   emit: dedup_bam
+        tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),   emit: dedup_bam_is_metrics
         tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_cdm
         tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_melt
         path "*.txt",                                                                  emit: txt

@@ -1,5 +1,28 @@
 ## Changelog ##
 
+### dsl2-v1.1.6
+### myeloid hotfixes
+- GENS for full coverage to export and indexing
+- contamination for paired tumor into python script
+
+### dsl2-v1.1.5
+### myeloid verif
+- pindel added and tested
+
+### dsl2-v1.1.4
+### patch 
+- Change date format in id SNP qc metadata to UTC / ISO 8601 format
+
+
+### dsl2-v1.1.3
+### update 
+- Idsnp qc for all Somatic panel pipelies
+- QC data compatabile to CDM
+
+### dsl2-v1.1.2
+### update PON
+- updated solid SNV PONs to include more samples
+
 ### dsl2-v1.1.1
 ### Bugfix
 - the subsample fraction is set to 0.99 so that seqtk doesn't fail at 1.00 
