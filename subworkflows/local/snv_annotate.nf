@@ -5,7 +5,6 @@ include { FFPE_PON_FILTER          } from '../../modules/local/filters/main'
 include { ANNOTATE_VEP             } from '../../modules/local/filters/main'
 include { MARK_GERMLINES           } from '../../modules/local/filters/main'
 include { FILTER_FOR_CNV           } from '../../modules/local/filters/main'
-include { CONTAMINATION            } from '../../modules/local/filters/main'
 include { VCFANNO                  } from '../../modules/local/filters/main'
 
 workflow SNV_ANNOTATE {
@@ -52,10 +51,6 @@ workflow SNV_ANNOTATE {
         // BAF for CNVkit //
         FILTER_FOR_CNV { ANNOTATE_VEP.out.vcf_vep.join(concat_vcfs.filter { item -> item[1] == 'freebayes' })  }
         ch_versions = ch_versions.mix(FILTER_FOR_CNV.out.versions)
-
-        // contamination values from VCF //
-        CONTAMINATION { ANNOTATE_VEP.out.vcf_vep }
-        ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
 
     emit:
         germline_variants   =   FILTER_FOR_CNV.out.vcf_only_germline    // channel: [ val(group), val(vc), file(vcf.gz) ]

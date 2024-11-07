@@ -54,21 +54,14 @@ workflow SPP_COMMON {
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    QC ( 
-        ch_mapped.qc_out, 
-        ch_mapped.bam_lowcov
+    QC (
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
+        ch_mapped.dedup_metrics
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
-    
-    // Genotype the idSnps probes
-    ID_SNP (
-	        ch_mapped.bam_dedup,
-            CHECK_INPUT.out.meta
-	      )
-    .set { ch_idsnp }
-    ch_versions = ch_versions.mix(ch_idsnp.versions)
-    
+      
     // Create PGx CSV file
     PHARMACOGENOMICS (
         ch_mapped.bam_umi.groupTuple(),
@@ -81,7 +74,7 @@ workflow SPP_COMMON {
         beds,
         CHECK_INPUT.out.meta,
         ch_qc.melt_qc,
-        ch_mapped.dedup_bam_is_metrics.groupTuple(),
+        ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)

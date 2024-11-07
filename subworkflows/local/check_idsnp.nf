@@ -2,7 +2,7 @@
 
 include { ALLELE_CALL            } from '../../modules/local/idSnp/main'
 include { SNP_CHECK              } from '../../modules/local/idSnp/main'
-include { PAIRGEN_CDM               } from '../../modules/local/idSnp/main'
+include { PAIRGEN_CDM            } from '../../modules/local/idSnp/main'
 
 workflow ID_SNP {
     take:
