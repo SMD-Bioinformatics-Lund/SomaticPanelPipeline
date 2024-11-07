@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### v3.0.1
+### DSL2-main version
+- coyote-yaml import fixes
+
 ### dsl2-v1.1.6
 ### myeloid hotfixes
 - GENS for full coverage to export and indexing

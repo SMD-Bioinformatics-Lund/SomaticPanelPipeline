@@ -33,7 +33,7 @@ workflow ADD_TO_DB {
         COYOTE_YAML { vcf.join(optional_json) }
 
     emit:
-        coyotedone = COYOTE.out.coyote_import 
+        coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
         coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
         
 }
