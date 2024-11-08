@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
-include { COYOTE               } from '../../modules/local/coyote/main'
 include { COYOTE_YAML          } from '../../modules/local/coyote/main'
+include { COYOTE               } from '../../modules/local/coyote/main'
 
 workflow ADD_TO_DB {
     take: 
@@ -33,7 +33,8 @@ workflow ADD_TO_DB {
         COYOTE_YAML { vcf.join(optional_json) }
 
     emit:
-        coyotedone = COYOTE.out.coyote_import   // channel: [ val(group), file(coyote) ]
+        coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
+        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
         
 }
 
