@@ -9,6 +9,7 @@ process VERIFYBAMID {
 
     output:
         tuple val(group), val(meta), file("${meta.id}.contaminationpy"),                emit: contamination
+        tuple val(group), file("result.selfSM"), file("result.Ancestry"),               emit: results
         path "versions.yml",                                                            emit: versions
     when:
         task.ext.when == null || task.ext.when
@@ -24,8 +25,10 @@ process VERIFYBAMID {
             $args2 \
             $args \
             --BamFile $bam
-
-        touch ${prefix}.contaminationpy
+        
+        cut -f 7 result.selfSM | grep -v FREEMIX > contamination.value
+        echo "--overwrite --sample-id ${meta.id} --sequencing-run ${meta.sequencing_run} --assay ${params.cdm} --contamination "> contamination.import
+        paste contamination.import contamination.value > ${prefix}.contaminationpy
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             verifybamid: \$(echo \$(verifybamid2 -h 2>&1 | grep Version | sed "s/Version://"))
@@ -36,7 +39,7 @@ process VERIFYBAMID {
         def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
         touch ${prefix}.contaminationpy
-
+        touch result.selfSM result.Ancestry
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             verifybamid: \$(echo \$(verifybamid2 -h 2>&1 | grep Version | sed "s/Version://"))
