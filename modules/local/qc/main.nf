@@ -30,7 +30,7 @@ process LOWCOV {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(bam), file(bai), file(dedup) //from bam_lowcov
+        tuple val(group), val(meta), file(bam), file(bai)
 
     output:
         tuple val(group), val(meta.type), file("*.lowcov.bed"), emit: lowcov_regions
