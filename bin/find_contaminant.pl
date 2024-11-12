@@ -198,6 +198,11 @@ sub paired {
 }
 
 sub check_vaf {
+    """
+    Groups VAFs into bins, both on INTEGER and FLOAT level
+    Go from low to high, default 0.01 -> 0.30
+    If paired tumor sample, make sure it is not a tumor specific variant
+    """
     my $vaf      = shift;
     my $othervaf = shift;
     my $var      = shift;
@@ -219,6 +224,7 @@ sub check_vaf {
             push @{ $dist_dec{$vaf}{VAR} }, $var;
         }
     }
+    ## extra check that the variant is indeed germline, this is mostly fixed by gnomad_check earlier.
     else {
         if ( $vaf <= $low && $othervaf >= $low && $othervaf <= $high ) {
 
