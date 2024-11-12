@@ -92,7 +92,6 @@ while ( my $v = $vcf->next_var() ) {
                 else {
                     $t_VAF = $min / $t_DP;
                 }
-
             }
         }
         else {
@@ -111,7 +110,6 @@ while ( my $v = $vcf->next_var() ) {
                     $n_VAF = $min / $n_DP;
                 }
             }
-
         }
     }
     next if $t_DP <= 5;
