@@ -5,8 +5,8 @@ process PREPROCESSINTERVALS {
         val(reference)
 
     output:
-        tuple val(ref), file("${reference}.preprocessed.blacklisted.interval_list"),    emit: preprocessed
-        path "versions.yml",                                                            emit: versions
+        tuple val(reference), file("${reference}.preprocessed.blacklisted.interval_list"),    emit: preprocessed
+        path "versions.yml",                                                                  emit: versions
 
     when:
         task.ext.when == null || task.ext.when
