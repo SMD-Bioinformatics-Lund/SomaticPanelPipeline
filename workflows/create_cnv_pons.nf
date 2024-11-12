@@ -39,10 +39,10 @@ workflow SPP_CREATE_CNVPON {
     )
     ch_versions = ch_versions.mix(CALL_COHORT.out.versions)
 
-    CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
-        CHECK_INPUT.out.meta
-    )
+    // CUSTOM_DUMPSOFTWAREVERSIONS (
+    //     ch_versions.unique().collectFile(name: 'collated_versions.yml'),
+    //     CHECK_INPUT.out.meta
+    // )
 
 }
 
