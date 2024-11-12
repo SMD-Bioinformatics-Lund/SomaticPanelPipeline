@@ -250,7 +250,7 @@ process CNVKIT_CALL {
 
 process MERGE_GENS {
     label 'process_single'
-
+    // THIS PROCESS SUCKS, please fix.
     input:
         tuple val(group), val(meta), file(baf), file(cov)
 
@@ -271,29 +271,30 @@ process MERGE_GENS {
         if !{params.cnvkit_split} == true
         then
         for i in $( ls *.cov.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.cov.bed ; done
-        bedtools sort -i !{meta.id}.base.cov.bed > !{meta.id}.base.cov.bed.sort
-        sed 's/^/o_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-        sed 's/^/a_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-        sed 's/^/b_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-        sed 's/^/c_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-        sed 's/^/d_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-        bedtools sort -i !{meta.id}.merged.cov.bed > !{meta.id}.merged.sorted.cov.bed
-        bgzip !{meta.id}.merged.sorted.cov.bed
-        tabix !{meta.id}.merged.sorted.cov.bed.gz
-        for i in $( ls *.baf.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.baf.bed ; done
-        bedtools sort -i !{meta.id}.base.baf.bed > !{meta.id}.base.baf.bed.sort
-        sed 's/^/o_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-        sed 's/^/a_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-        sed 's/^/b_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-        sed 's/^/c_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-        sed 's/^/d_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-        bedtools sort -i !{meta.id}.merged.baf.bed > !{meta.id}.merged.sorted.baf.bed
-        bgzip !{meta.id}.merged.sorted.baf.bed
-        tabix !{meta.id}.merged.sorted.baf.bed.gz
-        echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
+            bedtools sort -i !{meta.id}.base.cov.bed > !{meta.id}.base.cov.bed.sort
+            sed 's/^/o_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+            sed 's/^/a_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+            sed 's/^/b_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+            sed 's/^/c_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+            sed 's/^/d_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
+            bedtools sort -i !{meta.id}.merged.cov.bed > !{meta.id}.merged.sorted.cov.bed
+            bgzip !{meta.id}.merged.sorted.cov.bed
+            tabix !{meta.id}.merged.sorted.cov.bed.gz
+            for i in $( ls *.baf.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.baf.bed ; done
+            bedtools sort -i !{meta.id}.base.baf.bed > !{meta.id}.base.baf.bed.sort
+            sed 's/^/o_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+            sed 's/^/a_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+            sed 's/^/b_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+            sed 's/^/c_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+            sed 's/^/d_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
+            bedtools sort -i !{meta.id}.merged.baf.bed > !{meta.id}.merged.sorted.baf.bed
+            bgzip !{meta.id}.merged.sorted.baf.bed
+            tabix !{meta.id}.merged.sorted.baf.bed.gz
+            echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
         else
-        echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.cov.bed.gz" > !{meta.id}.gens
-        echo "needs to tabix here to Ram and Saile!"
+            tabix !{meta.id}.full.baf.bed.gz
+            tabix !{meta.id}.full.cov.bed.gz
+            echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
         fi
 
         cat <<-END_VERSIONS > versions.yml
