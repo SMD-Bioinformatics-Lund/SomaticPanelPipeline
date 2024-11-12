@@ -235,7 +235,7 @@ process COHORT_PLOIDY {
         tuple val(reference), val(id), file(tsvs)
 
     output:
-        tuple val(reference), path("*_ploidy-model"), path("*_ploidy-calls/"),  emit: ploidy
+        tuple val(reference), path("*_ploidy-model"), path("*_ploidy-calls"),  emit: ploidy
         path "versions.yml",                                                    emit: versions
 
     when:
