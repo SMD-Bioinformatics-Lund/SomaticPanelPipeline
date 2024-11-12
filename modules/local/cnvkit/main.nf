@@ -1,6 +1,6 @@
 process CNVKITREF {
-    label 'process_very_high_memory'
-    label 'process_many_cpus'
+    label 'process_high_memory'
+    label 'process_medium_cpus'
 
     input:
         tuple val(name), val(id), file(bam), file(bai)
