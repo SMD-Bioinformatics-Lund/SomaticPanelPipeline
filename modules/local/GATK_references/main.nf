@@ -326,6 +326,7 @@ process COHORT_CALL {
 
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
+        name = scatter.toString()
         """
         export THEANO_FLAGS="base_compiledir=."
         set +u
