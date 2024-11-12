@@ -277,7 +277,7 @@ process COHORT_PLOIDY {
 }
 
 process COHORT_CALL {
-    label 'process_many_cpus'
+    label 'process_medium_cpus'
     label 'process_very_high_memory'
 
     input:
@@ -346,7 +346,7 @@ process COHORT_CALL {
 }
 
 process COHORT_CALL_PANEL {
-    label 'process_many_cpus'
+    label 'process_medium_cpus'
     label 'process_very_high_memory'
 
     input:
@@ -413,7 +413,7 @@ process COHORT_CALL_PANEL {
 }
 
 process GATK_SOM_PON {
-    label 'process_many_cpus'
+    label 'process_medium_cpus'
     label 'process_very_high_memory'
 
     input:
