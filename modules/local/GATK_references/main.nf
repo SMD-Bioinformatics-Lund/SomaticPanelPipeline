@@ -13,7 +13,7 @@ process PREPROCESSINTERVALS {
 
     script:
         def args    = task.ext.args ?: ''
-        def panel   = $params.panel ? "-L ${params.interval_list}" : ''
+        def panel   = params.panel ? "-L ${params.interval_list}" : ''
 
         """
         gatk PreprocessIntervals $args -O ${reference}.preprocessed.blacklisted.interval_list $panel
