@@ -248,7 +248,14 @@ process COHORT_PLOIDY {
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
-        gatk DetermineGermlineContigPloidy \\
+        export THEANO_FLAGS="base_compiledir=."
+        set +u
+        source activate gatk
+        export HOME=/local/scratch
+        export MKL_NUM_THREADS=${task.cpus}
+        export OMP_NUM_THREADS=${task.cpus}
+        gatk --java-options "-Djava.io.tmpdir=/local/scratch/" \\
+            DetermineGermlineContigPloidy \\
             -L $interval_list \\
             $args \\
             --output . \\
