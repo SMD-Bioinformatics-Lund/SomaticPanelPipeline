@@ -38,6 +38,10 @@ my %assay_info = (
 		'cutoff' => 80,
 		'ADfield' => "VD"
 	},
+	'GMSHem' => {
+		'cutoff' => 80,
+		'ADfield' => "VD"
+	},
 	'PARPinhib' => {
 		'cutoff' => 80,
 		'ADfield' => "VD"
