@@ -361,7 +361,7 @@ process COHORT_CALL_PANEL {
         tuple val(reference), val(id), file(tsvs), path(ploidy_model), path(ploidy_calls), file(intervals)
 
     output:
-        tuple val(reference), path("cohort_calls/${prefix}*"),  emit: calls
+        tuple val(reference), path("cohort_calls/${reference}*"),  emit: calls
         path "versions.yml",                                    emit: versions
 
     when:
@@ -386,7 +386,7 @@ process COHORT_CALL_PANEL {
             --contig-ploidy-calls $ploidy_calls \\
             $args \\
             --output cohort_calls \\
-            --output-prefix ${prefix} \\
+            --output-prefix ${reference} \\
             $tsv_list
         touch test
 
