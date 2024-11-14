@@ -23,7 +23,7 @@ my $id             = $opt{"case-id"};
 my $check_normal   = $opt{normal};
 my $high           = 0.3;
 my $low            = 0;
-my $ADfield        = "AD";
+my $ADfield        = "VD";
 my $binsize_cutoff = 80;
 
 if ( $opt{'detect-level'} ) {
