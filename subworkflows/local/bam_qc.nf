@@ -9,7 +9,7 @@ include { ALLELE_CALL          } from '../../modules/local/idSnp/main'
 include { SNP_CHECK            } from '../../modules/local/idSnp/main'
 include { PAIRGEN_CDM          } from '../../modules/local/idSnp/main'
 
-workflow QC {
+workflow BAM_QC {
     take:        
         bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai"), file(bqsr) ]
         bam_dedup       // channel: [ val(group), val(meta), file(bam), file(bai) ]

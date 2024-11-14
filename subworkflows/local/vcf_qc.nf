@@ -2,7 +2,7 @@
 
 include { CONTAMINATION            } from '../../modules/local/qc/main'
 
-workflow QC {
+workflow VCF_QC {
     take:        
         vep_vcf                    // channel: [ val(group), val(meta), file("*.vep.vcf") ]
 
