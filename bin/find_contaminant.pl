@@ -198,11 +198,9 @@ sub paired {
 }
 
 sub check_vaf {
-    """
-    Groups VAFs into bins, both on INTEGER and FLOAT level
-    Go from low to high, default 0.01 -> 0.30
-    If paired tumor sample, make sure it is not a tumor specific variant
-    """
+    # Groups VAFs into bins, both on INTEGER and FLOAT level
+    # Go from low to high, default 0.01 -> 0.30
+    # If paired tumor sample, make sure it is not a tumor specific variant
     my $vaf      = shift;
     my $othervaf = shift;
     my $var      = shift;
