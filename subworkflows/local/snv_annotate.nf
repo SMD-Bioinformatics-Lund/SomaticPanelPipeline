@@ -53,6 +53,7 @@ workflow SNV_ANNOTATE {
         ch_versions = ch_versions.mix(FILTER_FOR_CNV.out.versions)
 
     emit:
+        vep_vcf             =   ANNOTATE_VEP.out.vcf_vep                // channel: [ val(group), val(meta), file("*.vep.vcf") ]
         germline_variants   =   FILTER_FOR_CNV.out.vcf_only_germline    // channel: [ val(group), val(vc), file(vcf.gz) ]
         finished_vcf        =   MARK_GERMLINES.out.vcf_germline         // channel: [ val(group), val(vc), file(vcf.gz) ]
         versions            =   ch_versions                             // channel: [ file(versions) ]

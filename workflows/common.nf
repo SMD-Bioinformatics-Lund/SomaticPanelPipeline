@@ -7,12 +7,12 @@ include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
 include { ID_SNP                        } from '../subworkflows/local/check_idsnp.nf'
-//include { PAIR_CHECK                    } from '../subworkflows/local/check_pair.nf'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
-include { QC                            } from '../subworkflows/local/qc'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
+include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
@@ -54,7 +54,7 @@ workflow SPP_COMMON {
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    QC (
+    BAM_QC (
         ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         ch_mapped.dedup_metrics
@@ -86,6 +86,10 @@ workflow SPP_COMMON {
     )
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
+
+    VCF_QC (
+        ch_vcf_anno.vep_vcf,
+    )
 
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
