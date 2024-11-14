@@ -37,9 +37,9 @@ workflow BAM_QC {
 
         PAIRGEN_CDM (SNP_CHECK.out.idsnp_checked)
 
-        // Calculate cross-sample contamination
-        VERIFYBAMID { bam_umi }
-        ch_versions = ch_versions.mix(VERIFYBAMID.out.versions)
+        // // Calculate cross-sample contamination
+        // VERIFYBAMID { bam_umi }
+        // ch_versions = ch_versions.mix(VERIFYBAMID.out.versions)
     emit:
         qcdone                  =   QC_TO_CDM.out.cdm_done                  // channel: [ val(group), val(meta), file(cdm) ]
         lowcov                  =   LOWCOV.out.lowcov_regions               // channel: [ val(group), val(meta.type), file(lowcov.bed) ]
