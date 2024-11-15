@@ -768,7 +768,9 @@ process POST_ANNOTATION_FILTERS {
             python: \$(python --version 2>&1| sed -e 's/Python //g')
         END_VERSIONS
         """
-    stub:   
+    stub:
+        def prefix  = task.ext.prefix   ?: "${group}"
+        def args    = task.ext.args     ?: ''
         """
         touch ${prefix}.final.filtered.vcf
         cat <<-END_VERSIONS > versions.yml
