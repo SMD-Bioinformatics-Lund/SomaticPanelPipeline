@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 from pysam import VariantFile
 from pprint import pprint
 import cmdvcf
@@ -91,6 +92,10 @@ def check_gnomad_vaf(var,af_cutoff):
         af = gnomad
         if gnomad == '':
             af = 0
+    else:
+        ## could not find gnomad annotations
+        return 1
+    
     if float(af) >= af_cutoff:
         return 0
     else:
