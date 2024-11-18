@@ -752,7 +752,7 @@ process POST_ANNOTATION_FILTERS {
         tuple val(group), val(meta), file(vcf)
         
     output:
-        tuple val(group), val(meta), file("${prefix}.final.filtered.vcf"),    emit: filtered_vcf
+        tuple val(group), val(meta), file("*.final.filtered.vcf"),    emit: filtered_vcf
         path "versions.yml",                                                  emit: versions
 
     when:
@@ -769,7 +769,7 @@ process POST_ANNOTATION_FILTERS {
         END_VERSIONS
         """
     stub:
-        def prefix  = task.ext.prefix   ?: "${group}"
+        def prefix  = task.ext.prefix ?: "${group}"
         def args    = task.ext.args     ?: ''
         """
         touch ${prefix}.final.filtered.vcf
