@@ -50,7 +50,7 @@ workflow SNV_ANNOTATE {
         MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep }
         ch_versions = ch_versions.mix(MARK_GERMLINES.out.versions)
 
-        POST_ANNOTATION_FILTERS { MARK_GERMLINES.out.vcf_germline }
+        POST_ANNOTATION_FILTERS { MARK_GERMLINES.out.vcf_germline.view() }
         ch_versions = ch_versions.mix(POST_ANNOTATION_FILTERS.out.versions)
 
         // BAF for CNVkit //
