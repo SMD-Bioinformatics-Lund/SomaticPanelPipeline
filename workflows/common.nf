@@ -6,7 +6,6 @@ include { CHECK_INPUT                   } from '../subworkflows/local/create_met
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
-include { ID_SNP                        } from '../subworkflows/local/check_idsnp.nf'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
