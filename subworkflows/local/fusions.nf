@@ -11,7 +11,7 @@ workflow FUSIONS {
 	take: 
         fastq                // channel: [mandatory] [ val(group), val(meta), file(r1), file(r2) ]
 		meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
-		bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(bai), file(bqsr) ]
+		bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(bai), file(bqsr), file(dedup_metrics.txt) ]
 
     main:
         ch_versions = Channel.empty()
