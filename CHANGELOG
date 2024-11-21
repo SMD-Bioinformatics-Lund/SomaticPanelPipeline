@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### v3.0.3
+### hotfix QC
+- sentieon qc container set to correct one
+
 ### v3.0.2
 ### QC reorganization
 - Moved QC modules into bam_qc and vcf_qc
