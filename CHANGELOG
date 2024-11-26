@@ -1,5 +1,21 @@
 ## Changelog ##
 
+### v3.0.4
+### Post-Annotation filtering
+- moved coyote import script filtering to pipeline
+- default filtering:
+  - above 5% gnomad
+  - FAIL_PON, FAIL_NVAF, FAIL_LONGDEL
+
+### v3.0.3
+### hotfix QC
+- sentieon qc container set to correct one
+
+### v3.0.2
+### QC reorganization
+- Moved QC modules into bam_qc and vcf_qc
+- Made contamination script more customizable via configs
+
 ### v3.0.1
 ### DSL2-main version
 - coyote-yaml import fixes
