@@ -29,12 +29,19 @@ workflow ADD_TO_DB {
 
         optional = lc.mix(segments,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         optional_json = lc.mix(s_json,gatcov_plot,biomarkers,fusions, cnvkit_png).groupTuple()
-        COYOTE { vcf.join(optional) }
-        COYOTE_YAML { vcf.join(optional_json) }
+
+        if params.coyote_cli {
+            COYOTE_YAML { vcf.join(optional_json) }
+            COYOTE_DONE = COYOTE_YAML.out.coyote_import
+        }
+        else {
+            COYOTE { vcf.join(optional) }
+            COYOTE_DONE = COYOTE.out.coyote_import 
+        }
+        
+        
 
     emit:
-        coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
-        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
-        
+        coyotedone = COYOTE_DONE       // channel: [ val(group), file(coyote) ]        
 }
 
