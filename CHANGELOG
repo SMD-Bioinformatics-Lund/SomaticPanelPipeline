@@ -1,5 +1,12 @@
 ## Changelog ##
 
+### v3.0.4
+### Post-Annotation filtering
+- moved coyote import script filtering to pipeline
+- default filtering:
+  - above 5% gnomad
+  - FAIL_PON, FAIL_NVAF, FAIL_LONGDEL
+
 ### v3.0.3
 ### hotfix QC
 - sentieon qc container set to correct one

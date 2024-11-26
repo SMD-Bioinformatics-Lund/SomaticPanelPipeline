@@ -664,3 +664,39 @@ process BEDTOOLS_INTERSECT {
         """
 }
 
+process POST_ANNOTATION_FILTERS {
+    label "process_single"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(vcf)
+        
+    output:
+        tuple val(group), val(meta), file("*.final.filtered.vcf"),    emit: filtered_vcf
+        path "versions.yml",                                                  emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def prefix  = task.ext.prefix   ?: "${group}"
+        def args    = task.ext.args     ?: ''
+        """
+        post_annotation_filtering.py --vcf $vcf $args > ${prefix}.final.filtered.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+        END_VERSIONS
+        """
+    stub:
+        def prefix  = task.ext.prefix ?: "${group}"
+        def args    = task.ext.args     ?: ''
+        """
+        touch ${prefix}.final.filtered.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+        END_VERSIONS
+        """
+        
+}
