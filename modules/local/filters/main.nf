@@ -624,86 +624,6 @@ process CREATE_SNVPON {
         """
 }
 
-process CONTAMINATION {
-    label "process_single"
-    tag "$group"
-
-    input:
-        tuple val(group), val(meta), file(vcf)
-
-    output:
-        tuple val(group), file("*.txt"), file("*.png"), emit: contamination_result_files
-        tuple val(group), file("*.contaminationpy"),    emit: contamination_cdm
-        path "versions.yml",                            emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args    = task.ext.args     ?: ''
-        def args2   = task.ext.args2    ?: ''
-
-        if(meta.id.size() >= 2) { 
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-
-            """
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args > ${meta.id[tumor_idx]}.value
-            echo "--overwrite --sample-id ${meta.id[tumor_idx]} --run-folder ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[tumor_idx]}.1
-            paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contamination
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args2 > ${meta.id[normal_idx]}.value
-            echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
-            paste -d " " ${meta.id[normal_idx]}.1 ${meta.id[normal_idx]}.value > ${meta.id[normal_idx]}.contaminationpy
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-            END_VERSIONS
-            """
-        }
-        else {
-            """
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} $args > ${meta.id[0]}.value
-            echo "--overwrite --sample-id ${meta.id[0]} --sequencing-run ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
-            paste -d " " ${meta.id[0]}.1 ${meta.id[0]}.value > ${meta.id[0]}.contaminationpy
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-            END_VERSIONS
-            """
-        }
-
-    stub:
-        if(meta.id.size() >= 2) { 
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            """
-            touch test.png
-            touch test.txt
-            touch ${meta.id[tumor_idx]}.contaminationpy
-            touch ${meta.id[normal_idx]}.contaminationpy
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-            END_VERSIONS
-            """
-        }
-        else {
-            """
-            touch test.png
-            touch test.txt
-            touch ${meta.id[0]}.contaminationpy
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-            END_VERSIONS
-            """
-        }
-}
-
 process BEDTOOLS_INTERSECT {
     label "process_single"
     tag "${meta.id}"
@@ -744,3 +664,39 @@ process BEDTOOLS_INTERSECT {
         """
 }
 
+process POST_ANNOTATION_FILTERS {
+    label "process_single"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(vcf)
+        
+    output:
+        tuple val(group), val(meta), file("*.final.filtered.vcf"),    emit: filtered_vcf
+        path "versions.yml",                                                  emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def prefix  = task.ext.prefix   ?: "${group}"
+        def args    = task.ext.args     ?: ''
+        """
+        post_annotation_filtering.py --vcf $vcf $args > ${prefix}.final.filtered.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+        END_VERSIONS
+        """
+    stub:
+        def prefix  = task.ext.prefix ?: "${group}"
+        def args    = task.ext.args     ?: ''
+        """
+        touch ${prefix}.final.filtered.vcf
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+        END_VERSIONS
+        """
+        
+}

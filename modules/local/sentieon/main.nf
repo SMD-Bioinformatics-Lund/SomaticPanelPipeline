@@ -96,8 +96,8 @@ process MARKDUP {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),                                emit: bam_bqsr
-        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"), file("*dedup_metrics.txt"),    emit: bam_qc
+        tuple val(group), val(meta), file("*dedup_metrics.txt"),                                                emit: dedup_metrics
+        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),                                emit: bam_qc
         path "versions.yml",                                                                                    emit: versions
 
     when:
@@ -199,9 +199,8 @@ process SENTIEON_QC {
         tuple val(group), val(meta), file(bam), file(bai), file(dedup)
 
     output:
-        tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),   emit: dedup_bam
+        tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),   emit: dedup_bam_is_metrics
         tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_cdm
-        tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_melt
         path "*.txt",                                                                  emit: txt
         path "versions.yml",                                                           emit: versions
 

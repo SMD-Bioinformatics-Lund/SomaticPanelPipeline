@@ -1,6 +1,5 @@
 #!/usr/bin/env nextflow
 
-
 nextflow.enable.dsl = 2
 
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
@@ -11,7 +10,8 @@ include { SNV_CALLING                   } from '../subworkflows/local/snv_callin
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
-include { QC                            } from '../subworkflows/local/qc'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
+include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
@@ -53,13 +53,14 @@ workflow SPP_COMMON {
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    QC ( 
-        ch_mapped.qc_out, 
-        ch_mapped.bam_lowcov
+    BAM_QC (
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
+        ch_mapped.dedup_metrics
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
-
+      
     // Create PGx CSV file
     PHARMACOGENOMICS (
         ch_mapped.bam_umi.groupTuple(),
@@ -71,7 +72,8 @@ workflow SPP_COMMON {
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
-        ch_qc.melt_qc
+        ch_qc.melt_qc,
+        ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
@@ -83,6 +85,10 @@ workflow SPP_COMMON {
     )
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
+
+    VCF_QC (
+        ch_vcf_anno.vep_vcf,
+    )
 
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
@@ -129,7 +135,8 @@ workflow SPP_COMMON {
         ch_cnvcalled.gens,
         ch_cnvcalled.gatcov_plot,
         ch_fusion.fusions,
-        ch_bio.biomarkers
+        ch_bio.biomarkers,
+        ch_cnvcalled.cnvkit_plot
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
