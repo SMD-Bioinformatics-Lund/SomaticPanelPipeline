@@ -165,7 +165,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
     stub:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${prefix}_${vc}.merged.vcf
+        echo "-db $params.loqusdb_export --query_vcf $vcf" > ${group}.cnv.artefacts.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
