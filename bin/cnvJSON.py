@@ -150,6 +150,10 @@ def get_varinfo(info,gt):
         varinfo["PR"] = gt["PR"]
     if "SR" in gt:
         varinfo["SR"] = gt["SR"]
+    if "ACOUNT" in info:
+        varinfo["ACOUNT"] = int(info["ACOUNT"])
+    if "AFRQ" in info:
+        varinfo["AFRQ"] = int(info["AFRQ"])
     return varinfo
 
 def gt_field(gt_keys,gt_values):
