@@ -153,7 +153,7 @@ def get_varinfo(info,gt):
     if "ACOUNT" in info:
         varinfo["ACOUNT"] = int(info["ACOUNT"])
     if "AFRQ" in info:
-        varinfo["AFRQ"] = int(info["AFRQ"])
+        varinfo["AFRQ"] = float(info["AFRQ"])
     return varinfo
 
 def gt_field(gt_keys,gt_values):
