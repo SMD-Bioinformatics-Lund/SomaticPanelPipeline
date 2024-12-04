@@ -144,6 +144,8 @@ def get_varinfo(info,gt):
         varinfo["callers"] = info["set"]
     if "FOLD_CHANGE_LOG" in info:
         varinfo["ratio"] = float(info["FOLD_CHANGE_LOG"])
+    elif "gatkCN" in info:
+        varinfo["ratio"] = float(int(info["gatkCN"])/2)
     if "SVLEN" in info:
         varinfo["size"] = abs(int(info["SVLEN"]))
     if "PR" in gt:
