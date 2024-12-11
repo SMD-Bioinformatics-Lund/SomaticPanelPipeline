@@ -145,7 +145,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
         
     output:
         tuple val(group), val(meta), file("${meta.id}.cnv.artefacts.vcf"),  emit: artefacts
-        path "versions.yml",                                              emit: versions
+        path "versions.yml",                                                emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -154,7 +154,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
         def args = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}" 
         """
-        svdb --query --bnd_distance 25000 --overlap 0.7 --in_occ Obs --out_occ ACOUNT --in_frq Frq --out_frq AFRQ --db $params.loqusdb_export --query_vcf $vcf > ${meta.id}.cnv.artefacts.vcf
+        svdb --query $args --query_vcf $vcf > ${meta.id}.cnv.artefacts.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
