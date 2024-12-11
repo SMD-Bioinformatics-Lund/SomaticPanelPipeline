@@ -135,3 +135,42 @@ process SVDB_MERGE_SINGLES {
         """
 
 }
+
+process SVDB_ANNOTATE_ARTEFACTS {
+    label "process_low"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(vcf)
+        
+    output:
+        tuple val(group), val(meta), file("${meta.id}.cnv.artefacts.vcf"),  emit: artefacts
+        path "versions.yml",                                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}" 
+        """
+        svdb --query $args --query_vcf $vcf > ${meta.id}.cnv.artefacts.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
+        """
+        echo "-db $params.loqusdb_export --query_vcf $vcf" > ${meta.id}.cnv.artefacts.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
+        """
+
+}
