@@ -31,7 +31,7 @@ workflow CNV_ANNOTATE {
 		MERGE_JSON ( COYOTE_SEGMENTS_JSON.out.json_panel.groupTuple() )
 		COYOTE_JSON = MERGE_JSON.out.merged
 
-		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions,SVDB_ANNOTATE_ARTEFACTS.out.versions)
+		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions)
 
 	emit:
 		segments 	= 	MERGE_SEGMENTS.out.merged	// channel: [ val(group), file(cn-segments.panel.merged.bed) ]
