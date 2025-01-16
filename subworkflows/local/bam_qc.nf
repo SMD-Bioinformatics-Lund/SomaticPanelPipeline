@@ -8,6 +8,7 @@ include { VERIFYBAMID          } from '../../modules/local/verifybamid/main'
 include { ALLELE_CALL          } from '../../modules/local/idSnp/main'
 include { SNP_CHECK            } from '../../modules/local/idSnp/main'
 include { PAIRGEN_CDM          } from '../../modules/local/idSnp/main'
+include { LOWCOV_D4            } from '../../modules/local/qc/main'
 
 workflow BAM_QC {
     take:        
@@ -27,6 +28,9 @@ workflow BAM_QC {
 
         LOWCOV ( bam_dedup )
         ch_versions = ch_versions.mix(LOWCOV.out.versions)
+
+        LOWCOV_D4 ( bam_dedup )
+        ch_versions = ch_versions.mix(LOWCOV_D4.out.versions)
 
         // Check genotypes of ID-SNPs
         ALLELE_CALL (bam_dedup)
