@@ -205,7 +205,7 @@ process LOWCOV_D4 {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta.type), file(".cov.json"),    emit: lowcov_regions
+        tuple val(group), val(meta.type), file("*.cov.json"),    emit: lowcov_regions
         path "versions.yml",                                    emit: versions
 
     when:
@@ -221,7 +221,7 @@ process LOWCOV_D4 {
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             python: \$(python --version 2>&1| sed -e 's/Python //g')
-            d4tools: \$(d4tools -h 2>&1 | grep "^D4" | cut -f 2 -d ":" | sed 's/)//' | sed 's/ //')
+            d4tools: \$(echo \$( d4tools 2>&1 | head -1 ) | sed "s/.*version: //" | sed "s/)//" )
             bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
         END_VERSIONS
         """
@@ -234,7 +234,7 @@ process LOWCOV_D4 {
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             python: \$(python --version 2>&1| sed -e 's/Python //g')
-            d4tools: \$(d4tools -h 2>&1 | grep "^D4" | cut -f 2 -d ":" | sed 's/)//' | sed 's/ //')
+            d4tools: \$(echo \$( d4tools 2>&1 | head -1 ) | sed "s/.*version: //" | sed "s/)//" )
             bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
         END_VERSIONS
         """
