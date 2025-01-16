@@ -216,7 +216,7 @@ process LOWCOV_D4 {
         def args2   = task.ext.args2    ?: ""
         def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
-        coyote_d4_cov.py -b $bam $args $args2 -o ${prefix}.cov.json
+        coyote_d4_cov.py -b $bam $args $args2 -o ${prefix}.cov.json -s ${prefix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
