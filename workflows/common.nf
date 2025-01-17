@@ -130,6 +130,7 @@ workflow SPP_COMMON {
     ADD_TO_DB (
         ch_vcf_anno.finished_vcf,
         ch_qc.lowcov.filter { item -> item[1] == 'T' },
+        ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
         ch_cnv.segments,
         ch_cnv.s_json,
         ch_cnvcalled.gens,
