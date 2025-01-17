@@ -7,7 +7,6 @@ workflow ADD_TO_DB {
     take: 
         vcf             // channel: [mandatory] [ val(group), val(meta), file(vcf) ]
         lowcov          // channel: [mandatory] [ val(group), val(meta.type), file(lowcov) ]
-        cov             // channel: [optional] [ val(group), val(meta.type), file(covjson) ]
         segments        // channel: [optional] [ val(group), file(segments) ]
         s_json          // channel: [optional] [ val(group), file(segments) ]
         gens            // channel: [optional] [ val(group), val(meta), file(gens) ]
@@ -29,7 +28,7 @@ workflow ADD_TO_DB {
         }.set { cnvkit_png }
 
         optional = lc.mix(segments,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
-        optional_json = lc.mix(s_json,gatcov_plot,biomarkers,fusions, cnvkit_png,cov).groupTuple()
+        optional_json = lc.mix(s_json,gatcov_plot,biomarkers,fusions, cnvkit_png).groupTuple()
         COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }
 
