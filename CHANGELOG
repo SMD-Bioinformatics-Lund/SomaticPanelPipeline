@@ -1,5 +1,10 @@
 ## Changelog ##
 
+### v3.0.5
+### CNV artefact annotation
+- added a SVDB query module
+- CNV json now includes loqusdb known variants if annotation is included in config-profile
+
 ### v3.0.4
 ### Post-Annotation filtering
 - moved coyote import script filtering to pipeline
