@@ -47,7 +47,7 @@ workflow BAM_QC {
     emit:
         qcdone                  =   QC_TO_CDM.out.cdm_done                  // channel: [ val(group), val(meta), file(cdm) ]
         lowcov                  =   LOWCOV.out.lowcov_regions               // channel: [ val(group), val(meta.type), file(lowcov.bed) ]
-        lowcov_d4               =   LOWCOV_D4.coyote_cov_json               // channel: [ val(group), val(meta.type), file(cov.json) ]
+        lowcov_d4               =   LOWCOV_D4.out.coyote_cov_json           // channel: [ val(group), val(meta.type), file(cov.json) ]
         melt_qc                 =   QC_VALUES.out.qc_melt_val               // channel: [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
         versions                =   ch_versions                             // channel: [ file(versions) ]
         dedup_bam_is_metrics    =   SENTIEON_QC.out.dedup_bam_is_metrics    // channel: [ val(group), val(meta), file(is_metrics.txt) ] 
