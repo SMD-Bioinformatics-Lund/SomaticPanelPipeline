@@ -205,7 +205,8 @@ process LOWCOV_D4 {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta.type), file("*.cov.json"),    emit: lowcov_regions
+        tuple val(group), val(meta.type), file("*.cov.json"),   emit: lowcov_regions
+        tuple val(group), val(meta.type), file("*.d4"),         emit: d4_coverage
         path "versions.yml",                                    emit: versions
 
     when:
