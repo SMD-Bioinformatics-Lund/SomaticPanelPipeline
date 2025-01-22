@@ -8,6 +8,7 @@ include { VERIFYBAMID          } from '../../modules/local/verifybamid/main'
 include { ALLELE_CALL          } from '../../modules/local/idSnp/main'
 include { SNP_CHECK            } from '../../modules/local/idSnp/main'
 include { PAIRGEN_CDM          } from '../../modules/local/idSnp/main'
+include { LOWCOV_D4            } from '../../modules/local/qc/main'
 
 workflow BAM_QC {
     take:        
@@ -25,8 +26,16 @@ workflow BAM_QC {
 
         QC_TO_CDM ( SENTIEON_QC.out.qc_cdm )
 
-        LOWCOV ( bam_dedup )
-        ch_versions = ch_versions.mix(LOWCOV.out.versions)
+        if (params.d4) {
+            LOWCOV_D4 ( bam_dedup )
+            cov = LOWCOV_D4.out.coyote_cov_json
+            ch_versions = ch_versions.mix(LOWCOV_D4.out.versions)
+        }
+        else {
+            LOWCOV ( bam_dedup )
+            cov = LOWCOV.out.lowcov_regions
+            ch_versions = ch_versions.mix(LOWCOV.out.versions)
+        }
 
         // Check genotypes of ID-SNPs
         ALLELE_CALL (bam_dedup)
@@ -42,7 +51,7 @@ workflow BAM_QC {
         // ch_versions = ch_versions.mix(VERIFYBAMID.out.versions)
     emit:
         qcdone                  =   QC_TO_CDM.out.cdm_done                  // channel: [ val(group), val(meta), file(cdm) ]
-        lowcov                  =   LOWCOV.out.lowcov_regions               // channel: [ val(group), val(meta.type), file(lowcov.bed) ]
+        lowcov                  =   cov                                     // channel: [ val(group), val(meta.type), file(lowcov.bed/cov.json) ]
         melt_qc                 =   QC_VALUES.out.qc_melt_val               // channel: [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
         versions                =   ch_versions                             // channel: [ file(versions) ]
         dedup_bam_is_metrics    =   SENTIEON_QC.out.dedup_bam_is_metrics    // channel: [ val(group), val(meta), file(is_metrics.txt) ] 

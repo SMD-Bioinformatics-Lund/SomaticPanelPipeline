@@ -196,3 +196,46 @@ process CONTAMINATION {
             """
         }
 }
+
+process LOWCOV_D4 {
+    label 'process_medium'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bai)
+
+    output:
+        tuple val(group), val(meta.type), file("*.cov.json"),   emit: coyote_cov_json
+        tuple val(group), val(meta.type), file("*.d4"),         emit: d4_coverage
+        path "versions.yml",                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args    = task.ext.args     ?: ""
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
+        """
+        coyote_d4_cov.py -b $bam $args -o ${prefix}.cov.json -s ${prefix}
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+            d4tools: \$(echo \$( d4tools 2>&1 | head -1 ) | sed "s/.*version: //" | sed "s/)//" )
+            bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
+        """
+        touch ${prefix}.cov.json
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1| sed -e 's/Python //g')
+            d4tools: \$(echo \$( d4tools 2>&1 | head -1 ) | sed "s/.*version: //" | sed "s/)//" )
+            bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
+        END_VERSIONS
+        """
+}
