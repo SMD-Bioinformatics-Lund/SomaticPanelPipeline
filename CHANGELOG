@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### 3.0.6
+### Coverage via D4
+- added a new python wrapper with d4tools to generate cov data for coyote3
+
 ### v3.0.5
 ### CNV artefact annotation
 - added a SVDB query module
