@@ -1,5 +1,9 @@
 ## Changelog ##
 
+### v3.0.7
+### CNV artefact annotation
+- bugfix: cnv annotation json fix for manta variants (required for coyote3)
+
 ### 3.0.6
 ### Coverage via D4
 - added a new python wrapper with d4tools to generate cov data for coyote3
