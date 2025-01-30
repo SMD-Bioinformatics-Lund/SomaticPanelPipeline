@@ -1,5 +1,10 @@
 ## Changelog ##
 
+## v3.0.8
+## Gens Load Fix
+- added --case-id $group to the gens load command
+- if the sample is paired 'p' is appended to $group
+
 ### v3.0.7
 ### CNV artefact annotation
 - bugfix: cnv annotation json fix for manta variants (required for coyote3)
