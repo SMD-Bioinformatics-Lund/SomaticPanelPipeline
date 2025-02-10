@@ -264,11 +264,8 @@ process MERGE_GENS {
     
     script:
         process_group = group
-        tumor_idx = 0
-        tumor_idx_lowcov = 0
-        if( meta.id.size() >= 2 ) {
+        if ( meta.paired ) {
             process_group = group + 'p'
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         }
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
@@ -314,17 +311,15 @@ process MERGE_GENS {
 
     stub:
         process_group = group
-        tumor_idx = 0
-        tumor_idx_lowcov = 0
-        if( meta.id.size() >= 2 ) {
+        if ( meta.paired ) {
             process_group = group + 'p'
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         }
+        def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens
         touch ${meta.id}.merged.sorted.cov.bed.gz 
         touch ${meta.id}.merged.sorted.baf.bed.gz 
-        touch ${meta.id}.gens
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
