@@ -1,5 +1,10 @@
 ## Changelog ##
 
+## v3.0.10
+## HotFix D4 Tools & Gens Single Sample ID
+- Fixed the D4 Tools container issue by adding '--contain' to containerOptions
+- Fixed appending 'p' for only paired samples and not for single samples in the gens load command
+
 ## v3.0.9
 ## Variant Filtration
 - variants that are tagged as failed and are filtered by post_annotation_filtering.py will be kept if the user has provided the rules in the nectflow config as params.override_filter_terms 
