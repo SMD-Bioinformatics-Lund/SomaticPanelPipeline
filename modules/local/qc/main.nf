@@ -230,6 +230,7 @@ process LOWCOV_D4 {
         def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
         touch ${prefix}.cov.json
+        touch ${prefix}.d4
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

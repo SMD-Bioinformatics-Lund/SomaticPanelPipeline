@@ -1,5 +1,9 @@
 ## Changelog ##
 
+## v3.0.11
+- patch to fix solid missing lowcov in old coyote
+- when statement for d4-cov
+
 ## v3.0.10
 ## HotFix D4 Tools & Gens Single Sample ID
 - Fixed the D4 Tools container issue by adding '--contain' to containerOptions
