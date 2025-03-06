@@ -120,8 +120,8 @@ process SNP_CHECK {
         if(meta.id.size() == 2) {
             """ 
             touch s${tumor_id}_c${normal_id}.csv
-            touch ${tumor_id}.idsnp
-            touch ${normal_id}.idsnp
+            touch ${tumor_id}.T.idsnp
+            touch ${normal_id}.N.idsnp
 
 
             cat <<-END_VERSIONS > versions.yml
@@ -134,7 +134,7 @@ process SNP_CHECK {
             """
             echo "Not applicable" > s${tumor_id}.csv
             echo  '{ "is_paired_sample" : false }' > ${tumor_id}.json
-            touch ${tumor_id}.idsnp
+            touch ${tumor_id}.T.idsnp
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
