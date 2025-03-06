@@ -189,14 +189,15 @@ process PAIRGEN_CDM {
     
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
-        
         if(meta.id.size() == 2) {
             tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             normal_id   = meta.id[normal_idx]
             tumor_id    = meta.id[tumor_idx]
-	        normaljson  = jsons[normal_idx]
-	        tumorjson    = jsons[tumor_idx]
+            tumor_json_idx   = jsons.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_json_idx   = jsons.findIndexOf{ it == 'normal' || it == 'N' }
+	        normaljson  = jsons[normal_json_idx]
+	        tumorjson    = jsons[tumor_json_idx]
              """
              echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
              
