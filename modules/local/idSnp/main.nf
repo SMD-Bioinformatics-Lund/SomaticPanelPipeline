@@ -90,8 +90,8 @@ process SNP_CHECK {
             echo '{"partner" : "${tumor_id}","sequencing_run" : "${tumor_seq_run}","analysis_date" : "'\${today_date}'" }' > ${normal_id}_partner_info.json
             echo '{"partner" : "${normal_id}","sequencing_run" : "${normal_seq_run}","analysis_date" : "'\${today_date}'" }' > ${tumor_id}_partner_info.json
             
-            combinejsons.py  ${tumor_id}.json ${tumGTjson} --partner_run_json_file  ${tumor_id}_partner_info.json ${tumor_id}.idsnp
-            combinejsons.py  ${normal_id}.json ${norGTjson} --partner_run_json_file ${normal_id}_partner_info.json ${normal_id}.idsnp
+            combinejsons.py  ${tumor_id}.json ${tumGTjson} --partner_run_json_file  ${tumor_id}_partner_info.json ${tumor_id}.T.idsnp
+            combinejsons.py  ${normal_id}.json ${norGTjson} --partner_run_json_file ${normal_id}_partner_info.json ${normal_id}.N.idsnp
         
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -102,7 +102,7 @@ process SNP_CHECK {
             """
             echo "Not applicable" > s${tumor_id}.csv
             echo  '{ "is_paired_sample" : false}' > ${tumor_id}.json
-            combinejsons.py  ${tumor_id}.json ${tumGTjson} ${tumor_id}.idsnp
+            combinejsons.py  ${tumor_id}.json ${tumGTjson} ${tumor_id}.T.idsnp
             
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -165,8 +165,10 @@ process PAIRGEN_CDM {
         normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
         normal_id   = meta.id[normal_idx]
         tumor_id    = meta.id[tumor_idx]
-	    normaljson  = jsons[normal_idx]
-	    tumorjson    = jsons[tumor_idx]
+        tumor_json_idx   = jsons.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_json_idx   = jsons.findIndexOf{ it == 'normal' || it == 'N' }
+	    normaljson  = jsons[normal_json_idx]
+	    tumorjson    = jsons[tumor_json_idx]
 
         """
         echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
