@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.12
+- ID-SNPs pairs missmatching fixed. Channel did not keep track of T vs N json
+
 ## v3.0.11
 - patch to fix solid missing lowcov in old coyote
 - when statement for d4-cov
