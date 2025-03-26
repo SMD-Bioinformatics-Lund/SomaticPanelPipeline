@@ -46,6 +46,7 @@ workflow SPP_CREATE_SNVPON {
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
+        Channel.of(tuple(1,2)),
         Channel.of(tuple(1,2))
     )
     .set { ch_vcf }
