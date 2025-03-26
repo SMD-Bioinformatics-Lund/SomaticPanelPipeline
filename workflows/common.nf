@@ -19,6 +19,9 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoft
 
 csv = file(params.csv)
 
+params.paired = csv.countLines() > 2 ? true : false
+
+
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
     .fromPath("${params.regions_bed}")
@@ -33,12 +36,13 @@ Channel
     .set{ gatk_ref}
 
 
+
 workflow SPP_COMMON {
 
     ch_versions = Channel.empty()
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
-    CHECK_INPUT ( Channel.fromPath(csv) )
+    CHECK_INPUT ( Channel.fromPath(csv), params.paired )
 
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
@@ -130,6 +134,7 @@ workflow SPP_COMMON {
     ADD_TO_DB (
         ch_vcf_anno.finished_vcf,
         ch_qc.lowcov.filter { item -> item[1] == 'T' },
+        ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
         ch_cnv.segments,
         ch_cnv.s_json,
         ch_cnvcalled.gens,

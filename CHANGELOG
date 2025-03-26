@@ -1,5 +1,43 @@
 ## Changelog ##
 
+## 3.0.12
+- ID-SNPs pairs missmatching fixed. Channel did not keep track of T vs N json
+
+## v3.0.11
+- patch to fix solid missing lowcov in old coyote
+- when statement for d4-cov
+
+## v3.0.10
+## HotFix D4 Tools & Gens Single Sample ID
+- Fixed the D4 Tools container issue by adding '--contain' to containerOptions
+- Fixed appending 'p' for only paired samples and not for single samples in the gens load command
+
+## v3.0.9
+## Variant Filtration
+- variants that are tagged as failed and are filtered by post_annotation_filtering.py will be kept if the user has provided the rules in the nectflow config as params.override_filter_terms 
+- Example way to addto the config file, Each Key=Value should be separated by a semicolon and the values within each key should be separated by a comma.
+  ```
+    params.override_filter_terms = "CLIN_SIG=likely_pathogenic,pathogenic;CANONICAL=Yes,Y"
+  ```
+
+## v3.0.8
+## Gens Load Fix
+- added --case-id $group to the gens load command
+- if the sample is paired 'p' is appended to $group
+
+### v3.0.7
+### CNV artefact annotation
+- bugfix: cnv annotation json fix for manta variants (required for coyote3)
+
+### 3.0.6
+### Coverage via D4
+- added a new python wrapper with d4tools to generate cov data for coyote3
+
+### v3.0.5
+### CNV artefact annotation
+- added a SVDB query module
+- CNV json now includes loqusdb known variants if annotation is included in config-profile
+
 ### v3.0.4
 ### Post-Annotation filtering
 - moved coyote import script filtering to pipeline

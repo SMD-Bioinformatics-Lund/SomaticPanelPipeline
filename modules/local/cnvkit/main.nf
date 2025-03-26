@@ -263,6 +263,10 @@ process MERGE_GENS {
         task.ext.when == null || task.ext.when
     
     script:
+        process_group = group
+        if ( meta.paired ) {
+            process_group = group + 'p'
+        }
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
 
@@ -290,11 +294,11 @@ process MERGE_GENS {
             bedtools sort -i !{meta.id}.merged.baf.bed > !{meta.id}.merged.sorted.baf.bed
             bgzip !{meta.id}.merged.sorted.baf.bed
             tabix !{meta.id}.merged.sorted.baf.bed.gz
-            echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
+            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
         else
             tabix !{meta.id}.full.baf.bed.gz
             tabix !{meta.id}.full.cov.bed.gz
-            echo "gens load sample --sample-id !{meta.id} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
+            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
         fi
 
         cat <<-END_VERSIONS > versions.yml
@@ -306,11 +310,16 @@ process MERGE_GENS {
         '''
 
     stub:
+        process_group = group
+        if ( meta.paired ) {
+            process_group = group + 'p'
+        }
+        def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens
         touch ${meta.id}.merged.sorted.cov.bed.gz 
         touch ${meta.id}.merged.sorted.baf.bed.gz 
-        touch ${meta.id}.gens
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

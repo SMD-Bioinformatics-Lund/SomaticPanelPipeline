@@ -144,12 +144,23 @@ def get_varinfo(info,gt):
         varinfo["callers"] = info["set"]
     if "FOLD_CHANGE_LOG" in info:
         varinfo["ratio"] = float(info["FOLD_CHANGE_LOG"])
+    elif "gatkCN" in info:
+        varinfo["ratio"] = float(int(info["gatkCN"])/2)
+    elif "SVTYPE" in info:
+        if info["SVTYPE"] == "DEL":
+            varinfo["ratio"] = "DEL"
+        elif info["SVTYPE"] in ["DUP", "INS"]:
+            varinfo["ratio"] = "AMP"
     if "SVLEN" in info:
         varinfo["size"] = abs(int(info["SVLEN"]))
     if "PR" in gt:
         varinfo["PR"] = gt["PR"]
     if "SR" in gt:
         varinfo["SR"] = gt["SR"]
+    if "ACOUNT" in info:
+        varinfo["ACOUNT"] = int(info["ACOUNT"])
+    if "AFRQ" in info:
+        varinfo["AFRQ"] = float(info["AFRQ"])
     return varinfo
 
 def gt_field(gt_keys,gt_values):
