@@ -460,7 +460,7 @@ process POSTPROCESS {
 
     shell:
         '''
-        THEANO_FLAGS="base_compiledir=/fs1/resources/theano"
+        export THEANO_FLAGS="base_compiledir=."
         for model in !{tar}; do
         tar -xvf $model
         done
