@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.14
+- theano base_dir now correctly set for GATK:PREPROCESS
+
 ## 3.0.13
 - added --no-home run_options for singularity. Was causing issues with container when run as worker
 
