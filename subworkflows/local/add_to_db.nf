@@ -36,6 +36,7 @@ workflow ADD_TO_DB {
         
 
     emit:
-        coyotedone = COYOTE_DONE       // channel: [ val(group), file(coyote) ]        
+        coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
+        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]     
 }
 
