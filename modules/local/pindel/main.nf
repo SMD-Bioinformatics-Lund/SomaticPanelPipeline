@@ -9,7 +9,7 @@ process PINDEL_CONFIG {
         tuple val(group), val(meta), file("*.pindel_config"),   emit: pindel_config
 
     when:
-        (task.ext.when == null || task.ext.when) && !Boolean.valueOf(meta.ffpe instanceof List ? meta.ffpe[0] : meta.ffpe)
+        (task.ext.when == null || task.ext.when) && !meta.ffpe.contains('true')
 
     script:
         def prefix	= task.ext.prefix	?:  "${group}" 
