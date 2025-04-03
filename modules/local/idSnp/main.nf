@@ -154,7 +154,7 @@ process PAIRGEN_CDM {
         tuple val(group), val(id), val(run), file(json)
 
     output:
-        tuple val(group), val(meta), file("*.pairgen"), emit: isnsp_cdm_done
+        tuple val(group), file("${id}.pairgen"), emit: isnsp_cdm_done
 
     when:
         task.ext.when == null || task.ext.when
@@ -164,7 +164,6 @@ process PAIRGEN_CDM {
         echo "--overwrite --sample-id ${id} --sequencing-run ${run} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${json} " > ${id}.pairgen
         """
 
-    
     stub:
         """
         echo "--overwrite --sample-id ${id} --sequencing-run ${run} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${json} " > ${id}.pairgen
