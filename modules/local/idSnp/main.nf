@@ -150,7 +150,7 @@ process SNP_CHECK {
 
 process PAIRGEN_CDM {
     label 'process_single'
-    tag "${meta.id}"
+    tag "${id}"
 
     input:
         tuple val(group), val(id), val(run), file(json)
