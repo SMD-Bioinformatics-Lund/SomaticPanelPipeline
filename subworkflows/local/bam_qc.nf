@@ -39,7 +39,7 @@ workflow BAM_QC {
         SNP_CHECK(ALLELE_CALL.out.sample_id_genotypes.groupTuple())
         ch_versions = ch_versions.mix(SNP_CHECK.out.versions)
 
-        PAIRGEN_CDM (SNP_CHECK.out.idsnp_checked)
+        PAIRGEN_CDM (SNP_CHECK.out.idsnp_tumor.mix(SNP_CHECK.out.dsnp_normal))
 
         // // Calculate cross-sample contamination
         // VERIFYBAMID { bam_umi }
