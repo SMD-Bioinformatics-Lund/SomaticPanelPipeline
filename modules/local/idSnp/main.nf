@@ -51,7 +51,7 @@ process SNP_CHECK {
 
     output:
         tuple val(group), val(tumor_id), val(tumor_seq_run), file("${tumor_id}.T.idsnp"),             emit: idsnp_tumor
-        tuple val(group), val(normal_id), val(normal_seq_run), file("${tumor_id}.N.idsnp"),           emit: idsnp_normal, optional: true
+        tuple val(group), val(normal_id), val(normal_seq_run), file("${normal_id}.N.idsnp"),           emit: idsnp_normal, optional: true
         path "versions.yml", optional: true,                                                          emit: versions
 
     when:
