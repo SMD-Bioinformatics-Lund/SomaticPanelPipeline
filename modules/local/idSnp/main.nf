@@ -50,8 +50,9 @@ process SNP_CHECK {
         tuple val(group), val(meta), file(vcfs), file(genotypes)
 
     output:
-        tuple val(group), val(meta), file("*.idsnp"),           emit: idsnp_checked
-        path "versions.yml", optional: true,                    emit: versions
+        tuple val(group), val(tumor_id), val(tumor_seq_run), file("${tumor_id}.T.idsnp"),             emit: idsnp_tumor
+        tuple val(group), val(normal_id), val(normal_seq_run), file("${normal_id}.N.idsnp"),           emit: idsnp_normal, optional: true
+        path "versions.yml", optional: true,                                                          emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -65,7 +66,7 @@ process SNP_CHECK {
         tumor_id                    = meta.id[tumor_idx]
                     
         tumor_seq_run               = meta.sequencing_run[tumor_idx]
-        normal_seq_run               = meta.sequencing_run[normal_idx]
+        normal_seq_run              = meta.sequencing_run[normal_idx]
 
 	    normalvcf                   = vcfs[normal_idx]
 	    tumorvcf                    = vcfs[tumor_idx]
@@ -82,6 +83,7 @@ process SNP_CHECK {
                 --control $normal_id \\
                 $args
 
+            ## Why is the perl-script not doing all of the below code?
             cp s${tumor_id}_c${normal_id}.json  ${tumor_id}.json
             cp s${tumor_id}_c${normal_id}.json  ${normal_id}.json
             rm s${tumor_id}_c${normal_id}.json
@@ -112,10 +114,12 @@ process SNP_CHECK {
         }
 
     stub:
-        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal_id   = meta.id[normal_idx]
-        tumor_id    = meta.id[tumor_idx]
+        tumor_idx                   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_idx                  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+        normal_id                   = meta.id[normal_idx]
+        tumor_id                    = meta.id[tumor_idx]
+        tumor_seq_run               = meta.sequencing_run[tumor_idx]
+        normal_seq_run              = meta.sequencing_run[normal_idx]
         
         if(meta.id.size() == 2) {
             """ 
@@ -146,73 +150,26 @@ process SNP_CHECK {
 
 process PAIRGEN_CDM {
     label 'process_single'
-    tag "${meta.id}"
+    tag "${id}"
 
     input:
-        tuple val(group), val(meta), file(jsons)
+        tuple val(group), val(id), val(run), file(json)
 
     output:
-        tuple val(group), val(meta), file("*.pairgen"), emit: isnsp_cdm_done
+        tuple val(group), file("${id}.pairgen"), emit: isnsp_cdm_done
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
-      def args    = task.ext.args  ?: ""
-      if(meta.id.size() == 2) {
-        
-        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal_id   = meta.id[normal_idx]
-        tumor_id    = meta.id[tumor_idx]
-        tumor_json_idx   = jsons.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_json_idx   = jsons.findIndexOf{ it == 'normal' || it == 'N' }
-	    normaljson  = jsons[normal_json_idx]
-	    tumorjson    = jsons[tumor_json_idx]
-
         """
-        echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
-
-             
-        echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${normaljson} "> ${meta.id[normal_idx]}.pairgen
+        echo "--overwrite --sample-id ${id} --sequencing-run ${run} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${json} " > ${id}.pairgen
         """
 
-      } else {
-        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        tumor_id    = meta.id[tumor_idx]
-	    tumorjson    = jsons[tumor_idx]
-
-        """
-        echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
-        """
-      }
-    
     stub:
-        def prefix = task.ext.prefix ?: "${meta.id}"
-        if(meta.id.size() == 2) {
-            tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            normal_id   = meta.id[normal_idx]
-            tumor_id    = meta.id[tumor_idx]
-            tumor_json_idx   = jsons.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_json_idx   = jsons.findIndexOf{ it == 'normal' || it == 'N' }
-	        normaljson  = jsons[normal_json_idx]
-	        tumorjson    = jsons[tumor_json_idx]
-            """
-            echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
-            
-            echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${normaljson} "> ${meta.id[normal_idx]}.pairgen
-            """
-        } else {
-            tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            tumor_id    = meta.id[tumor_idx]
-	        tumorjson    = jsons[tumor_idx]
-
-            """
-            echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${tumorjson} " > ${meta.id[tumor_idx]}.pairgen
-            """
-        }
-
+        """
+        echo "--overwrite --sample-id ${id} --sequencing-run ${run} --assay ${params.cdm} --id-snp ${params.outdir}/${params.subdir}/QC/${json} " > ${id}.pairgen
+        """
 }
 
 process PROVIDER {

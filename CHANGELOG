@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.15
+- CDM for pairdness stripped of logic, skipped meta channel for SNP_CHECK. optional outputs for normals
+
 ## 3.0.14
 - theano base_dir now correctly set for GATK:PREPROCESS
 
