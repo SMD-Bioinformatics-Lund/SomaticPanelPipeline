@@ -114,10 +114,12 @@ process SNP_CHECK {
         }
 
     stub:
-        tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal_id   = meta.id[normal_idx]
-        tumor_id    = meta.id[tumor_idx]
+        tumor_idx                   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+        normal_idx                  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+        normal_id                   = meta.id[normal_idx]
+        tumor_id                    = meta.id[tumor_idx]
+        tumor_seq_run               = meta.sequencing_run[tumor_idx]
+        normal_seq_run              = meta.sequencing_run[normal_idx]
         
         if(meta.id.size() == 2) {
             """ 
