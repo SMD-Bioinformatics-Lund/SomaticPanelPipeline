@@ -9,6 +9,7 @@ nextflow.enable.dsl = 2
 include { SPP_CREATE_SNVPON        } from './workflows/pon_solid.nf'
 include { SPP_COMMON               } from './workflows/common.nf'
 include { SPP_CREATE_CNVPON        } from './workflows/create_cnv_pons.nf'
+include { SPP_QC                   } from './workflows/qc_flow.nf'
 
 println(params.genome_file)
 csv = file(params.csv)
@@ -29,4 +30,6 @@ workflow CNVPON {
     SPP_CREATE_CNVPON()
 }
 
-
+workflow QC {
+    SPP_QC()
+}

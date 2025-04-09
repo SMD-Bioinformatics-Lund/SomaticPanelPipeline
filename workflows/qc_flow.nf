@@ -1,55 +1,20 @@
 #!/usr/bin/env nextflow
 
-
 nextflow.enable.dsl = 2
 
-
+include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
+include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
-include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
-include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
-include { QC                            } from '../subworkflows/local/qc'
-include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
+include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
+include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
-println(params.genome_file)
-genome_file = file(params.genome_file)
-
-OUTDIR = params.outdir+'/'+params.subdir
-CRONDIR = params.crondir
-
 csv = file(params.csv)
-println(csv)
 
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, file(row.read1), file(row.read2)) }
-    .set { fastq }
+params.paired = csv.countLines() > 2 ? true : false
 
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("ffpe") ? row.ffpe : false)) }
-    .set { meta }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("purity") ? row.purity : false)) }
-    .set { meta_purity }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.id, row.clarity_sample_id, row.sequencing_run, row.read1, row.read2) }
-    .set{ meta_qc }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, row.clarity_sample_id, row.clarity_pool_id , row.diagnosis ) }
-    .set{ meta_coyote }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, row.sequencing_run) }
-    .set{ meta_contamination }
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -65,48 +30,64 @@ Channel
     .set{ gatk_ref}
 
 
-workflow SOLID_GMS {
+
+workflow SPP_QC {
 
     ch_versions = Channel.empty()
 
-    ALIGN_SENTIEON ( fastq )
+    // Checks input, creates meta-channel and decides whether data should be downsampled //
+    CHECK_INPUT ( Channel.fromPath(csv), params.paired )
+
+    // Downsample if meta.sub == value and not false //
+    SAMPLE ( CHECK_INPUT.out.fastq )  
+    .set{ ch_trim }
+    ch_versions = ch_versions.mix(ch_trim.versions)
+
+    // Do alignment if downsample was false and mix with SAMPLE subworkflow output
+    ALIGN_SENTIEON ( 
+        ch_trim.fastq_trim,
+        CHECK_INPUT.out.meta
+    )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    QC ( 
-        ch_mapped.qc_out,
-        meta_qc,
-        ch_mapped.bam_lowcov
+    BAM_QC (
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
+        ch_mapped.dedup_metrics
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
 
     SNV_CALLING ( 
         ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_dedup,
         beds,
-        meta,
-        meta_contamination
+        CHECK_INPUT.out.meta,
+        ch_qc.melt_qc,
+        ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
 
-    ADD_TO_DB (
-        ch_vcf.finished_vcf,
-        meta_coyote.groupTuple(),
-        ch_qc.lowcov.groupTuple()
+    SNV_ANNOTATE (
+        ch_vcf.agg_vcf,
+        ch_vcf.concat_vcfs,
+        CHECK_INPUT.out.meta
+    )
+    .set { ch_vcf_anno }
+    ch_versions = ch_versions.mix(ch_vcf_anno.versions)
+
+    VCF_QC (
+        ch_vcf_anno.vep_vcf,
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml'),
-        meta
+        CHECK_INPUT.out.meta
     )
+
 }
-
-workflow {
-    SOLID_GMS()
-}
-
-
 
 workflow.onComplete {
 
@@ -118,6 +99,7 @@ workflow.onComplete {
         Success     : ${workflow.success}
         scriptFile  : ${workflow.scriptFile}
         workDir     : ${workflow.workDir}
+        csv         : ${params.csv}
         exit status : ${workflow.exitStatus}
         errorMessage: ${workflow.errorMessage}
         errorReport :

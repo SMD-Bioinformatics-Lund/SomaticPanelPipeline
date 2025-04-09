@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.15
+- added a QC workflow for only running qc-processes
+
 ## 3.0.14
 - theano base_dir now correctly set for GATK:PREPROCESS
 
