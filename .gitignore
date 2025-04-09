@@ -25,3 +25,4 @@ configs/nextflow.hopper_test.config
 timeline*html
 trace*txt
 report*html
+msi_*
