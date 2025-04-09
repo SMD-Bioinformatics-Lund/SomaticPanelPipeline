@@ -1,5 +1,9 @@
 ## Changelog ##
 
+## 3.0.16
+- updated solid msi loci
+
+
 ## 3.0.14
 - theano base_dir now correctly set for GATK:PREPROCESS
 
