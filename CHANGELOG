@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.15
+- QC-workflow to allow for only producing QC data for samples
+
 ## 3.0.14
 - theano base_dir now correctly set for GATK:PREPROCESS
 
