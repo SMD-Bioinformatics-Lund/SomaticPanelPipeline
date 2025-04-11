@@ -28,7 +28,7 @@ system("zgrep ^#CHROM $ARGV[0]");
 while ( my $v = $vcf->next_var() ) {
 
     my @status;
-    my (%vaf, %dp, %cVaf );
+    my (%vaf, %dp, %cVaf);
 
     my $is_indel = 0;
     $is_indel = 1 if length($v->{REF}) != length($v->{ALT});
@@ -39,73 +39,73 @@ while ( my $v = $vcf->next_var() ) {
 		$repeat_seq = ($v->{INFO}->{RU} or "");
     }
     	    
+    
     for my $gt (@{$v->{GT}}) {
         my $type = "T";
         $type = "N" if $gt->{_sample_id} eq $N;
-		$vaf{$type} = $gt->{AF};
-		$dp{$type} = sum( split /,/, $gt->{AD} );
-		$cVaf{$type} = sprintf("%.3f", (split /,/, $gt->{AD})[1] / $dp{$type});;
-    }
 
+	$vaf{$type} = $gt->{AF};
+	$dp{$type} = sum( split /,/, $gt->{AD} );
+	$cVaf{$type} = sprintf("%.3f", (split /,/, $gt->{AD})[1] / $dp{$type});
+    }
 
     # Fail if difference between tumor's and normal's VAF is < 3x.
-    if( $vaf{T} > 0 )  {
+    if( $vaf{T} > 0 ) {
+			
+	## Calculation VAF from the AD calls from the vcf file rather than using the adhoc VAF from the VCF file
+	$cVaf{N} = 1e-10 unless $cVaf{N}; ## adding very small pseudo couunt to avoid the Indefinte call after division with 0 
+	if( $cVaf{N} > 0 and ($cVaf{T} / $cVaf{N} < $MIN_VAF_RATIO) )  {
+		push @status, "FAIL_NVAF";
+	}
+	if( $dp{T} < 100 ) {
+	    push @status, "WARN_LOW_TCOV";
+	}
+	if( $vaf{T} < 0.02 ) {
+	    push @status, "WARN_VERYLOW_TVAF";
+	}
+	elsif( $vaf{T} < 0.05 ) {
+	    push @status, "WARN_LOW_TVAF";
+	}
 
-		## Calculation VAF from the AD calls from the vcf file rather than using the adhoc VAF from the VCF file
-		$cVaf{N} = 1e-10 unless $cVaf{N}; ## adding very small pseudo couunt to avoid the Indefinte call after division with 0 
-		if( $cVaf{N} > 0 and ($cVaf{T} / $cVaf{N} < $MIN_VAF_RATIO) )  {
-			push @status, "FAIL_NVAF";
-		}
+	# If in a homopolymer or dinucleotide repeat
+	if( length($repeat_seq) <= 2 and $repeat_units_num >= 10 ) {
+	    if( $is_indel or !$vaf{N} or $vaf{T} / $vaf{N} >= $MIN_VAF_HOMOPOLYMER_RATIO ) {
+		push @status, "WARN_HOMOPOLYMER_".($is_indel?"INDEL":"SNV");
+	    }
+	    else {
+		push @status, "FAIL_HOMOPOLYMER_".($is_indel?"INDEL":"SNV");
+	    }
+	}
 
-		if( $dp{T} < 100 ) {
-			push @status, "WARN_LOW_TCOV";
-		}
-		if( $vaf{T} < 0.02 ) {
-			push @status, "WARN_VERYLOW_TVAF";
-		}
-		elsif( $vaf{T} < 0.05 ) {
-			push @status, "WARN_LOW_TVAF";
-		}
+	# Warn/fail on high strand bias (SOR)
+	if( $is_indel and $v->{INFO}->{SOR} > 4) {
+	    push @status, ( $v->{INFO}->{SOR} > 10 ? "FAIL_STRANDBIAS" : "WARN_STRANDBIAS" );
+	}
+	if( !$is_indel and $v->{INFO}->{SOR} > 2.5) {
+	    push @status, ( $v->{INFO}->{SOR} > 4 ? "FAIL_STRANDBIAS" : "WARN_STRANDBIAS" );
+	}
 
-		# If in a homopolymer or dinucleotide repeat
-		if( length($repeat_seq) <= 2 and $repeat_units_num >= 10 ) {
-			if( $is_indel or !$vaf{N} or $vaf{T} / $vaf{N} >= $MIN_VAF_HOMOPOLYMER_RATIO ) {
-				push @status, "WARN_HOMOPOLYMER_".($is_indel?"INDEL":"SNV");
-			}
-			else {
-				push @status, "FAIL_HOMOPOLYMER_".($is_indel?"INDEL":"SNV");
-			}
-		}
-
-		# Warn/fail on high strand bias (SOR)
-		if( $is_indel and $v->{INFO}->{SOR} > 4) {
-	    	push @status, ( $v->{INFO}->{SOR} > 10 ? "FAIL_STRANDBIAS" : "WARN_STRANDBIAS" );
-		}
-	
-		if( !$is_indel and $v->{INFO}->{SOR} > 2.5) {
-	    	push @status, ( $v->{INFO}->{SOR} > 4 ? "FAIL_STRANDBIAS" : "WARN_STRANDBIAS" );
-		}
-
-		if( $v->{INFO}->{PV2} > 0.05 ) {
-	    	push @status, "FAIL_PVALUE";
-		}
+	if( $v->{INFO}->{PV2} > 0.05 ) {
+	    push @status, "FAIL_PVALUE";
+	}
     }
     else {
-		push @status, "FAIL_NO_TVAR";
+	push @status, "FAIL_NO_TVAR";
     }
 
     if( @status ) {
-		if( $v->{FILTER} eq "PASS" or $v->{FILTER} eq "." ) {
-	    	$v->{FILTER} = join(";", @status);
-		}
-		else {
-	    	$v->{FILTER} .= ";".join(";", @status);
-		}
+	if( $v->{FILTER} eq "PASS" or $v->{FILTER} eq "." ) {
+	    $v->{FILTER} = join(";", @status);
+	}
+	else {
+	    $v->{FILTER} .= ";".join(";", @status);
+	}
     }
-
     vcfstr($v);
-
 }
+
+
+
 
 
 sub add_info {
@@ -122,7 +122,7 @@ sub vcfstr {
 
     # Generate and print INFO field
     for my $info_key (@{$v->{INFO_order}}) {
-		push @all_info, $info_key."=".$v->{INFO}->{$info_key};
+	push @all_info, $info_key."=".$v->{INFO}->{$info_key};
     }
     print join(";", @all_info)."\t";
 
@@ -131,11 +131,11 @@ sub vcfstr {
 
     # Print GT fields for all samples
     for my $gt (@{$v->{GT}}) {
-		my @all_gt;
-		for my $key ( @{$v->{FORMAT}} ) {
-	    	push @all_gt, ( defined $gt->{$key} ? $gt->{$key} : "");
-		}
-		print join(":", @all_gt)."\t";
+	my @all_gt;
+	for my $key ( @{$v->{FORMAT}} ) {
+	    push @all_gt, ( defined $gt->{$key} ? $gt->{$key} : "");
+	}
+	print join(":", @all_gt)."\t";
     }
     print "\n";
 }
