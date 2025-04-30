@@ -16,19 +16,19 @@ my $MIN_VAF_HOMOPOLYMER_RATIO = 5;
 
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
-print 'FILTER=<ID=FAIL_NVAF,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=WARN_LOW_TCOV,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=WARN_VERYLOW_TVAF,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=WARN_LOW_TVAF,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=WARN_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=WARN_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=FAIL_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=FAIL_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=FAIL_STRANDBIAS,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=WARN_STRANDBIAS,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=FAIL_PVALUE,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=FAIL_NO_TVAR,Description="Record fails the filters">'."\n";
-print 'FILTER=<ID=.,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_NVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_LOW_TCOV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_VERYLOW_TVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_LOW_TVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_STRANDBIAS,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_STRANDBIAS,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_PVALUE,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_NO_TVAR,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=.,Description="Record fails the filters">'."\n";
 system("zgrep ^#CHROM $ARGV[0]");
 
 
