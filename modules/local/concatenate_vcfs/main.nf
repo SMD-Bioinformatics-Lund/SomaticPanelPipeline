@@ -61,7 +61,9 @@ process CONCATENATE_VCFS_BCFTOOLS {
         def prefix = task.ext.prefix ?: "${group}"
         """
         vcf-concat $vcfs | vcf-sort -c > ${vc}.concat.vcf
-        bcftools norm -m-both -c w -O v -f $params.genome_file ${vc}.concat.vcf \\
+        bgzip ${vc}.concat.vcf
+        tabix ${vc}.concat.vcf.gz
+        bcftools norm -m-both -c w -O v -f $params.genome_file ${vc}.concat.vcf.gz \\
         | bcftools norm -d exact -Oz -o ${prefix}_${vc}_bcftools.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
