@@ -130,7 +130,7 @@ sub aggregate_headers {
 
 sub is_weird_freebayes {
     my $var = shift;
-    return 1 unless defined $var->{GT}->[0]->{AD};
+    return 1 unless defined $var->{GT}->[0]->{AO};
     return 0;
 }
 
