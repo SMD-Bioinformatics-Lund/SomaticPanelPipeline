@@ -77,7 +77,7 @@ workflow SNV_CALLING {
 
         BT_AGG ( CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "bcftools" )
 
-        ch_versions         = ch_versions.mix(AGGREGATE_VCFS.out.versions.first())
+        ch_versions         = ch_versions.mix(VT_AGG.out.versions.first())
 
     emit:
         concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
