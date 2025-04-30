@@ -73,7 +73,7 @@ workflow SNV_CALLING {
         CONCATENATE_VCFS_BCFTOOLS { vcfs_to_concat }
 
         // Aggregate all callers to one VCF
-        VT_AGG ( CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "vt" )
+        VT_AGG ( CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "vt" )
 
         BT_AGG ( CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "bcftools" )
 
