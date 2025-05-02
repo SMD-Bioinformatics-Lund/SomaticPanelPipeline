@@ -80,8 +80,8 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(VT_AGG.out.versions.first())
 
     emit:
-        concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
-        agg_vcf     =   BT_AGG.out.vcf_concat                   // channel: [ val(group), val(meta), file(agg.vcf) ]
-        versions    =   ch_versions                             // channel: [ file(versions) ]
+        concat_vcfs =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
+        agg_vcf     =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
+        versions    =   ch_versions                                      // channel: [ file(versions) ]
 
 }
