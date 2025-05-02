@@ -35,7 +35,7 @@ system("zgrep ^#CHROM $ARGV[0]");
 while ( my $v = $vcf->next_var() ) {
 
     my @status;
-    my (%vaf, %dp);
+    my (%vaf, %dp, %cVaf);
 
     my $is_indel = 0;
     $is_indel = 1 if length($v->{REF}) != length($v->{ALT});
@@ -53,13 +53,16 @@ while ( my $v = $vcf->next_var() ) {
 
 	$vaf{$type} = $gt->{AF};
 	$dp{$type} = sum( split /,/, $gt->{AD} );
-	    
+	$cVaf{$type} = sprintf("%.3f", (split /,/, $gt->{AD})[1] / $dp{$type});
     }
 
     # Fail if difference between tumor's and normal's VAF is < 3x.
     if( $vaf{T} > 0 ) {
-	if( $vaf{N} > 0 and ($vaf{T} / $vaf{N} < $MIN_VAF_RATIO) ) {
-	    push @status, "FAIL_NVAF";
+			
+	## Calculation VAF from the AD calls from the vcf file rather than using the adhoc VAF from the VCF file
+	$cVaf{N} = 1e-10 unless $cVaf{N}; ## adding very small pseudo couunt to avoid the Indefinte call after division with 0 
+	if( $cVaf{N} > 0 and ($cVaf{T} / $cVaf{N} < $MIN_VAF_RATIO) )  {
+		push @status, "FAIL_NVAF";
 	}
 	if( $dp{T} < 100 ) {
 	    push @status, "WARN_LOW_TCOV";
