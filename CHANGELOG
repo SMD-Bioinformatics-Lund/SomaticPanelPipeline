@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.17
+- reverted clinsig rescue for failed variants
+
 ## 3.0.16
 - updated solid msi loci
 
