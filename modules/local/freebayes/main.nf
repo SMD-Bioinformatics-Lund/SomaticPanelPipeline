@@ -58,7 +58,10 @@ process FREEBAYES {
             | vcffilter $args3 \\
             | vcfglxgt > freebayes_${bed}.filt1.vcf
 
-            filter_freebayes_unpaired.pl freebayes_${bed}.filt1.vcf > freebayes_${bed}.vcf
+            filter_freebayes_unpaired.pl freebayes_${bed}.filt1.vcf > freebayes_filtered_${bed}.vcf
+
+            ## AD-field bugs out when doing continious pooling, AO is used downstream for alternate counts
+            bcftools annotate -x FORMAT/AD freebayes_filtered_${bed}.vcf -o freebayes_${bed}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
