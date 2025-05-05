@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.18
+- added tnscope parameters to find snvs only
+
 ## 3.0.17
 - reverted clinsig rescue for failed variants
 
