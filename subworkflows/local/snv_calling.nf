@@ -10,7 +10,7 @@ include { AGGREGATE_VCFS           } from '../../modules/local/concatenate_vcfs/
 include { MELT                     } from '../../modules/local/melt/main'
 include { SVDB_MERGE_SINGLES       } from '../../modules/local/svdb/main'
 include { BEDTOOLS_INTERSECT       } from '../../modules/local/filters/main'
-include { FILTER_TNSCOPE           } from '../../modules/local/filters/main'
+include { FILTER_TNSCOPE           } from '../../modules/local/sentieon/main'
 
 workflow SNV_CALLING {
     take: 
