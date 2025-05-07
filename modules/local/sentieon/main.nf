@@ -262,6 +262,7 @@ process SENTIEON_QC_TO_CDM {
         task.ext.when == null || task.ext.when
 
     script:
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
         qc_sentieon.pl ${meta.id}_${meta.type} panel > ${prefix}_${meta.type}.QC
         """
