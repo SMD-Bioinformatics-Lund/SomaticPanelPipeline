@@ -258,8 +258,8 @@ process TNSCOPE {
         each file(bed)
 
     output:
-        tuple val("tnscope"), val(group), file("tnscope_${bed}.vcf"),   emit: vcfparts_tnscope
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), file("tnscope_${bed}.vcf.raw"),        emit: vcfparts_tnscope
+        path "versions.yml",                                                emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -281,8 +281,6 @@ process TNSCOPE {
                 --min_tumor_allele_frac ${params.tnscope_var_freq_cutoff_p} \\
                 tnscope_${bed}.vcf.raw
 
-            filter_tnscope_somatic.pl tnscope_${bed}.vcf.raw ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > tnscope_${bed}.vcf
-
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
                 sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
@@ -299,7 +297,58 @@ process TNSCOPE {
                 --min_tumor_allele_frac ${params.tnscope_var_freq_cutoff_up} \\
                 tnscope_${bed}.vcf.raw
 
-            filter_tnscope_unpaired.pl tnscope_${bed}.vcf.raw > tnscope_${bed}.vcf
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+            END_VERSIONS
+            """ 
+        }
+
+    stub:
+        """
+        touch tnscope_${bed}.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+}
+
+process FILTER_TNSCOPE {
+    label "process_medium"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(vcf)
+        each file(bed)
+
+    output:
+        tuple val("tnscope"), val(group), file("tnscope_${bed}.vcf"),   emit: vcfparts_tnscope_filtered
+        path "versions.yml",                                            emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args    = task.ext.args     ?: ''
+        def args2   = task.ext.args2    ?: ''
+
+        if( meta.id.size() >= 2 ) {
+            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+            """
+            filter_tnscope_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > tnscope_${bed}.vcf
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+            END_VERSIONS
+            """
+        }
+        else if( meta.id.size() == 1 ) {
+            """
+            filter_tnscope_unpaired.pl $vcf > tnscope_${bed}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

@@ -10,6 +10,7 @@ include { AGGREGATE_VCFS           } from '../../modules/local/concatenate_vcfs/
 include { MELT                     } from '../../modules/local/melt/main'
 include { SVDB_MERGE_SINGLES       } from '../../modules/local/svdb/main'
 include { BEDTOOLS_INTERSECT       } from '../../modules/local/filters/main'
+include { FILTER_TNSCOPE           } from '../../modules/local/filters/main'
 
 workflow SNV_CALLING {
     take: 
@@ -37,6 +38,7 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(VARDICT.out.versions.first())
 
         TNSCOPE ( bam_umi, beds)
+        FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
@@ -59,7 +61,7 @@ workflow SNV_CALLING {
         // Prepare vcf parts for concatenation //
         vcfparts_freebayes  = FREEBAYES.out.vcfparts_freebayes.groupTuple(by:[0,1])
         vcfparts_vardict    = VARDICT.out.vcfparts_vardict.groupTuple(by:[0,1])
-        vcfparts_tnscope    = TNSCOPE.out.vcfparts_tnscope.groupTuple(by:[0,1])
+        vcfparts_tnscope    = FILTER_TNSCOPE.out.vcfparts_tnscope_filtered.groupTuple(by:[0,1])
 
         //vcfs_to_concat = vcfparts_freebayes.mix(vcfparts_vardict).mix(vcfparts_tnscope)
         vcfs_to_concat      = vcfparts_freebayes.mix(vcfparts_vardict,vcfparts_tnscope)
