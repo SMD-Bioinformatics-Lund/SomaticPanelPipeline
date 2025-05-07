@@ -347,7 +347,7 @@ process FILTER_TNSCOPE {
         tuple val(group), val(meta), file(vcf)
 
     output:
-        tuple val("tnscope"), val(group), file("tnscope_${bed}.vcf"),   emit: vcfparts_tnscope_filtered
+        tuple val("tnscope"), val(group), file("*.vcf"),                emit: vcfparts_tnscope_filtered
         path "versions.yml",                                            emit: versions
 
     when:
@@ -361,7 +361,7 @@ process FILTER_TNSCOPE {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            filter_tnscope_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > tnscope_${bed}.vcf
+            filter_tnscope_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > ${vcf}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -371,7 +371,7 @@ process FILTER_TNSCOPE {
         }
         else if( meta.id.size() == 1 ) {
             """
-            filter_tnscope_unpaired.pl $vcf > tnscope_${bed}.vcf
+            filter_tnscope_unpaired.pl $vcf > ${vcf}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -382,7 +382,7 @@ process FILTER_TNSCOPE {
 
     stub:
         """
-        touch tnscope_${bed}.vcf
+        touch ${vcf}.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
