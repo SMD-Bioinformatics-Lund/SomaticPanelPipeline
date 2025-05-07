@@ -43,10 +43,20 @@ while ( my $v = $vcf->next_var() ) {
     for my $gt (@{$v->{GT}}) {
         my $type = "T";
         $type = "N" if $gt->{_sample_id} eq $N;
+        $vaf{$type} = $gt->{AF};
+        my ( $ref_count, $alt_count ) = split /,/, $gt->{AD};
+        my $depth = $ref_count + $alt_count;
 
-	$vaf{$type} = $gt->{AF};
-	$dp{$type} = sum( split /,/, $gt->{AD} );
-	$cVaf{$type} = sprintf("%.3f", (split /,/, $gt->{AD})[1] / $dp{$type});
+        # Only process if depth > 0
+        if ( $depth > 0 ) {
+            $vaf{$type}  = $gt->{AF};
+            $dp{$type}   = $depth;
+            $cVaf{$type} = sprintf( "%.3f", $alt_count / $depth );
+        }
+        else {
+            $dp{$type}   = 0;
+            $cVaf{$type} = 0;
+        }
     }
 
     # Fail if difference between tumor's and normal's VAF is < 3x.
