@@ -200,8 +200,7 @@ process SENTIEON_QC {
 
     output:
         tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),   emit: dedup_bam_is_metrics
-        tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_cdm
-        path "*.txt",                                                                  emit: txt
+        tuple val(group), val(meta), file("*.txt"),                                    emit: qc_files
         path "versions.yml",                                                           emit: versions
 
     when:
@@ -228,8 +227,6 @@ process SENTIEON_QC {
 
         cp is_metrics.txt ${prefix}_is_metrics.txt
 
-        qc_sentieon.pl ${meta.id}_${meta.type} panel > ${prefix}_${meta.type}.QC
-
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
@@ -246,6 +243,33 @@ process SENTIEON_QC {
         "${task.process}":
             sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
         END_VERSIONS
+        """
+}
+
+process SENTIEON_QC_TO_CDM {
+    label 'process_high'
+    label 'scratch'
+    label 'stage'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(qc_files)
+
+    output:
+        tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_cdm
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        """
+        qc_sentieon.pl ${meta.id}_${meta.type} panel > ${prefix}_${meta.type}.QC
+        """
+
+    stub:
+        def prefix  = task.ext.prefix   ?: "${meta.id}"
+        """
+        touch ${prefix}_${meta.type}.QC
         """
 }
 
