@@ -330,7 +330,7 @@ process TNSCOPE {
 
     stub:
         """
-        touch tnscope_${bed}.vcf
+        touch tnscope_${bed}.vcf.raw
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
