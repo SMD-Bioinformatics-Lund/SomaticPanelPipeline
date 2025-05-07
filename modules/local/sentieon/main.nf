@@ -345,7 +345,6 @@ process FILTER_TNSCOPE {
 
     input:
         tuple val(group), val(meta), file(vcf)
-        each file(bed)
 
     output:
         tuple val("tnscope"), val(group), file("tnscope_${bed}.vcf"),   emit: vcfparts_tnscope_filtered
