@@ -200,7 +200,7 @@ process SENTIEON_QC {
 
     output:
         tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),               emit: dedup_bam_is_metrics
-        tuple val(group), val(meta), file("*.txt"), file("cov_metrics.txt.sample_summary"),        emit: qc_files
+        tuple val(group), val(meta), file("*.txt"), file("cov_metrics.txt.sample_summary"), file(dedup)       emit: qc_files
         path "versions.yml",                                                                       emit: versions
 
     when:
@@ -252,7 +252,7 @@ process SENTIEON_QC_TO_CDM {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(qc_files), file(cov_sample_summary)
+        tuple val(group), val(meta), file(qc_files), file(cov_sample_summary), file(dedup)
 
     output:
         tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_cdm
