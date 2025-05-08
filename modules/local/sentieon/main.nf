@@ -200,7 +200,7 @@ process SENTIEON_QC {
 
     output:
         tuple val(group), val(meta), file(bam), file(bai), file("*_is_metrics.txt"),               emit: dedup_bam_is_metrics
-        tuple val(group), val(meta), file("*.txt"), file("cov_metrics.txt.sample_summary"), file(dedup)       emit: qc_files
+        tuple val(group), val(meta), file("*.txt"), file("cov_metrics.txt.sample_summary"),        emit: qc_files
         path "versions.yml",                                                                       emit: versions
 
     when:

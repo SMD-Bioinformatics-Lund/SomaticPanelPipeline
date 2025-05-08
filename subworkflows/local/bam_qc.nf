@@ -22,7 +22,7 @@ workflow BAM_QC {
         
         SENTIEON_QC ( bam_dedup.join(dedup_metrics, by:[0,1]) )
         ch_versions = ch_versions.mix(SENTIEON_QC.out.versions)
-        SENTIEON_QC_TO_CDM( SENTIEON_QC.out.qc_files )
+        SENTIEON_QC_TO_CDM( SENTIEON_QC.out.qc_files.join(dedup_metrics, by:[0,1]) )
         
         QC_VALUES ( SENTIEON_QC_TO_CDM.out.qc_cdm )
 
