@@ -247,9 +247,8 @@ process SENTIEON_QC {
 }
 
 process SENTIEON_QC_TO_CDM {
-    label 'process_high'
-    label 'scratch'
-    label 'stage'
+    label 'process_low'
+
     tag "${meta.id}"
 
     input:
