@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.19
+- fixed illegal division error in filter_tnscope_somatic script
+
 ## 3.0.18
 - added tnscope parameters to find snvs only
 
