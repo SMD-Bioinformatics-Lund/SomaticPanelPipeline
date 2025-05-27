@@ -12,13 +12,20 @@ process COYOTE {
         task.ext.when == null || task.ext.when
 
     script:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        normal_sample = null
+        sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+            normal_sample = meta.id[normal_idx]
         }
+        tumor_sample = meta.id[tumor_idx]
+
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
         cnvseg_idx     = importy.findIndexOf{ it =~ 'panel' }
@@ -55,17 +62,28 @@ process COYOTE {
             --gens ${meta.id[tumor_idx]} \\
             --subpanel ${meta.diagnosis[tumor_idx]} \\
             --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
+            --sample_no $sample_no \\
+            --tumor_sample ${tumor_sample} \\
+            --normal_sample ${normal_sample} \\
+            --profile ${environment} \\
+            --assay $params.coyote_group \\
             $import_command" > ${process_group}.coyote
         """
 
     stub:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        normal_sample = null
+        sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+            normal_sample = meta.id[normal_idx]
+        }
+        tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
         cnvseg_idx     = importy.findIndexOf{ it =~ 'panel' }
@@ -103,6 +121,11 @@ process COYOTE {
             --gens ${meta.id[tumor_idx]} \\
             --subpanel ${meta.diagnosis[tumor_idx]} \\
             --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
+            --sample_no $sample_no \\
+            --tumor_sample ${tumor_sample} \\
+            --normal_sample ${normal_sample} \\
+            --profile ${environment} \\
+            --assay $params.coyote_group \\
             $import_command" > ${process_group}.coyote
         """
 }
@@ -121,13 +144,19 @@ process COYOTE_YAML {
         task.ext.when == null || task.ext.when
 
     script:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        normal_sample = null
+        sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+            normal_sample = meta.id[normal_idx]
         }
+        tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
         cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
@@ -165,16 +194,28 @@ process COYOTE_YAML {
         echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote.yaml
         echo genome_build: 38 >> ${process_group}.coyote.yaml
         echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote.yaml
+        echo sample_no: ${sample_no} >> ${process_group}.coyote.yaml
+        echo tumor_sample: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
+        echo normal_sample: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
+        echo profile: \\'${environment}\\' >> ${process_group}.coyote.yaml
+        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote.yaml
         printf "$import_command" >> ${process_group}.coyote.yaml
         """
     stub:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        normal_sample = null
+        sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+            normal_sample = meta.id[normal_idx]
+            sample_no = meta.id.size()
+        }
+        tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
         cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
@@ -212,6 +253,11 @@ process COYOTE_YAML {
         echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote.yaml
         echo genome_build: 38 >> ${process_group}.coyote.yaml
         echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote.yaml
+        echo sample_no: ${sample_no} >> ${process_group}.coyote.yaml
+        echo tumor_sample: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
+        echo normal_sample: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
+        echo profile: \\'${environment}\\' >> ${process_group}.coyote.yaml
+        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote.yaml
         printf "$import_command" >> ${process_group}.coyote.yaml
         """
 }
