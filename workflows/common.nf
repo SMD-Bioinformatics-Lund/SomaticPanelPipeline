@@ -64,7 +64,7 @@ workflow SPP_COMMON {
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
-      
+
     // Create PGx CSV file
     PHARMACOGENOMICS (
         ch_mapped.bam_umi.groupTuple(),

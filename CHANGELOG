@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.0.20
+- added some meta info to the coyote yaml and coyote load command 
+
 ## 3.0.19
 - fixed illegal division error in filter_tnscope_somatic script
 
