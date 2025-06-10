@@ -238,6 +238,7 @@ process SENTIEON_QC {
         """
         touch ${prefix}_is_metrics.txt
         touch ${prefix}_${meta.type}.QC
+        touch cov_metrics.txt.sample_summary
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
