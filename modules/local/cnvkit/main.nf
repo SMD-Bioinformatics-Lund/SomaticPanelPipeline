@@ -195,7 +195,7 @@ process CNVKIT_CALL {
     output:
         tuple val(group), val(meta), val(part), file("*.${part}.call*.cns"),            emit: cnvkitsegment
         tuple val(group), val(meta), val(part), file("*.${part}_logr_ballele.cnvkit"),  emit: cnvkit_baflogr
-        tuple val(group), val(part), file("*.${part}.cnvkit.vcf"),                      emit: cnvkit_vcf
+        tuple val(group), val(meta), val(part), file("*.${part}.cnvkit.vcf"),           emit: cnvkit_vcf
         path "versions.yml",                                                            emit: versions
 
     when:
