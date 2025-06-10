@@ -77,7 +77,7 @@ process CONCATENATE_VCFS_BCFTOOLS {
     stub:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${prefix}_${vc}.vcf.gz
+        touch ${prefix}_${vc}_bcftools.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
