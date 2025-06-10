@@ -132,7 +132,7 @@ process AGGREGATE_VCFS {
             sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
             """
             echo tumor:${meta.id[tumor_idx]} normal:${meta.id[normal_idx]}
-            touch ${prefix}.agg.vcf
+            touch ${prefix}.${norm_sw}.agg.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
