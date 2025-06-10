@@ -142,7 +142,7 @@ process AGGREGATE_VCFS {
         }
         else {
             """
-            touch ${group}.agg.vcf
+            touch ${prefix}.${norm_sw}.agg.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
