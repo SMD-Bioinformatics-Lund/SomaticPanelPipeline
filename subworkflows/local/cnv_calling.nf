@@ -60,7 +60,7 @@ workflow CNV_CALLING {
             cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
             // tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
             cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[2] == "full" && it[1].type == "T" }.map { val -> tuple(val[0], val[2], val[3]  )}
-            CNVKIT_VCF_TUMOR = cnvkit_vcf.cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
+            CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
         else {
             CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
