@@ -1,5 +1,9 @@
 ## Changelog ##
 
+## 3.1.0
+- Added GMSHem profile
+- changed to bcftools decomposing and normalization
+
 ## 3.0.19
 - fixed illegal division error in filter_tnscope_somatic script
 
