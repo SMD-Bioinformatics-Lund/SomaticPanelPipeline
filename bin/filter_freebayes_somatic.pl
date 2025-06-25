@@ -20,6 +20,14 @@ my $N = $ARGV[2];
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
 print '##INFO=<ID=SSC,Number=1,Type=Float,Description="Somatic score">'."\n";
+print '##FILTER=<ID=FAIL_GT,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=LOH,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_QUAL,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_LOD,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_NOVAR,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_NVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_MQ,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=.,Description="Record fails the filters">'."\n";
 system("zgrep ^#CHROM $ARGV[0]");
 
 my $SSC_THRES = 30; # Somatic score threshold

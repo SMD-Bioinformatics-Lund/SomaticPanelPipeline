@@ -42,6 +42,52 @@ process CONCATENATE_VCFS {
         """
 }
 
+process CONCATENATE_VCFS_BCFTOOLS {
+    label "process_single"
+    tag "$group"
+
+    input:
+        tuple val(vc), val(group), file(vcfs)
+
+    output:
+        tuple val(group), val(vc), file("*_${vc}_bcftools.vcf.gz"),    emit: concatenated_vcfs
+        path "versions.yml",                                           emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${group}"
+        """
+        vcf-concat $vcfs | vcf-sort -c > ${vc}.concat.vcf
+        bgzip ${vc}.concat.vcf
+        tabix ${vc}.concat.vcf.gz
+        bcftools norm -m-both -c w -O v -f $params.genome_file ${vc}.concat.vcf.gz \\
+        | bcftools norm -d exact -Oz -o ${prefix}_${vc}_bcftools.vcf.gz
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            vcftools: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
+            vt-decompose: \$(echo \$(vt decompose 2>&1) | sed 's/.*decompose v//; s/ .*//')
+            vt-normalize: \$(echo \$(vt normalize 2>&1) | sed 's/.*normalize v//; s/ .*//')
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${group}"
+        """
+        touch ${prefix}_${vc}_bcftools.vcf.gz
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            vcftools: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
+            vt-decompose: \$(echo \$(vt decompose 2>&1) | sed 's/.*decompose v//; s/ .*//')
+            vt-normalize: \$(echo \$(vt normalize 2>&1) | sed 's/.*normalize v//; s/ .*//')
+        END_VERSIONS
+        """
+}
+
 
 process AGGREGATE_VCFS {
     label "process_single"
@@ -49,10 +95,11 @@ process AGGREGATE_VCFS {
 
     input:
         tuple val(group), val(vc), file(vcfs), val(meta)
+        val(norm_sw)
 
     output:
-        tuple val(group), val(meta), file("*.agg.vcf"), emit: vcf_concat
-        path "versions.yml",                            emit: versions
+        tuple val(group), val(meta), file("*${norm_sw}.agg.vcf"), emit: vcf_concat
+        path "versions.yml",                                      emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -68,7 +115,7 @@ process AGGREGATE_VCFS {
         }
 
         """
-        aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${prefix}.agg.vcf
+        aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${prefix}.${norm_sw}.agg.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -85,7 +132,7 @@ process AGGREGATE_VCFS {
             sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
             """
             echo tumor:${meta.id[tumor_idx]} normal:${meta.id[normal_idx]}
-            touch ${prefix}.agg.vcf
+            touch ${prefix}.${norm_sw}.agg.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -95,7 +142,7 @@ process AGGREGATE_VCFS {
         }
         else {
             """
-            touch ${group}.agg.vcf
+            touch ${prefix}.${norm_sw}.agg.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

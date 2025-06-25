@@ -6,18 +6,7 @@ use vcf2;
 use Data::Dumper;
 use List::Util qw( max min sum );
 
-#1       1718690 .       A       T       0.14    ML_FAIL ECNT=1;FS=0;HCNT=8;MAX_ED=.;MIN_ED=.;ML_PROB=0.02;NLOD=181.64;NLODF=54.2;PV=0.085;PV2=0.0561;SOR=0.415;TLOD=4.81        GT:AD:AF:AFDP:ALTHC:ALT_F1R2:ALT_F2R1:BaseQRankSumPS:ClippingRankSumPS:DPHC:FOXOG:MQRankSumPS:NBQPS:QSS:REF_F1R2:REF_F2R1:ReadPosEndDistPS:ReadPosRankSumPS     0/1:715,14:0.02:703:12:12:2:-7.451:0:720:0.143:0:25.963:21370,330:368:347:30.542:-5.755 0/0:696,6:0.009:646:4:5:1:-4.974:0:629:0.167:0:26.017:20615,119:354:342:30.751:-2.414
-
-## Indelic site have wrong AD and VAF calls (see example here more valid for FLT3-itD)
-# 13      28034086        .       C       CTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAA 798.71  PASS    ECNT=1;FS=0.681;HCNT=3;MAX_ED=.;MIN_ED=.;NLOD=82.07;NLODF=172.36;PV=0.0008;PV2=0.0000;RPA=1,2;RU=TCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAAA;SOR=0.596;STR;TLOD=500.88 GT:AD:AF:AFDP:ALTHC:ALT_F1R2:ALT_F2R1:BaseQRankSumPS:ClippingRankSumPS:DPHC:FOXOG:MQRankSumPS:NBQPS:QSS:REF_F1R2:REF_F2R1:ReadPosEndDistPS:ReadPosRankSumPS       0/1:28,61:0.942:518:236:36:25:3.368:0.000:265:.:0.000:28.655:671,1695:11:12:15.079:-6.227       0/0:32,0:0.418:55:0:0:0:.:.:32:.:.:.:804,0:12:10:31.812:.
-
-## 3       128491208       ins_0   G       <INS>   32      PASS    SVTYPE=INS;SOMATIC      GT:AD   ./.:3694,13     ./.:.
-
-## 4       39943123        .       TACACACACACACAC T       51.98   triallelic_site ECNT=6;FS=0.000;HCNT=6;MAX_ED=4;MIN_ED=0;NLOD=24.20;NLODF=6.59;PV=0.0593;PV2=0.0593;RPA=23,16;RU=AC;SOR=0.368;STR;TLOD=11.50    GT:AD:AF:AFDP:ALTHC:ALT_F1R2:ALT_F2R1:BaseQRankSumPS:ClippingRankSumPS:DPHC:FOXOG:MQRankSumPS:NBQPS:QSS:REF_F1R2:REF_F2R1:ReadPosEndDistPS:ReadPosRankSumPS 0/1:3,4:0.043:92:4:0:0:-0.180:-0.000:90:.:-0.000:27.545:79,105:0:0:39.429:-0.566        0/0:0,0:0.000:97:0:0:0:.:.:88:.:.:.:0,0:0:0:.:.
-
-## 4       39943123        .       TACACACACACACACAC       T       9.01    triallelic_site ECNT=4;FS=0.000;HCNT=5;MAX_ED=9;MIN_ED=0;NLOD=37.18;NLODF=10.75;PV=0.0429;PV2=0.0429;RPA=23,15;RU=AC;SOR=0.582;STR;TLOD=7.14    GT:AD:AF:AFDP:ALTHC:ALT_F1R2:ALT_F2R1:BaseQRankSumPS:ClippingRankSumPS:DPHC:FOXOG:MQRankSumPS:NBQPS:QSS:REF_F1R2:REF_F2R1:ReadPosEndDistPS:ReadPosRankSumPS 0/1:3,5:0.071:70:5:0:0:0.366:-0.000:58:.:-0.000:26.618:76,129:0:0:37.000:-1.029 0/0:0,0:0.000:64:0:0:0:.:.:43:.:.:.:0,0:0:0:.:.
-
-my $vcf = vcf2->new( 'file' => $ARGV[0] );
+my $vcf = vcf2->new('file'=>$ARGV[0] );
 
 my $T = $ARGV[1];
 my $N = $ARGV[2];
@@ -27,6 +16,19 @@ my $MIN_VAF_HOMOPOLYMER_RATIO = 5;
 
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
+print '##FILTER=<ID=FAIL_NVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_LOW_TCOV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_VERYLOW_TVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_LOW_TVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_STRANDBIAS,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_STRANDBIAS,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_PVALUE,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_NO_TVAR,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=.,Description="Record fails the filters">'."\n";
 system("zgrep ^#CHROM $ARGV[0]");
 
 while ( my $v = $vcf->next_var() ) {

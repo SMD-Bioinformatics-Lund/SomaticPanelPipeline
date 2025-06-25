@@ -5,15 +5,15 @@ process PREPROCESSINTERVALS {
         val(reference)
 
     output:
-        tuple val(ref), file("${reference}.preprocessed.blacklisted.interval_list"),    emit: preprocessed
-        path "versions.yml",                                                            emit: versions
+        tuple val(reference), file("${reference}.preprocessed.blacklisted.interval_list"),    emit: preprocessed
+        path "versions.yml",                                                                  emit: versions
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
         def args    = task.ext.args ?: ''
-        def panel   = $params.panel ? "-L ${params.interval_list}" : ''
+        def panel   = params.panel ? "-L ${params.interval_list}" : ''
 
         """
         gatk PreprocessIntervals $args -O ${reference}.preprocessed.blacklisted.interval_list $panel
@@ -235,7 +235,7 @@ process COHORT_PLOIDY {
         tuple val(reference), val(id), file(tsvs)
 
     output:
-        tuple val(reference), path("*_ploidy-model"), path("*_ploidy-calls/"),  emit: ploidy
+        tuple val(reference), path("*_ploidy-model"), path("*_ploidy-calls"),  emit: ploidy
         path "versions.yml",                                                    emit: versions
 
     when:
@@ -248,7 +248,14 @@ process COHORT_PLOIDY {
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
         """
-        gatk DetermineGermlineContigPloidy \\
+        export THEANO_FLAGS="base_compiledir=."
+        set +u
+        source activate gatk
+        export HOME=/local/scratch
+        export MKL_NUM_THREADS=${task.cpus}
+        export OMP_NUM_THREADS=${task.cpus}
+        gatk --java-options "-Djava.io.tmpdir=/local/scratch/" \\
+            DetermineGermlineContigPloidy \\
             -L $interval_list \\
             $args \\
             --output . \\
@@ -277,7 +284,7 @@ process COHORT_PLOIDY {
 }
 
 process COHORT_CALL {
-    label 'process_many_cpus'
+    label 'process_medium_cpus'
     label 'process_very_high_memory'
 
     input:
@@ -326,6 +333,7 @@ process COHORT_CALL {
 
         tsv_list = tsvs.collect {'-I ' + it}
         tsv_list = tsv_list.join(' ')
+        name = scatter.toString()
         """
         export THEANO_FLAGS="base_compiledir=."
         set +u
@@ -346,14 +354,14 @@ process COHORT_CALL {
 }
 
 process COHORT_CALL_PANEL {
-    label 'process_many_cpus'
+    label 'process_medium_cpus'
     label 'process_very_high_memory'
 
     input:
         tuple val(reference), val(id), file(tsvs), path(ploidy_model), path(ploidy_calls), file(intervals)
 
     output:
-        tuple val(reference), path("cohort_calls/${prefix}*"),  emit: calls
+        tuple val(reference), path("cohort_calls/${reference}*"),  emit: calls
         path "versions.yml",                                    emit: versions
 
     when:
@@ -378,7 +386,7 @@ process COHORT_CALL_PANEL {
             --contig-ploidy-calls $ploidy_calls \\
             $args \\
             --output cohort_calls \\
-            --output-prefix ${prefix} \\
+            --output-prefix ${reference} \\
             $tsv_list
         touch test
 
@@ -413,7 +421,7 @@ process COHORT_CALL_PANEL {
 }
 
 process GATK_SOM_PON {
-    label 'process_many_cpus'
+    label 'process_medium_cpus'
     label 'process_very_high_memory'
 
     input:

@@ -59,7 +59,8 @@ workflow CNV_CALLING {
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
             cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
             // tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
-            CNVKIT_VCF_TUMOR = CNVKIT_CALL.out.cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
+            cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[2] == "full" && it[1].type == "T" }.map { val -> tuple(val[0], val[2], val[3]  )}
+            CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
         else {
             CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
@@ -99,7 +100,7 @@ workflow CNV_CALLING {
             // assign correct part full,exon,backbone to relevant upcoming analysis //
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
             cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment
-            cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[1] == "full" }
+            cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[2] == "full" && it[1].type == "T" }.map { val -> tuple(val[0], val[2], val[3]  )}
             CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
 

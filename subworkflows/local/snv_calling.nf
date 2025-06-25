@@ -6,7 +6,9 @@ include { TNSCOPE                  } from '../../modules/local/sentieon/main'
 include { PINDEL_CONFIG            } from '../../modules/local/pindel/main'
 include { PINDEL_CALL              } from '../../modules/local/pindel/main'
 include { CONCATENATE_VCFS         } from '../../modules/local/concatenate_vcfs/main'
-include { AGGREGATE_VCFS           } from '../../modules/local/concatenate_vcfs/main'
+include { CONCATENATE_VCFS_BCFTOOLS} from '../../modules/local/concatenate_vcfs/main'
+include { AGGREGATE_VCFS as VT_AGG } from '../../modules/local/concatenate_vcfs/main'
+include { AGGREGATE_VCFS as BT_AGG } from '../../modules/local/concatenate_vcfs/main'
 include { MELT                     } from '../../modules/local/melt/main'
 include { SVDB_MERGE_SINGLES       } from '../../modules/local/svdb/main'
 include { BEDTOOLS_INTERSECT       } from '../../modules/local/filters/main'
@@ -70,14 +72,18 @@ workflow SNV_CALLING {
         CONCATENATE_VCFS { vcfs_to_concat }
         ch_versions         = ch_versions.mix(CONCATENATE_VCFS.out.versions.first())
 
-        // Aggregate all callers to one VCF
-        AGGREGATE_VCFS { CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()) }
+        CONCATENATE_VCFS_BCFTOOLS { vcfs_to_concat }
 
-        ch_versions         = ch_versions.mix(AGGREGATE_VCFS.out.versions.first())
+        // Aggregate all callers to one VCF
+        VT_AGG ( CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "vt" )
+
+        BT_AGG ( CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "bcftools" )
+
+        ch_versions         = ch_versions.mix(VT_AGG.out.versions.first())
 
     emit:
-        concat_vcfs =   CONCATENATE_VCFS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
-        agg_vcf     =   AGGREGATE_VCFS.out.vcf_concat           // channel: [ val(group), val(meta), file(agg.vcf) ]
-        versions    =   ch_versions                             // channel: [ file(versions) ]
+        concat_vcfs =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
+        agg_vcf     =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
+        versions    =   ch_versions                                      // channel: [ file(versions) ]
 
 }
