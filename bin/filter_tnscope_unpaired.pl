@@ -6,13 +6,20 @@ use vcf2;
 use Data::Dumper;
 use List::Util qw( max min sum );
 
-#1       1718690 .       A       T       0.14    ML_FAIL ECNT=1;FS=0;HCNT=8;MAX_ED=.;MIN_ED=.;ML_PROB=0.02;NLOD=181.64;NLODF=54.2;PV=0.085;PV2=0.0561;SOR=0.415;TLOD=4.81        GT:AD:AF:AFDP:ALTHC:ALT_F1R2:ALT_F2R1:BaseQRankSumPS:ClippingRankSumPS:DPHC:FOXOG:MQRankSumPS:NBQPS:QSS:REF_F1R2:REF_F2R1:ReadPosEndDistPS:ReadPosRankSumPS     0/1:715,14:0.02:703:12:12:2:-7.451:0:720:0.143:0:25.963:21370,330:368:347:30.542:-5.755 0/0:696,6:0.009:646:4:5:1:-4.974:0:629:0.167:0:26.017:20615,119:354:342:30.751:-2.414
-   
-
 my $vcf = vcf2->new('file'=>$ARGV[0] );
 
 #TODO ADD INFO HEADER STRINGS PROPERLY!
 system("zgrep ^## $ARGV[0]");
+print '##FILTER=<ID=WARN_LOW_TCOV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_VERYLOW_TVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_LOW_TVAF,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_HOMOPOLYMER_INDEL,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_HOMOPOLYMER_SNV,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_STRANDBIAS,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=WARN_STRANDBIAS,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_PVALUE,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=FAIL_NO_TVAR,Description="Record fails the filters">'."\n";
+print '##FILTER=<ID=.,Description="Record fails the filters">'."\n";
 system("zgrep ^#CHROM $ARGV[0]");
 
 

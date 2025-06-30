@@ -30,7 +30,7 @@ def create_fastq_channel(LinkedHashMap row, paired) {
 	meta.diagnosis          = row.diagnosis
 	meta.type               = row.type
 	meta.clarity_sample_id  = row.clarity_sample_id
-	meta.ffpe               = (row.containsKey("ffpe") ? row.ffpe : false)
+	meta.ffpe               = row.containsKey("ffpe") && row.ffpe ? true : false
 	meta.purity             = (row.containsKey("purity") ? row.purity : false)
 	meta.sequencing_run     = row.sequencing_run
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
@@ -64,7 +64,7 @@ def create_samples_channel(LinkedHashMap row, paired) {
 	meta.diagnosis          = row.diagnosis
 	meta.type               = row.type
 	meta.clarity_sample_id  = row.clarity_sample_id
-	meta.ffpe               = (row.containsKey("ffpe") ? row.ffpe : false)
+	meta.ffpe               = row.containsKey("ffpe") && row.ffpe ? true : false
 	meta.purity             = (row.containsKey("purity") ? row.purity : false)
 	meta.sequencing_run     = row.sequencing_run
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)

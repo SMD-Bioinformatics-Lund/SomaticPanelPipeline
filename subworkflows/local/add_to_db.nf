@@ -33,10 +33,10 @@ workflow ADD_TO_DB {
         optional_json = lc_d4.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }
+        
 
     emit:
         coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
-        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
-        
+        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]     
 }
 
