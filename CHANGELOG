@@ -1,5 +1,9 @@
 ## Changelog ##
 
+
+## 3.1.1
+- added some meta info to the coyote yaml and coyote load command 
+
 ## 3.1.0
 - Added GMSHem profile
 - changed to bcftools decomposing and normalization
