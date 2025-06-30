@@ -138,7 +138,7 @@ process COYOTE_YAML {
         tuple val(group), val(meta), file(vcf), file(importy)
 
     output:
-        tuple val(group), file("*.coyote.yaml"), emit: coyote_import
+        tuple val(group), file("*.coyote3.yaml"), emit: coyote_import
 
     when:
         task.ext.when == null || task.ext.when
@@ -186,20 +186,20 @@ process COYOTE_YAML {
         import_command = tmp.join('\n')
 
         """
-        echo --- > ${process_group}.coyote.yaml
-        echo groups: [\\'$params.coyote_group\\'] >> ${process_group}.coyote.yaml
-        echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote.yaml
-        echo name: \\'${process_group}\\' >> ${process_group}.coyote.yaml
-        echo clarity-sample-id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote.yaml
-        echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote.yaml
-        echo genome_build: 38 >> ${process_group}.coyote.yaml
-        echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote.yaml
-        echo sample_no: ${sample_no} >> ${process_group}.coyote.yaml
-        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
-        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
-        echo profile: \\'${environment}\\' >> ${process_group}.coyote.yaml
-        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote.yaml
-        printf "$import_command" >> ${process_group}.coyote.yaml
+        echo --- > ${process_group}.coyote3.yaml
+        echo groups: [\\'$params.coyote_group\\'] >> ${process_group}.coyote3.yaml
+        echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo name: \\'${process_group}\\' >> ${process_group}.coyote3.yaml
+        echo clarity-sample-id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo genome_build: 38 >> ${process_group}.coyote3.yaml
+        echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote3.yaml
+        echo sample_no: ${sample_no} >> ${process_group}.coyote3.yaml
+        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote3.yaml
+        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote3.yaml
+        echo profile: \\'${environment}\\' >> ${process_group}.coyote3.yaml
+        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote3.yaml
+        printf "$import_command" >> ${process_group}.coyote3.yaml
         """
     stub:
         environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
@@ -245,19 +245,19 @@ process COYOTE_YAML {
         import_command = tmp.join('\n')
 
         """
-        echo --- > ${process_group}.coyote.yaml
-        echo groups: [\\'$params.coyote_group\\'] >> ${process_group}.coyote.yaml
-        echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote.yaml
-        echo name: \\'${process_group}\\' >> ${process_group}.coyote.yaml
-        echo clarity-sample-id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote.yaml
-        echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote.yaml
-        echo genome_build: 38 >> ${process_group}.coyote.yaml
-        echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote.yaml
-        echo sample_no: ${sample_no} >> ${process_group}.coyote.yaml
-        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
-        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
-        echo profile: \\'${environment}\\' >> ${process_group}.coyote.yaml
-        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote.yaml
-        printf "$import_command" >> ${process_group}.coyote.yaml
+        echo --- > ${process_group}.coyote3.yaml
+        echo groups: [\\'$params.coyote_group\\'] >> ${process_group}.coyote3.yaml
+        echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo name: \\'${process_group}\\' >> ${process_group}.coyote3.yaml
+        echo clarity-sample-id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo genome_build: 38 >> ${process_group}.coyote3.yaml
+        echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote3.yaml
+        echo sample_no: ${sample_no} >> ${process_group}.coyote3.yaml
+        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote3.yaml
+        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote3.yaml
+        echo profile: \\'${environment}\\' >> ${process_group}.coyote3.yaml
+        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote3.yaml
+        printf "$import_command" >> ${process_group}.coyote3.yaml
         """
 }
