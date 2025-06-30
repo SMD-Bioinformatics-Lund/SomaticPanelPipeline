@@ -1,5 +1,9 @@
 ## Changelog ##
 
+## 3.1.2
+- gmshem to downsample at 100 mbp
+- coyote-yaml renamed and always saved in non-cron dir
+- coyote_cli params to decide what is added to cron dir
 
 ## 3.1.1
 - added some meta info to the coyote yaml and coyote load command 
