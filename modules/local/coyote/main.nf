@@ -63,8 +63,8 @@ process COYOTE {
             --subpanel ${meta.diagnosis[tumor_idx]} \\
             --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
             --sample_no $sample_no \\
-            --tumor_sample ${tumor_sample} \\
-            --normal_sample ${normal_sample} \\
+            --case_id ${tumor_sample} \\
+            --control_id ${normal_sample} \\
             --profile ${environment} \\
             --assay $params.coyote_group \\
             $import_command" > ${process_group}.coyote
@@ -122,8 +122,8 @@ process COYOTE {
             --subpanel ${meta.diagnosis[tumor_idx]} \\
             --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
             --sample_no $sample_no \\
-            --tumor_sample ${tumor_sample} \\
-            --normal_sample ${normal_sample} \\
+            --case_id ${tumor_sample} \\
+            --control_id ${normal_sample} \\
             --profile ${environment} \\
             --assay $params.coyote_group \\
             $import_command" > ${process_group}.coyote
@@ -195,8 +195,8 @@ process COYOTE_YAML {
         echo genome_build: 38 >> ${process_group}.coyote.yaml
         echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote.yaml
         echo sample_no: ${sample_no} >> ${process_group}.coyote.yaml
-        echo tumor_sample: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
-        echo normal_sample: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
+        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
+        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
         echo profile: \\'${environment}\\' >> ${process_group}.coyote.yaml
         echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote.yaml
         printf "$import_command" >> ${process_group}.coyote.yaml
@@ -254,8 +254,8 @@ process COYOTE_YAML {
         echo genome_build: 38 >> ${process_group}.coyote.yaml
         echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote.yaml
         echo sample_no: ${sample_no} >> ${process_group}.coyote.yaml
-        echo tumor_sample: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
-        echo normal_sample: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
+        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote.yaml
+        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote.yaml
         echo profile: \\'${environment}\\' >> ${process_group}.coyote.yaml
         echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote.yaml
         printf "$import_command" >> ${process_group}.coyote.yaml
