@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.3
+- cnvJSON.py could not handle merged GATK variants, now asumes copy number to be the same for merged
+
 ## 3.1.2
 - gmshem to downsample at 100 mbp
 - coyote-yaml renamed and always saved in non-cron dir
