@@ -30,12 +30,9 @@ while ( my $var = $vcf->next_var() ) {
     for my $gt (@{$var->{GT}}) {
 	next unless $gt->{_sample_id} eq $sample_id;
 	my $DP = ($gt->{DP} or 0);
-	last if $DP < 100 or !$gt->{AD};
-
-	my @AD = split /,/, $gt->{AD};
-	last unless @AD == 2;
-
-	my $vaf = $AD[1]/$gt->{DP};
+	last if $DP < 100 or !$gt->{AO};
+	my $AD = $gt->{AO};
+	my $vaf = $AD/$gt->{DP};
 	push @baf_data, $var->{CHROM}."\t".($var->{POS}-1)."\t".$var->{POS}."\t".$vaf;
     }
     
