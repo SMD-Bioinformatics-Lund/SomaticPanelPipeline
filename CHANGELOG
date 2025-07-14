@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.4
+- generate_gens_data_from_cnvkit.pl no longer uses deprecated AD-field from freebayes
+
 ## 3.1.3
 - cnvJSON.py could not handle merged GATK variants, now asumes copy number to be the same for merged
 
