@@ -16,13 +16,29 @@ process COYOTE {
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        tumor_reads = meta.reads[tumor_idx] ?: null
+        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
+        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
+        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
         normal_sample = null
+        clarity_control_id = null
+        clarity_control_pool_id = null
+        control_reads = null
+        control_ffpe = null
+        control_sequencing_run = null
+        control_purity = null
         sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             normal_sample = meta.id[normal_idx]
+            clarity_control_id = meta.clarity_sample_id[normal_idx]
+            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
+            control_reads = meta.reads[normal_idx] ?: null
+            control_ffpe = meta.ffpe[normal_idx] ? true : false
+            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
+            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
         }
         tumor_sample = meta.id[tumor_idx]
 
@@ -58,15 +74,33 @@ process COYOTE {
         echo "/data/bnf/scripts/import_DSL2_to_coyote.pl --group $params.coyote_group \\
             --vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
             --clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
+            --clarity_case_id ${meta.clarity_sample_id[tumor_idx]} \\
+            --clarity_control_id ${clarity_control_id} \\
             --build 38 \\
             --gens ${meta.id[tumor_idx]} \\
             --subpanel ${meta.diagnosis[tumor_idx]} \\
             --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
+            --clarity_case_pool_id ${meta.clarity_pool_id[tumor_idx]} \\
+            --clarity_control_pool_id ${clarity_control_pool_id} \\
             --sample_no $sample_no \\
             --case_id ${tumor_sample} \\
             --control_id ${normal_sample} \\
             --profile ${environment} \\
             --assay $params.coyote_group \\
+            --sequencing_scope panel \\
+            --omics_layer DNA \\
+            --sequencing_technology Illumina \\
+            --pipeline ${workflow.manifest.name} \\
+            --pipeline_version ${workflow.manifest.version} \\
+            --case_ffpe ${tumor_ffpe} \\
+            --case_sequencing_run ${tumor_sequencing_run} \\
+            --case_reads ${tumor_reads} \\
+            --case_purity ${tumor_purity} \\
+            --control_ffpe ${control_ffpe} \\
+            --control_sequencing_run ${control_sequencing_run} \\
+            --control_reads ${control_reads} \\
+            --control_purity ${control_purity} \\
+            --paired ${meta.id.size() >= 2} \\
             $import_command" > ${process_group}.coyote
         """
 
@@ -75,13 +109,29 @@ process COYOTE {
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        tumor_reads = meta.reads[tumor_idx] ?: null
+        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
+        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
+        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
         normal_sample = null
+        clarity_control_id = null
+        clarity_control_pool_id = null
+        control_reads = null
+        control_ffpe = null
+        control_sequencing_run = null
+        control_purity = null
         sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             normal_sample = meta.id[normal_idx]
+            clarity_control_id = meta.clarity_sample_id[normal_idx]
+            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
+            control_reads = meta.reads[normal_idx] ?: null
+            control_ffpe = meta.ffpe[normal_idx] ? true : false
+            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
+            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
         }
         tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
@@ -117,15 +167,33 @@ process COYOTE {
         echo "/data/bnf/scripts/import_DSL2_to_coyote.pl --group $params.coyote_group \\
             --vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
             --clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
+            --clarity_case_id ${meta.clarity_sample_id[tumor_idx]} \\
+            --clarity_control_id ${clarity_control_id} \\
             --build 38 \\
             --gens ${meta.id[tumor_idx]} \\
             --subpanel ${meta.diagnosis[tumor_idx]} \\
             --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
+            --clarity_case_pool_id ${meta.clarity_pool_id[tumor_idx]} \\
+            --clarity_control_pool_id ${clarity_control_pool_id} \\
             --sample_no $sample_no \\
             --case_id ${tumor_sample} \\
             --control_id ${normal_sample} \\
             --profile ${environment} \\
             --assay $params.coyote_group \\
+            --sequencing_scope panel \\
+            --omics_layer DNA \\
+            --sequencing_technology Illumina \\
+            --pipeline ${workflow.manifest.name} \\
+            --pipeline_version ${workflow.manifest.version} \\
+            --case_ffpe ${tumor_ffpe} \\
+            --case_sequencing_run ${tumor_sequencing_run} \\
+            --case_reads ${tumor_reads} \\
+            --case_purity ${tumor_purity} \\
+            --control_ffpe ${control_ffpe} \\
+            --control_sequencing_run ${control_sequencing_run} \\
+            --control_reads ${control_reads} \\
+            --control_purity ${control_purity} \\
+            --paired ${meta.id.size() >= 2} \\
             $import_command" > ${process_group}.coyote
         """
 }
@@ -148,13 +216,29 @@ process COYOTE_YAML {
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        tumor_reads = meta.reads[tumor_idx] ?: null
+        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
+        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
+        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
         normal_sample = null
+        clarity_control_id = null
+        clarity_control_pool_id = null
+        control_reads = null
+        control_ffpe = null
+        control_sequencing_run = null
+        control_purity = null
         sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             normal_sample = meta.id[normal_idx]
+            clarity_control_id = meta.clarity_sample_id[normal_idx]
+            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
+            control_reads = meta.reads[normal_idx] ?: null
+            control_ffpe = meta.ffpe[normal_idx] ? true : false
+            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
+            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
         }
         tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
@@ -187,11 +271,12 @@ process COYOTE_YAML {
 
         """
         echo --- > ${process_group}.coyote3.yaml
-        echo groups: [\\'$params.coyote_group\\'] >> ${process_group}.coyote3.yaml
         echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
         echo name: \\'${process_group}\\' >> ${process_group}.coyote3.yaml
-        echo clarity-sample-id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_case_id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_control_id: \\'${clarity_control_id}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_case_pool_id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_control_pool_id: \\'${clarity_control_pool_id}\\' >> ${process_group}.coyote3.yaml
         echo genome_build: 38 >> ${process_group}.coyote3.yaml
         echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote3.yaml
         echo sample_no: ${sample_no} >> ${process_group}.coyote3.yaml
@@ -199,6 +284,20 @@ process COYOTE_YAML {
         echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote3.yaml
         echo profile: \\'${environment}\\' >> ${process_group}.coyote3.yaml
         echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote3.yaml
+        echo sequencing_scope: \\'panel\\' >> ${process_group}.coyote3.yaml
+        echo omics_layer: \\'DNA\\' >> ${process_group}.coyote3.yaml
+        echo sequencing_technology: \\'Illumina\\' >> ${process_group}.coyote3.yaml
+        echo pipeline: \\'${workflow.manifest.name}\\' >> ${process_group}.coyote3.yaml
+        echo pipeline_version: ${workflow.manifest.version} >> ${process_group}.coyote3.yaml
+        echo case_ffpe: ${tumor_ffpe} >> ${process_group}.coyote3.yaml
+        echo case_sequencing_run: \\'${tumor_sequencing_run}\\' >> ${process_group}.coyote3.yaml
+        echo case_reads: ${tumor_reads} >> ${process_group}.coyote3.yaml
+        echo case_purity: ${tumor_purity} >> ${process_group}.coyote3.yaml
+        echo control_ffpe: ${control_ffpe} >> ${process_group}.coyote3.yaml
+        echo control_sequencing_run: \\'${control_sequencing_run}\\' >> ${process_group}.coyote3.yaml
+        echo control_reads: ${control_reads} >> ${process_group}.coyote3.yaml
+        echo control_purity: ${control_purity} >> ${process_group}.coyote3.yaml
+        echo paired: ${meta.id.size() >= 2} >> ${process_group}.coyote3.yaml
         printf "$import_command" >> ${process_group}.coyote3.yaml
         """
     stub:
@@ -206,7 +305,17 @@ process COYOTE_YAML {
         process_group = group
         tumor_idx = 0
         tumor_idx_lowcov = 0
+        tumor_reads = meta.reads[tumor_idx] ?: null
+        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
+        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
+        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
         normal_sample = null
+        clarity_control_id = null
+        clarity_control_pool_id = null
+        control_reads = null
+        control_ffpe = null
+        control_sequencing_run = null
+        control_purity = null
         sample_no = meta.id.size()
         if( meta.id.size() >= 2 ) {
             process_group = group + 'p'
@@ -214,6 +323,12 @@ process COYOTE_YAML {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             normal_sample = meta.id[normal_idx]
             sample_no = meta.id.size()
+            clarity_control_id = meta.clarity_sample_id[normal_idx]
+            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
+            control_reads = meta.reads[normal_idx] ?: null
+            control_ffpe = meta.ffpe[normal_idx] ? true : false
+            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
+            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
         }
         tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
@@ -246,11 +361,12 @@ process COYOTE_YAML {
 
         """
         echo --- > ${process_group}.coyote3.yaml
-        echo groups: [\\'$params.coyote_group\\'] >> ${process_group}.coyote3.yaml
         echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
         echo name: \\'${process_group}\\' >> ${process_group}.coyote3.yaml
-        echo clarity-sample-id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo clarity-pool-id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_case_id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_control_id: \\'${clarity_control_id}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_case_pool_id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
+        echo clarity_control_pool_id: \\'${clarity_control_pool_id}\\' >> ${process_group}.coyote3.yaml
         echo genome_build: 38 >> ${process_group}.coyote3.yaml
         echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote3.yaml
         echo sample_no: ${sample_no} >> ${process_group}.coyote3.yaml
@@ -258,6 +374,20 @@ process COYOTE_YAML {
         echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote3.yaml
         echo profile: \\'${environment}\\' >> ${process_group}.coyote3.yaml
         echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote3.yaml
+        echo sequencing_scope: \\'panel\\' >> ${process_group}.coyote3.yaml
+        echo omics_layer: \\'DNA\\' >> ${process_group}.coyote3.yaml
+        echo sequencing_technology: \\'Illumina\\' >> ${process_group}.coyote3.yaml
+        echo pipeline: \\'${workflow.manifest.name}\\' >> ${process_group}.coyote3.yaml
+        echo pipeline_version: ${workflow.manifest.version} >> ${process_group}.coyote3.yaml
+        echo case_ffpe: ${tumor_ffpe} >> ${process_group}.coyote3.yaml
+        echo case_sequencing_run: \\'${tumor_sequencing_run}\\' >> ${process_group}.coyote3.yaml
+        echo case_reads: ${tumor_reads} >> ${process_group}.coyote3.yaml
+        echo case_purity: ${tumor_purity} >> ${process_group}.coyote3.yaml
+        echo control_ffpe: ${control_ffpe} >> ${process_group}.coyote3.yaml
+        echo control_sequencing_run: \\'${control_sequencing_run}\\' >> ${process_group}.coyote3.yaml
+        echo control_reads: ${control_reads} >> ${process_group}.coyote3.yaml
+        echo control_purity: ${control_purity} >> ${process_group}.coyote3.yaml
+        echo paired: ${meta.id.size() >= 2} >> ${process_group}.coyote3.yaml
         printf "$import_command" >> ${process_group}.coyote3.yaml
         """
 }
