@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.5
+- added more meta information to the coyote3 load yaml and legacy coyote
+
 ## 3.1.4
 - generate_gens_data_from_cnvkit.pl no longer uses deprecated AD-field from freebayes
 
