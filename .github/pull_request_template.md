@@ -1,6 +1,6 @@
-# Pull Request Template for SomaticPanelPipeline
+<!-- Pull Request Template for SomaticPanelPipeline -->
 
-## Summary
+# Summary
 Clearly describe the purpose of this PR and what changed. 
 If it fixes an issue, reference it (e.g., Fixes #123). 
 For reviewers: include how to test this change.  
@@ -13,6 +13,7 @@ For reviewers: include how to test this change.
 - [ ] New feature / enhancement  
 - [ ] Refactor / cleanup  
 - [ ] Documentation update  
+
 
 ---
 
