@@ -141,7 +141,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(vcf)
+        tuple val(group), val(meta), file(vcf), val(db_name), file(db_vcf)
         
     output:
         tuple val(group), val(meta), file("${meta.id}.cnv.artefacts.vcf"),  emit: artefacts
@@ -154,7 +154,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
         def args = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}" 
         """
-        svdb --query $args --query_vcf $vcf > ${meta.id}.cnv.artefacts.vcf
+        svdb --query $args -out_frq AFRQ_${db_name} --out_occ ACOUNT_${db_name} --db ${db_vcf} --query_vcf $vcf > ${meta.id}.cnv.artefacts.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -165,7 +165,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        echo "-db $params.loqusdb_export --query_vcf $vcf" > ${meta.id}.cnv.artefacts.vcf
+        echo "-db $params.loqusdb_export --query_vcf $vcf $db_name $db_vcf" > ${meta.id}.cnv.artefacts.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
