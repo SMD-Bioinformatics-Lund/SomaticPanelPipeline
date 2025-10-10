@@ -158,10 +158,12 @@ def get_varinfo(info,gt):
         varinfo["PR"] = gt["PR"]
     if "SR" in gt:
         varinfo["SR"] = gt["SR"]
-    if "ACOUNT" in info:
-        varinfo["ACOUNT"] = int(info["ACOUNT"])
-    if "AFRQ" in info:
-        varinfo["AFRQ"] = float(info["AFRQ"])
+    # Dynamically capture any AFRQ* and ACOUNT* keys
+    for key, value in info.items():
+        if key.startswith("AFRQ"):
+            varinfo[key] = float(value)
+        elif key.startswith("ACOUNT"):
+            varinfo[key] = int(value)
     return varinfo
 
 def gt_field(gt_keys,gt_values):

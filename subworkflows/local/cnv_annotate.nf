@@ -18,7 +18,7 @@ workflow CNV_ANNOTATE {
 
 		if (params.loqusdb_export) {
 			SVDB_ANNOTATE_ARTEFACTS(tumor, params.loqusdb_vcfs)
-			gene_input = SVDB_ANNOTATE_ARTEFACTS.out.artefacts
+			gene_input = SVDB_ANNOTATE_ARTEFACTS.out.artefacts.mix(normal)
 		}
 
 		else {
