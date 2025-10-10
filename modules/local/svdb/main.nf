@@ -155,7 +155,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
         def args   = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
 
-        // 🧠 Build the sequential svdb chain as a bash loop
+        // Build the sequential svdb chain as a bash loop
         // We generate bash code dynamically in Groovy, then insert it below.
         def svdb_chain = dbs.collect { db_name, db_vcf ->
             """
@@ -170,7 +170,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
             """
         }.join("\n\n")
 
-        // 🧱 Emit final bash script
+        // Emit final bash script
         return """
         set -euo pipefail
 
@@ -193,7 +193,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
         def args   = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
 
-        // 🧠 Build the sequential svdb chain as a bash loop
+        // Build the sequential svdb chain as a bash loop
         // We generate bash code dynamically in Groovy, then insert it below.
         def svdb_chain = dbs.collect { db_name, db_vcf ->
             """
@@ -208,7 +208,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
             """
         }.join("\n\n")
 
-        // 🧱 Emit final bash script
+        // Emit final bash script
         return """
         set -euo pipefail
 
