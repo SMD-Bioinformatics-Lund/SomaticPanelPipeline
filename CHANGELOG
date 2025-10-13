@@ -1,5 +1,9 @@
 ## Changelog ##
 
+## 3.1.6
+- CNVs as JSON. Updated import script to ol'coyote to support this. 
+- Added multiple SVDB annotations via config-map
+
 ## 3.1.5
 - added more meta information to the coyote3 load yaml and legacy coyote
 
