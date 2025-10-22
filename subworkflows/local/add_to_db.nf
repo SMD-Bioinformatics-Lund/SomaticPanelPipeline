@@ -29,7 +29,7 @@ workflow ADD_TO_DB {
             }
         }.set { cnvkit_png }
 
-        optional = lc.mix(segments,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
+        optional = lc.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         optional_json = lc_d4.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }

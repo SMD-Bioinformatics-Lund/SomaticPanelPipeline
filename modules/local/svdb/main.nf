@@ -142,6 +142,7 @@ process SVDB_ANNOTATE_ARTEFACTS {
 
     input:
         tuple val(group), val(meta), file(vcf)
+	val(dbs)
         
     output:
         tuple val(group), val(meta), file("${meta.id}.cnv.artefacts.vcf"),  emit: artefacts
@@ -151,26 +152,79 @@ process SVDB_ANNOTATE_ARTEFACTS {
         task.ext.when == null || task.ext.when
 
     script:
-        def args = task.ext.args ?: ''
-        def prefix = task.ext.prefix ?: "${meta.id}" 
-        """
-        svdb --query $args --query_vcf $vcf > ${meta.id}.cnv.artefacts.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
-        END_VERSIONS
-        """
-
-    stub:
+        def args   = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
-        """
-        echo "-db $params.loqusdb_export --query_vcf $vcf" > ${meta.id}.cnv.artefacts.vcf
 
+        // Build the sequential svdb chain as a bash loop
+        // We generate bash code dynamically in Groovy, then insert it below.
+        def svdb_chain = dbs.collect { db_name, db_vcf ->
+            """
+            echo "[SVDB] Annotating with ${db_name} (${db_vcf})"
+            svdb --query ${args} \\
+                 --out_frq AFRQ_${db_name} \\
+                 --out_occ ACOUNT_${db_name} \\
+                 --db ${db_vcf} \\
+                 --query_vcf "\$input_vcf" \\
+                 > tmp_${db_name}.vcf
+            input_vcf="tmp_${db_name}.vcf"
+            """
+        }.join("\n\n")
+
+        // Emit final bash script
+        return """
+        set -euo pipefail
+
+        # Start from the original input VCF
+        input_vcf="${vcf}"
+
+        # Sequentially annotate using all DBs
+        ${svdb_chain}
+
+        # Final output file
+        mv "\$input_vcf" "${meta.id}.cnv.artefacts.vcf"
+
+        # Version tracking
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            svdb: \$( echo \$(svdb) | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+            svdb: \$( svdb 2>&1 | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
         END_VERSIONS
         """
+    stub:
+        def args   = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
 
+        // Build the sequential svdb chain as a bash loop
+        // We generate bash code dynamically in Groovy, then insert it below.
+        def svdb_chain = dbs.collect { db_name, db_vcf ->
+            """
+            echo "[SVDB] Annotating with ${db_name} (${db_vcf})"
+            echo --query ${args} \\
+                 --out_frq AFRQ_${db_name} \\
+                 --out_occ ACOUNT_${db_name} \\
+                 --db ${db_vcf} \\
+                 --query_vcf "\$input_vcf" \\
+                 > tmp_${db_name}.vcf
+            input_vcf="tmp_${db_name}.vcf"
+            """
+        }.join("\n\n")
+
+        // Emit final bash script
+        return """
+        set -euo pipefail
+
+        # Start from the original input VCF
+        input_vcf="${vcf}"
+
+        # Sequentially annotate using all DBs
+        ${svdb_chain}
+
+        # Final output file
+        mv "\$input_vcf" "${meta.id}.cnv.artefacts.vcf"
+
+        # Version tracking
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            svdb: \$( svdb 2>&1 | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
+        END_VERSIONS
+        """
 }

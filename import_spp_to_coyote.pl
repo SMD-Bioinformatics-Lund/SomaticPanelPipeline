@@ -163,54 +163,15 @@ my $var = $variants->with_codec( prefer_numeric => 1 );
 my $result = $var->insert_many($data_filtered);
 #print Dumper($result);
 if( $opt{'cnv'} ) {
-
-    open(CNV, $opt{cnv}) or die $!;
+	my @cnvs;
+    my $cnv_json = read_json($opt{'cnv'});
+	my %cnv_json = %$cnv_json;
+	foreach my $cnv (keys %cnv_json) {
+		$cnv_json{$cnv}{'SAMPLE_ID'} = $SAMPLE_ID;
+		push @cnvs,$cnv_json{$cnv};
+	}
 	
-    my @cnvs;
-    while(<CNV>) {
-	chomp;
 
-	my( $chr, $start, $end, $nprobes, $ratio, $strand, $genes, $panel, $callers, $prsr, $normal ) = split /\t/;
-
-	# Get overlapping genes from panel, with panel info
-	my %panel_info;
-	my @panel_genes = split /,/, $panel;
-	foreach(@panel_genes) {
-	    my($gene, $class, $cnv_type ) = split /:/;
-	    $panel_info{$gene} = {'gene'=>$gene, 'class'=>$class, 'cnv_type'=>$cnv_type};
-	}
-	# PR:SR 659,517:1800,119
-	# Get overlapping genes into an array
-	my @genes = split /,/, $genes;
-
-	my @gene_info;
-	foreach my $gene (@genes) {
-	    if($panel_info{$gene}) {
-		push( @gene_info, $panel_info{$gene} );
-	    }
-	    else {
-		push( @gene_info, {'gene'=>$gene} );
-	    }
-	}
-
-	my %cnv = ('chr'=>$chr, 'start'=>$start, 'end'=>$end, 
-		   'size'=>($end-$start), 'ratio'=>$ratio, 'genes'=>\@gene_info, 
-		   'nprobes'=>$nprobes, 'SAMPLE_ID'=>$SAMPLE_ID);
-	
-	# if extra info, mainly from multiple callers 
-	if ($callers) {
-		$cnv{'callers'} = $callers;
-	}
-	if ($prsr) {
-		my @prsr = split(":",$prsr);
-		$cnv{'PR'} = $prsr[0];
-		$cnv{'SR'} = $prsr[1];
-	}
-	if ($normal) {
-		$cnv{'NORMAL'} = 1;
-	}
-	push( @cnvs, \%cnv);
-    }
 
     my $variants = $client->ns("coyote.cnvs_wgs");
     my $var = $variants->with_codec( prefer_numeric => 1 );

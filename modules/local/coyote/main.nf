@@ -44,7 +44,7 @@ process COYOTE {
 
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
-        cnvseg_idx     = importy.findIndexOf{ it =~ 'panel' }
+        cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
         fusions_idx    = importy.findIndexOf{ it =~ 'annotated' }
         biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
         lowcov_idx     = importy.findIndexOf{ it =~ 'lowcov' }
@@ -136,7 +136,7 @@ process COYOTE {
         tumor_sample = meta.id[tumor_idx]
         // find what to load into coyote, depending on what files are in $import //
         // index of imports added from mix //
-        cnvseg_idx     = importy.findIndexOf{ it =~ 'panel' }
+        cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
         fusions_idx    = importy.findIndexOf{ it =~ 'annotated' }
         biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
         lowcov_idx     = importy.findIndexOf{ it =~ 'lowcov' }

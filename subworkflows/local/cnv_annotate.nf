@@ -17,9 +17,10 @@ workflow CNV_ANNOTATE {
 		ch_versions = Channel.empty()
 
 		if (params.loqusdb_export) {
-			SVDB_ANNOTATE_ARTEFACTS ( tumor.mix(normal) )
-			gene_input = SVDB_ANNOTATE_ARTEFACTS.out.artefacts
+			SVDB_ANNOTATE_ARTEFACTS(tumor, params.loqusdb_vcfs)
+			gene_input = SVDB_ANNOTATE_ARTEFACTS.out.artefacts.mix(normal)
 		}
+
 		else {
 			gene_input = tumor.mix(normal)
 		}
