@@ -96,7 +96,7 @@ def read_bedlike_vcf(file_name,panel_genes):
                 end = info["END"]
                 varid = chrom+":"+start+"-"+end
                 LOG.debug("Processing varid: %s", varid)
-                varinfo = get_varinfo(info,gt)
+                varinfo = get_varinfo(info,gt,start)
                 varinfo["chr"] = str(chrom)
                 varinfo["start"] = int(start)
                 varinfo["end"] = int(end)
@@ -136,7 +136,7 @@ def info_field(info):
             infodict[key] = value
     return infodict
 
-def get_varinfo(info,gt):
+def get_varinfo(info,gt,start):
     varinfo = {}
     if "PROBES" in info:
         varinfo["nprobes"] = int(info["PROBES"])
@@ -154,6 +154,10 @@ def get_varinfo(info,gt):
             varinfo["ratio"] = "AMP"
     if "SVLEN" in info:
         varinfo["size"] = abs(int(info["SVLEN"]))
+    elif 'END' in info:
+        varinfo["size"] = int(info['END']) - int(start) +1
+    else:
+        varinfo['size'] = 0
     if "PR" in gt:
         varinfo["PR"] = gt["PR"]
     if "SR" in gt:
