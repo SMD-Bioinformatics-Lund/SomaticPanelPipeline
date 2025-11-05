@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.7
+- CNVs for certain manta ins got no cnv size, cause downstream crashes in coyote. Now fixed
+
 ## 3.1.6
 - CNVs as JSON. Updated import script to ol'coyote to support this. 
 - Added multiple SVDB annotations via config-map
