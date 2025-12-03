@@ -107,7 +107,6 @@ workflow CNV_CALLING {
 
         // GENS V4 output
         GENS_V4 ( MERGE_GENS.out.merged_gens )
-        ch_versions = ch_versions.mix(GENS_V4.out.versions)
 
         ///////////////////////////////////////////////////////////////////////////////////////
 

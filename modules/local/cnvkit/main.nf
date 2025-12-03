@@ -339,7 +339,6 @@ process GENS_V4 {
 
     output:
         tuple val(group), val(meta), file("*.gens_v4"),     emit: dbload_v4
-        path "versions.yml",                                emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -352,17 +351,9 @@ process GENS_V4 {
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
 
-    shell:
-        '''
-        echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type ${meta.type} --baf !{params.gens_accessdir}/!{baf} --coverage !{params.gens_accessdir}/!{cov}" > !{meta.id}.gens_v4
-
-        cat <<-END_VERSIONS > versions.yml
-        "!{task.process}":
-            bedtools: $(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: $(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: $(echo $(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*$//')
-        END_VERSIONS
-        '''
+        """
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens_v4
+        """
     stub:
         process_group = group
         if ( meta.paired ) {
@@ -372,12 +363,5 @@ process GENS_V4 {
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
         echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens_v4
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
-        END_VERSIONS
         """
 }
