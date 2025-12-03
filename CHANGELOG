@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.8
+- Added GENS_V4 process to make it work with new version of GENS
+
 ## 3.1.7
 - CNVs for certain manta ins got no cnv size, cause downstream crashes in coyote. Now fixed
 
