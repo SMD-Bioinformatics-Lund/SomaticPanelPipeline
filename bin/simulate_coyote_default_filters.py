@@ -40,14 +40,31 @@ def _read_config_json(json_path):
 def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
     vcf_object = VariantFile(vcf_path)
     original_header = vcf_object.header
+    variants_found_under_filter_settings = 0
+    known_variants_missed = []
+
+    statistics = {
+        'fail_pon' : 0,
+        'fail_other_filter' : 0,
+        'fail_pop_load' : 0,
+        'fail_control_vaf' : 0,
+        'fail_pop_filter' : 0,
+        'fail_tvaf' : 0,
+        'fail_dp' : 0,
+        'fail_vd' : 0,
+        'retained_germline' : 0,
+        'fail_vep' : 0
+    }
 
     for var in vcf_object.fetch():
         var_is_kept = True
         var_is_shown = True
+        should_be_found = False
+
         var_dict = cmdvcf.parse_variant(var,vcf_object.header)
         simple_id = f"{var.chrom}_{var.pos}_{var.ref}_{var.alts[0]}"
         even_simpler_id = f"{var.chrom}:{var.pos}"
-        should_be_found = False
+
         if even_simpler_id in known:
             should_be_found = True
 
@@ -61,43 +78,54 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
         # hard filters, dont make it past CLI
         for filter_name in config['cli_filters']['filters']:
             if filter_name in filters:
+                if 'PON' in filter_name:
+                    statistics['fail_pon'] +=1
+                else:
+                    statistics['fail_other_filter'] +=1
                 var_is_kept = False
-                break
         if pop_af > config['cli_filters']['af']:
             var_is_kept = False
+            statistics['fail_pop_load'] +=1
         
         # soft filters, what is shown by default in coyote
         if tumor_af >= config['snv_filters']['max_freq'] or tumor_af <= config['snv_filters']['min_freq']:
             var_is_shown = False
+            statistics['fail_tvaf'] +=1
         if pop_af > config['snv_filters']['max_popfreq']:
             var_is_shown = False
+            statistics['fail_pop_filter'] +=1
         if depth < config['snv_filters']['min_depth']:
             var_is_shown = False
+            statistics['fail_dp'] +=1
         if variant_depth < config['snv_filters']['min_alt_reads']:
             var_is_shown = False
-        if normal_af >= config['snv_filters']['max_control_freq']:
-            var_is_shown = False
+            statistics['fail_vd'] +=1
+        if normal_af is not None:
+            if normal_af >= config['snv_filters']['max_control_freq']:
+                var_is_shown = False
+                statistics['fail_control_vaf'] +=1
         if not (set(all_consequences) & set(config['vep_filters'])):
             var_is_shown = False
+            statistics['fail_vep'] +=1
 
         # completely override all rules for this mf
-        if "GERMLINE" in filters:
+        if "GERMLINE" in filters and not 'GERMLINE_RISK' in filters:
             var_is_kept = True
             var_is_shown = True
+            statistics['retained_germline'] +=1
 
         if var_is_kept and var_is_shown:
-            if should_be_found:
-                print(f"{simple_id}")
-            else:
-                print(f"{simple_id} should not be found")
-                print(f"Pop_af:{pop_af}  tumor_af:{tumor_af}  variant_depth:{variant_depth} depth:{depth} normal_af:{normal_af}  filters:{filters} vep_consequences:{all_consequences}")
-
+            variants_found_under_filter_settings +=1
+            # else:
+            #     print(f"{simple_id} should not be found")
+            #     print(f"Pop_af:{pop_af}  tumor_af:{tumor_af}  variant_depth:{variant_depth} depth:{depth} normal_af:{normal_af}  filters:{filters} vep_consequences:{all_consequences}")
         else:
             if should_be_found:
-                print(f"{simple_id} should be found but was not")
-                print(f"Pop_af:{pop_af}  tumor_af:{tumor_af}  variant_depth:{variant_depth} depth:{depth} normal_af:{normal_af}  filters:{filters} vep_consequences:{all_consequences}")
+                known_variants_missed.append(f"Pop_af:{pop_af}  tumor_af:{tumor_af}  variant_depth:{variant_depth} depth:{depth} normal_af:{normal_af}  filters:{filters} vep_consequences:{all_consequences}")
 
-        #vcf_str = cmdvcf.vcf_string(var_dict,vcf_object.header)
+    print(f"variants shown in coyote:{variants_found_under_filter_settings} ")
+    print(f"variants missed:{known_variants_missed} ")
+    pprint(statistics)
 
 def max_gnomad(gnomad):
     """

@@ -1,0 +1,33 @@
+{
+    "snv_filters" : {
+        "max_freq" : 1,
+        "min_freq" : 0.02,
+        "max_control_freq" : 0.01,
+        "max_popfreq" : 0.01,
+        "min_depth" : 100,
+        "min_alt_reads" : 5
+    },
+    "vep_filters" : [
+        "splice_acceptor_variant",
+        "splice_donor_variant",
+        "splice_region_variant",
+        "stop_gained",
+        "frameshift_variant",
+        "frameshift_deletion",
+        "inframe_deletion",
+        "inframe_insertion",
+        "stop_lost",
+        "start_lost",
+        "missense_variant",
+        "protein_altering_variant",
+        "coding_sequence_variant"
+    ],
+    "cli_filters" : {
+        "af" : 0.05,
+        "filters" : {
+            "FAIL_PON": 1, 
+            "FAIL_NVAF": 1, 
+            "FAIL_LONGDEL": 1
+        }
+    }
+}
