@@ -30,7 +30,7 @@ Channel
 
 
 
-workflow SPP_COMMON {
+workflow VALIDATION {
 
     ch_versions = Channel.empty()
 
@@ -69,6 +69,11 @@ workflow SPP_COMMON {
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
 
+    SNV_VALIDATE (
+        ch_vcf_anno.finished_vcf,
+        params.assay_config,
+        params.known_validation_snvs
+    )
 }
 
 workflow.onComplete {
