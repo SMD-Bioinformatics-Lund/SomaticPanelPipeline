@@ -12,11 +12,20 @@ workflow CHECK_INPUT {
         CSV_CHECK ( csv )
         checkedCsv = CSV_CHECK.out.csv.splitCsv( header:true, sep:',').set { csvmap }
 
-        fastq     = csvmap.map { create_fastq_channel(it, paired) }
+        reads     = csvmap.map { create_fastq_channel(it, paired) }
+		ch_fastq  = reads
+			.filter { 
+				it -> it[1][0].endsWith("q.gz") && it[1][1].endsWith("q.gz") 
+			}
+		ch_bam = reads
+			.filter { 
+				it -> it[1][0].endsWith("bam") && it[1][1].endsWith("bam.bai") 
+			}
         meta      = csvmap.map { create_samples_channel(it, paired) }
 
 	emit:
-        fastq        // channel: [ val(meta), [ reads ] ]
+        ch_fastq        // channel: [ val(meta), [ reads ] ]
+		ch_bam
         meta         // channel: [ sample_id, sex, phenotype, paternal_id, maternal_id, case_id ]
 
 }
