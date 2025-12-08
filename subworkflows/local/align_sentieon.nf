@@ -8,6 +8,7 @@ include { BQSR_UMI               } from '../../modules/local/sentieon/main'
 workflow ALIGN_SENTIEON {
     take: 
         fastq_input         // channel: [mandatory] [ val(meta), [ reads ] ]
+        alt_bam_path        // channel: [optional] [val(meta [bam,bai])]
         meta                // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
@@ -19,7 +20,7 @@ workflow ALIGN_SENTIEON {
         MARKDUP ( BWA_UMI.out.bam_umi_markdup )
         ch_versions = ch_versions.mix(MARKDUP.out.versions)
 
-        BQSR_UMI ( BWA_UMI.out.bam_umi )
+        BQSR_UMI ( BWA_UMI.out.bam_umi.mix(alt_bam_path) )
         ch_versions = ch_versions.mix(BQSR_UMI.out.versions)
 
     emit:
