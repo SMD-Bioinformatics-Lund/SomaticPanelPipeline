@@ -15,7 +15,7 @@ workflow CHECK_INPUT {
         reads     = csvmap.map { create_fastq_channel(it, paired) }
 
         // FASTQ
-        ch_fastq = reads.filter { it ->
+        fastq = reads.filter { it ->
             def r1 = it[2].toString()
             def r2 = it[3].toString()
             r1.endsWith("fastq.gz") || r1.endsWith("fq.gz") &&
@@ -23,14 +23,14 @@ workflow CHECK_INPUT {
         }
 
         // BAM + BAI
-        ch_bam = reads.filter { it ->
+        bam = reads.filter { it ->
             def r1 = it[2].toString()
             def r2 = it[3].toString()
             r1.endsWith("bam") && (r2.endsWith("bai") || r2.endsWith("bam.bai"))
         }
 
         // VCF + index
-        ch_vcf = reads.filter { it ->
+        vcf = reads.filter { it ->
             def r1 = it[2].toString().toLowerCase()
             def r2 = it[3].toString().toLowerCase()
             r1.endsWith("vcf") &&
@@ -40,9 +40,9 @@ workflow CHECK_INPUT {
         meta = csvmap.map { create_samples_channel(it, paired) }
 
     emit:
-        ch_fastq
-        ch_bam
-        ch_vcf
+        fastq
+        bam
+        vcf
         meta
 }
 
