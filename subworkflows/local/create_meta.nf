@@ -10,7 +10,7 @@ workflow CHECK_INPUT {
 
     main:
         CSV_CHECK(csv)
-        csvmap = CSV_CHECK.out.csv.splitCsv(header:true, sep:',').set { csvmap }
+        checkedCSV = CSV_CHECK.out.csv.splitCsv(header:true, sep:',').set { csvmap }
 
         reads     = csvmap.map { create_fastq_channel(it, paired) }
 
