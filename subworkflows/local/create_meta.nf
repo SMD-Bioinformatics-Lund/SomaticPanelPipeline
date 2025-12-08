@@ -4,31 +4,48 @@
 include { CSV_CHECK      } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
-	take:
+    take:
         csv     // file(csv)
         paired  // boolean
 
-	main:
-        CSV_CHECK ( csv )
-        checkedCsv = CSV_CHECK.out.csv.splitCsv( header:true, sep:',').set { csvmap }
+    main:
+        CSV_CHECK(csv)
+        csvmap = CSV_CHECK.out.csv.splitCsv(header:true, sep:',').set { csvmap }
 
         reads     = csvmap.map { create_fastq_channel(it, paired) }
-		ch_fastq  = reads
-			.filter { 
-				it -> it[1][0].endsWith("q.gz") && it[1][1].endsWith("q.gz") 
-			}
-		ch_bam = reads
-			.filter { 
-				it -> it[1][0].endsWith("bam") && it[1][1].endsWith("bam.bai") 
-			}
-        meta      = csvmap.map { create_samples_channel(it, paired) }
 
-	emit:
-        ch_fastq        // channel: [ val(meta), [ reads ] ]
-		ch_bam
-        meta         // channel: [ sample_id, sex, phenotype, paternal_id, maternal_id, case_id ]
+        // FASTQ
+        ch_fastq = reads.filter { it ->
+            def r1 = it[2].toString()
+            def r2 = it[3].toString()
+            r1.endsWith("fastq.gz") || r1.endsWith("fq.gz") &&
+            r2.endsWith("fastq.gz") || r2.endsWith("fq.gz")
+        }
 
+        // BAM + BAI
+        ch_bam = reads.filter { it ->
+            def r1 = it[2].toString()
+            def r2 = it[3].toString()
+            r1.endsWith("bam") && (r2.endsWith("bai") || r2.endsWith("bam.bai"))
+        }
+
+        // VCF + index
+        ch_vcf = reads.filter { it ->
+            def r1 = it[2].toString().toLowerCase()
+            def r2 = it[3].toString().toLowerCase()
+            r1.endsWith("vcf") &&
+                (r2.endsWith("tbi") || r2.endsWith("csi") || r2.endsWith("vcf.gz.tbi"))
+        }
+
+        meta = csvmap.map { create_samples_channel(it, paired) }
+
+    emit:
+        ch_fastq
+        ch_bam
+        ch_vcf
+        meta
 }
+
 
 // Function to get list of [ meta, [ fastq_1, fastq_2 ] ]
 def create_fastq_channel(LinkedHashMap row, paired) {
