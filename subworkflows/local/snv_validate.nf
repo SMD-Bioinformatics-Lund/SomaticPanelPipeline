@@ -2,7 +2,7 @@
 
 include { VALIDATE_COYOTE_SNV            } from '../../modules/local/validate/main'
 
-workflow VALIDATE_SNV {
+workflow SNV_VALIDATE {
     take:        
         final_vcf                    // channel: [ val(group), val(meta), file("final.vcf") ]
         assay_config                 // channel : [ file(params.assay_config) ]
@@ -11,9 +11,9 @@ workflow VALIDATE_SNV {
     main:
         ch_versions = Channel.empty()
 
-        VALIDATE_SNV { final_vcf,assay_config,known_variants }
+        VALIDATE_COYOTE_SNV ( final_vcf,assay_config,known_variants )
         
     emit:
-        results             VALIDATE_SNV.out.results
+	placeholder = VALIDATE_COYOTE_SNV.out.results
 
 }

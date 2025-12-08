@@ -4,11 +4,11 @@ process VALIDATE_COYOTE_SNV {
 
     input:
         tuple val(group), val(meta), file(vcf)
-        file(assay_config)
-        file(known_variants)
+        path(assay_config)
+        path(known_variants)
         
     output:
-        tuple val(group), val(meta), file("*results.txt"),      emit: filtered_vcf
+        tuple val(group), val(meta), file("*results.txt"),      emit: results
         path "versions.yml",                                    emit: versions
 
     when:

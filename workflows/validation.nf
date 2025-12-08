@@ -5,6 +5,7 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { SNV_VALIDATE                  } from '../subworkflows/local/snv_validate'
@@ -49,6 +50,14 @@ workflow VALIDATION {
     )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
+
+    BAM_QC (
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
+        ch_mapped.dedup_metrics
+    )
+    .set { ch_qc }
+    ch_versions = ch_versions.mix(ch_qc.versions)
 
     SNV_CALLING ( 
         ch_mapped.bam_umi.groupTuple(),
