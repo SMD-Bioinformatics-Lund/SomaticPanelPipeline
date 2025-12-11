@@ -352,7 +352,7 @@ process GENS_V4 {
         def prefix   = task.ext.prefix ?: "${meta.id}"
 
         """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens_v4
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${meta.id}.merged.sorted.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens_v4
         """
     stub:
         process_group = group
@@ -362,6 +362,6 @@ process GENS_V4 {
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens_v4
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${meta.id}.merged.sorted.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens_v4
         """
 }
