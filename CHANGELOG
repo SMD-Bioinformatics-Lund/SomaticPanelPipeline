@@ -1,5 +1,10 @@
 ## Changelog ##
 
+
+## 3.1.9
+### HotFix
+- Added access dir path for gens_v4 files
+
 ## 3.1.8
 - Added GENS_V4 process to make it work with new version of GENS
 
