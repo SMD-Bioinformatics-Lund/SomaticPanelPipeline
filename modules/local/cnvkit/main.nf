@@ -338,7 +338,7 @@ process GENS_V4 {
         tuple val(group), val(meta), file(baf), file(cov)
 
     output:
-        tuple val(group), val(meta), file("*.gens_v4"),     emit: dbload_v4
+        tuple val(group), val(meta), file("*.gens_v4_somatic"),     emit: dbload_v4
 
     when:
         task.ext.when == null || task.ext.when
@@ -352,7 +352,7 @@ process GENS_V4 {
         def prefix   = task.ext.prefix ?: "${meta.id}"
 
         """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${baf} --coverage ${params.gens_accessdir}/${cov}" > ${meta.id}.gens_v4
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${baf} --coverage ${params.gens_accessdir}/${cov}" > ${meta.id}.gens_v4_somatic
         """
     stub:
         process_group = group
@@ -362,6 +362,6 @@ process GENS_V4 {
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${baf} --coverage ${params.gens_accessdir}/${cov}" > ${meta.id}.gens_v4
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${baf} --coverage ${params.gens_accessdir}/${cov}" > ${meta.id}.gens_v4_somatic
         """
 }

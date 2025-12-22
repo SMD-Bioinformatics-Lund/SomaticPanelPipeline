@@ -1,5 +1,7 @@
 ## Changelog ##
 
+## 3.1.10
+- Gens v4 output file name changed from `.gens_v4` -> `.gens_v4_somatic`
 
 ## 3.1.9
 ### HotFix
