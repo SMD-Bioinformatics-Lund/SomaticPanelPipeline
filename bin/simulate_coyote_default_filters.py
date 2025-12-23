@@ -20,12 +20,14 @@ def main(args):
     config = _read_config_json(args.config)
 
     if args.known:
-        known = _read_known_variants(args.known)
+        known,known_statistics = _read_known_variants(args.known)
     else:
         known = {}
 
     statistics = _read_and_filter_vcf(args.vcf,config,args.tumor_id,known)
     pprint(statistics)
+    if args.known:
+        pprint(known_statistics)
 
 def cli():
     """
@@ -49,9 +51,11 @@ def _read_config_json(json_path):
 def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
     vcf_object = VariantFile(vcf_path)
     variants_found = 0
+    variants_missed = 0
     false_postives_found = 0
     tiered_found = 0
-    known_variants_missed = []
+
+    known_summary = {}
 
     statistics = {
         'fail_pon' : 0,
@@ -67,6 +71,9 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
     }
 
     for var in vcf_object.fetch():
+        # for known variants
+        is_match = False
+        is_false = False
         
         var_dict = cmdvcf.parse_variant(var,vcf_object.header)
         simple_id = f"{var.chrom}_{var.pos}"
@@ -88,23 +95,42 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
             var_is_shown = True
             statistics['retained_germline'] +=1
 
+
+        # known
+        if simple_id in known:
+            is_match = _match_known(all_hgvsp,all_hgvsc,known[simple_id])
+            if is_match:
+                known_summary[simple_id] = "found"
+                if is_match.get("fp") == "False positive" or is_match.get("irr") == "Irrelevant":
+                    is_false = True
+                    false_postives_found +=1
+                elif is_match.get('Tier') <= TIER:
+                    tiered_found +=1
+
         if var_is_kept and var_is_shown:
             variants_found +=1
-            if simple_id in known:
-                is_match = _match_known(all_hgvsp,all_hgvsc,known[simple_id])
-                if is_match:
-                    if is_match.get("fp") == "False positive" or is_match.get("irr") == "Irrelevant":
-                        false_postives_found +=1
-                        continue
-                    if is_match.get('Tier') <= TIER:
-                        tiered_found +=1
+        # any variants missed from known due to filters
         else:
-            if simple_id in known:
-                ...
-        
+            if is_match and not is_false:
+                known_summary[simple_id] = reason_for_filter
+    
+    # if known was provided
+    if len(known.keys()) > 0:
+        for kvar in known:
+            if kvar not in known_summary:
+                for variant in known[kvar]:
+                    if variant.get('Tier') <= TIER and (variant.get("fp") != "False positive" or variant.get("irr") != "Irrelevant"):
+                        variants_missed +=1
+                        known_summary[kvar] = "not called/tiered"
+                    else:    
+                        known_summary[kvar] = "not called/fp/irr"
+        statistics['false_postives_found'] = false_postives_found
+        statistics['tiered_variants_found'] = tiered_found
+        statistics['tiered_variants_missed'] = variants_missed
+    
+    pprint(known_summary)
     statistics['variants_found_under_filters'] = variants_found
-    statistics['false_postives_found'] = false_postives_found
-    statistics['tiered_found'] = tiered_found
+        
     return statistics
     
 
@@ -151,16 +177,32 @@ def _get_all_consequences(csq):
 
 def _read_known_variants(filepath):
     variants = defaultdict(list)
+    known_statistics = {
+        'false_positives' : 0,
+        'found' : 0,
+        'tiered' : 0,
+        'germline' : 0,
+    }
     with open(filepath) as f:
         variants_ = csv.DictReader(f)
         for row in variants_:
             coordinates = row['Chr:Pos'].replace("'","").replace(":","_")
+
+            # make Tier integers
             tier = row.get('Tier')
             try:
                 tier = int(tier)
+                if tier <= TIER:
+                    known_statistics['tiered'] +=1
             except:
                 tier = 10
             row['Tier'] = tier
+
+            # save germline counts
+            if "GERM" in row.get('Flags'):
+                known_statistics['germline'] +=1
+
+            # make HGVS nomeclature more code friendly
             hgvs = row['HGVS']
             hgvs_p = None
             hgvs_c = None
@@ -172,10 +214,13 @@ def _read_known_variants(filepath):
             if c_match:
                 hgvs_c = c_match.group(1)
                 row['hgvsc'] = hgvs_c
+            if row.get("fp") == "False positive" or row.get("irr") == "Irrelevant":
+                known_statistics['false_positives'] +=1
             
             variants[coordinates].append(row)
 
-    return variants
+    known_statistics["found"] = len(variants.keys())
+    return variants,known_statistics
 
 def _hard_filters_cli(config,filters,statistics,pop_af,reason_for_filter):
     """
