@@ -106,7 +106,7 @@ workflow CNV_CALLING {
         }
 
         // GENS V4 output
-        GENS_V4 ( MERGE_GENS.out.merged_gens )
+        GENS_V4 ( MERGE_GENS.out.merged_gens_for_v4 )
 
         ///////////////////////////////////////////////////////////////////////////////////////
 
