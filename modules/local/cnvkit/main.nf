@@ -256,6 +256,7 @@ process MERGE_GENS {
 
     output:
         tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), optional: true,    emit: merged_gens
+        tuple val(group), val(meta), file("*baf.bed.gz"), file("*cov.bed.gz"),   optional: true,    emit: merged_gens_for_v4
         tuple val(group), val(meta), file("*.gens"),                                                emit: dbload
         path "versions.yml",                                                                        emit: versions
 

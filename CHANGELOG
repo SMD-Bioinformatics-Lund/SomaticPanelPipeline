@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.11
+- Fix: GENS v4 process attempted to load index files (e.g. .tbi) instead of the actual data files; corrected the load command to use the proper GENS v4 output files to prevent downstream failures.
+
 ## 3.1.10
 - Gens v4 output file name changed from `.gens_v4` -> `.gens_v4_somatic`
 
