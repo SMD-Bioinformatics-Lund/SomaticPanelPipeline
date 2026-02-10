@@ -161,7 +161,7 @@ sub mini_rank {
             my $score = conseqeunce($tx->{Consequence},\%rank);
             $max_score = $score if $score > $max_score; 
         }
-         if ( ($tx -> {gnomAD_AF}  || $tx -> {gnomADg_AF}) && $rank{"gnomad_cutoff"} ) {
+         if ( ($tx -> {gnomADg_AF} || $tx -> {gnomAD_AF}) && $rank{"gnomad_cutoff"} ) {
             my @afs_genome =  split(",",$tx->{gnomADg_AF});
             my @afs_exome =  split(",",$tx->{gnomAD_AF});
             if (($afs_genome[0] || $afs_exome[0])  < $assay_json{"gnomad_cutoff"}) {
