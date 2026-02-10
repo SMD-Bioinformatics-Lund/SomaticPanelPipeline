@@ -1,178 +1,246 @@
-## Changelog ##
+## Changelog
+
+## 3.1.12
+
+- Fix: Markgermline now takes the severe consequences from annotation VEP. Also now takes the genomAd from either genome or exon frequencies.
 
 ## 3.1.11
+
 - Fix: GENS v4 process attempted to load index files (e.g. .tbi) instead of the actual data files; corrected the load command to use the proper GENS v4 output files to prevent downstream failures.
 
 ## 3.1.10
+
 - Gens v4 output file name changed from `.gens_v4` -> `.gens_v4_somatic`
 
 ## 3.1.9
+
 ### HotFix
+
 - Added access dir path for gens_v4 files
 
 ## 3.1.8
+
 - Added GENS_V4 process to make it work with new version of GENS
 
 ## 3.1.7
+
 - CNVs for certain manta ins got no cnv size, cause downstream crashes in coyote. Now fixed
 
 ## 3.1.6
-- CNVs as JSON. Updated import script to ol'coyote to support this. 
+
+- CNVs as JSON. Updated import script to ol'coyote to support this.
 - Added multiple SVDB annotations via config-map
 
 ## 3.1.5
+
 - added more meta information to the coyote3 load yaml and legacy coyote
 
 ## 3.1.4
+
 - generate_gens_data_from_cnvkit.pl no longer uses deprecated AD-field from freebayes
 
 ## 3.1.3
+
 - cnvJSON.py could not handle merged GATK variants, now asumes copy number to be the same for merged
 
 ## 3.1.2
+
 - gmshem to downsample at 100 mbp
 - coyote-yaml renamed and always saved in non-cron dir
 - coyote_cli params to decide what is added to cron dir
 
 ## 3.1.1
-- added some meta info to the coyote yaml and coyote load command 
+
+- added some meta info to the coyote yaml and coyote load command
 
 ## 3.1.0
+
 - Added GMSHem profile
 - changed to bcftools decomposing and normalization
 
 ## 3.0.19
+
 - fixed illegal division error in filter_tnscope_somatic script
 
 ## 3.0.18
+
 - added tnscope parameters to find snvs only
 
 ## 3.0.17
+
 - reverted clinsig rescue for failed variants
 
 ## 3.0.16
+
 - updated solid msi loci
 
 ## 3.0.15
+
 - added a QC workflow for only running qc-processes
 
-
 ## 3.0.14
+
 - theano base_dir now correctly set for GATK:PREPROCESS
 
 ## 3.0.13
+
 - added --no-home run_options for singularity. Was causing issues with container when run as worker
 
 ## 3.0.12
+
 - ID-SNPs pairs missmatching fixed. Channel did not keep track of T vs N json
 
 ## v3.0.11
+
 - patch to fix solid missing lowcov in old coyote
 - when statement for d4-cov
 
 ## v3.0.10
+
 ## HotFix D4 Tools & Gens Single Sample ID
+
 - Fixed the D4 Tools container issue by adding '--contain' to containerOptions
 - Fixed appending 'p' for only paired samples and not for single samples in the gens load command
 
 ## v3.0.9
+
 ## Variant Filtration
-- variants that are tagged as failed and are filtered by post_annotation_filtering.py will be kept if the user has provided the rules in the nectflow config as params.override_filter_terms 
+
+- variants that are tagged as failed and are filtered by post_annotation_filtering.py will be kept if the user has provided the rules in the nectflow config as params.override_filter_terms
 - Example way to addto the config file, Each Key=Value should be separated by a semicolon and the values within each key should be separated by a comma.
   ```
     params.override_filter_terms = "CLIN_SIG=likely_pathogenic,pathogenic;CANONICAL=Yes,Y"
   ```
 
 ## v3.0.8
+
 ## Gens Load Fix
+
 - added --case-id $group to the gens load command
 - if the sample is paired 'p' is appended to $group
 
 ### v3.0.7
+
 ### CNV artefact annotation
+
 - bugfix: cnv annotation json fix for manta variants (required for coyote3)
 
 ### 3.0.6
+
 ### Coverage via D4
+
 - added a new python wrapper with d4tools to generate cov data for coyote3
 
 ### v3.0.5
+
 ### CNV artefact annotation
+
 - added a SVDB query module
 - CNV json now includes loqusdb known variants if annotation is included in config-profile
 
 ### v3.0.4
+
 ### Post-Annotation filtering
+
 - moved coyote import script filtering to pipeline
 - default filtering:
   - above 5% gnomad
   - FAIL_PON, FAIL_NVAF, FAIL_LONGDEL
 
 ### v3.0.3
+
 ### hotfix QC
+
 - sentieon qc container set to correct one
 
 ### v3.0.2
+
 ### QC reorganization
+
 - Moved QC modules into bam_qc and vcf_qc
 - Made contamination script more customizable via configs
 
 ### v3.0.1
+
 ### DSL2-main version
+
 - coyote-yaml import fixes
 
 ### dsl2-v1.1.6
+
 ### myeloid hotfixes
+
 - GENS for full coverage to export and indexing
 - contamination for paired tumor into python script
 
 ### dsl2-v1.1.5
+
 ### myeloid verif
+
 - pindel added and tested
 
 ### dsl2-v1.1.4
-### patch 
+
+### patch
+
 - Change date format in id SNP qc metadata to UTC / ISO 8601 format
 
-
 ### dsl2-v1.1.3
-### update 
+
+### update
+
 - Idsnp qc for all Somatic panel pipelies
 - QC data compatabile to CDM
 
 ### dsl2-v1.1.2
+
 ### update PON
+
 - updated solid SNV PONs to include more samples
 
 ### dsl2-v1.1.1
+
 ### Bugfix
-- the subsample fraction is set to 0.99 so that seqtk doesn't fail at 1.00 
+
+- the subsample fraction is set to 0.99 so that seqtk doesn't fail at 1.00
 
 ### ???
+
 ### Patch
+
 - VAF in FORMAT field should be Float, not Integer
 
 ### 2.1.2
+
 ### Bugfix
+
 - cnvkit 0/0 genotypes wrongly was presented as 0/1
 
 ### 2.1.1
+
 ### Bugfix
+
 - coyote cannot handle multiallelic indels produced by tnscope
 - added fix_vep_gnomad.pl which fixes above variants
 
 ### 2.1.0
+
 ### Clearing up and merging of PARP and myeloid
+
 - merged myeloid_hg38 into master
 - both profiles now can be run with same code base
 - fully supports batches
 
 ### 2.0.1
+
 ### Bugfix
+
 - CNVkit called duplications, when merged missed information, causing SVDB merge to crash
 
 ### 2.0.0
+
 ### Major release
+
 - PARP_inhib and myeloid remerged into same pipeline
 - config-logic added. --dev automatically adds results to dev-folders
 - PARP_inhib cnvcalling updates. CNVkit merged before SVDB merge for paired samples
@@ -181,22 +249,30 @@
 - Solid profile, and soon lymph
 
 ### 1.0.3
+
 - fixes: melt peak mem higher than expected
-- added: added memory variable to manta and delly 
+- added: added memory variable to manta and delly
 
 ### 1.0.2
+
 - feature, added param for cdm page for myeloid and parpinhib
 
 ### 1.0.1
+
 - bug fixes for aggregate_cnv2.pl, rare delly div 0
 
 ### 1.0
+
 - live version, supporting PARP_inib, myeloid
 - test versions for Solid, Lymphoid and pancancer
 
 2020-07-10
 Merged master with ovarian:
+
 # queue set to high
+
 # allow umiconform-skipping
+
 # profiles, hg19/hg38 and myeloid/ovarian
+
 # dev version of varlociraptor calling
