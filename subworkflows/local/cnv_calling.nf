@@ -6,7 +6,6 @@ include { CNVKIT_PLOT                          } from '../../modules/local/cnvki
 include { CNVKIT_CALL                          } from '../../modules/local/cnvkit/main'
 include { CNVKIT_CALL as CNVKIT_CALL_TC        } from '../../modules/local/cnvkit/main'
 include { MERGE_GENS                           } from '../../modules/local/cnvkit/main'
-include { GENS_V4                              } from '../../modules/local/cnvkit/main'
 include { CNVKIT_BATCH as CNVKIT_BACKBONE      } from '../../modules/local/cnvkit/main'
 include { CNVKIT_BATCH as CNVKIT_EXONS         } from '../../modules/local/cnvkit/main'
 include { GATKCOV_BAF                          } from '../../modules/local/GATK/main'
@@ -105,9 +104,6 @@ workflow CNV_CALLING {
             CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
 
-        // GENS V4 output
-        GENS_V4 ( MERGE_GENS.out.merged_gens_for_v4 )
-
         ///////////////////////////////////////////////////////////////////////////////////////
 
         //////////////////////////// GATK SEGMENT CALLING /////////////////////////////////////
@@ -180,7 +176,7 @@ workflow CNV_CALLING {
         tumor_vcf   =   JOIN_TUMOR.out.merged_vcf       // channel: [ val(group), val(vc), file(tumor.merged.vcf) ]
         normal_vcf  =   JOIN_NORMAL.out.merged_vcf      // channel: [ val(group), val(vc), file(normal.merged.vcf) ]
         gens        =   MERGE_GENS.out.dbload           // channel: [ val(group), val(meta), file(gens) ]
-        gens_v4     =   GENS_V4.out.dbload_v4           // channel: [ val(group), val(meta), file(gens_v4) ]
+        gens_v4     =   MERGE_GENS.out.gens_v4          // channel: [ val(group), val(meta), file(gens_v4) ]
         versions    =   ch_versions                     // channel: [ file(versions) ]
 
 }
