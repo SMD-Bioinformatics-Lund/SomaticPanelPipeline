@@ -258,6 +258,7 @@ process MERGE_GENS {
         tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), optional: true,    emit: merged_gens
         tuple val(group), val(meta), file("*baf.bed.gz"), file("*cov.bed.gz"),   optional: true,    emit: merged_gens_for_v4
         tuple val(group), val(meta), file("*.gens"),                                                emit: dbload
+        tuple val(group), val(meta), file("*.gens_v4_somatic"),                                     emit: gens_v4
         path "versions.yml",                                                                        emit: versions
 
     when:
@@ -296,10 +297,14 @@ process MERGE_GENS {
             bgzip !{meta.id}.merged.sorted.baf.bed
             tabix !{meta.id}.merged.sorted.baf.bed.gz
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
+
+            echo "gens load sample --sample-id !${meta.id} --case-id !${process_group} --genome-build 38 --sample-type !${meta.type} --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !${meta.id}.gens_v4_somatic
         else
             tabix !{meta.id}.full.baf.bed.gz
             tabix !{meta.id}.full.cov.bed.gz
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
+
+            echo "gens load sample --sample-id !${meta.id} --case-id !${process_group} --genome-build 38 --sample-type !${meta.type} --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !${meta.id}.gens_v4_somatic
         fi
 
         cat <<-END_VERSIONS > versions.yml
@@ -315,12 +320,20 @@ process MERGE_GENS {
         if ( meta.paired ) {
             process_group = group + 'p'
         }
+        if ( params.cnvkit_split ) {
+            filename_mod = "merged.sorted"
+        } else {
+            filename_mod = "full"
+        }
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --baf ${meta.id}.merged.sorted.baf.bed.gz --coverage ${meta.id}.merged.sorted.cov.bed.gz" > ${meta.id}.gens
-        touch ${meta.id}.merged.sorted.cov.bed.gz 
-        touch ${meta.id}.merged.sorted.baf.bed.gz 
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --baf ${params.gens_accessdir}/${meta.id}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.${filename_mod}.cov.bed.gz" > ${meta.id}.gens
+
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${meta.id}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.${filename_mod}.cov.bed.gz" > ${meta.id}.gens_v4_somatic
+        
+        touch ${meta.id}.${filename_mod}.cov.bed.gz 
+        touch ${meta.id}.${filename_mod}.baf.bed.gz 
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -328,41 +341,5 @@ process MERGE_GENS {
             bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
             tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
         END_VERSIONS
-        """
-}
-
-
-process GENS_V4 {
-    label 'process_single'
-    // THIS PROCESS SUCKS, please fix.
-    input:
-        tuple val(group), val(meta), file(baf), file(cov)
-
-    output:
-        tuple val(group), val(meta), file("*.gens_v4_somatic"),     emit: dbload_v4
-
-    when:
-        task.ext.when == null || task.ext.when
-    
-    script:
-        process_group = group
-        if ( meta.paired ) {
-            process_group = group + 'p'
-        }
-        def args     = task.ext.args ?: ""
-        def prefix   = task.ext.prefix ?: "${meta.id}"
-
-        """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${baf} --coverage ${params.gens_accessdir}/${cov}" > ${meta.id}.gens_v4_somatic
-        """
-    stub:
-        process_group = group
-        if ( meta.paired ) {
-            process_group = group + 'p'
-        }
-        def args     = task.ext.args ?: ""
-        def prefix   = task.ext.prefix ?: "${meta.id}"
-        """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${baf} --coverage ${params.gens_accessdir}/${cov}" > ${meta.id}.gens_v4_somatic
         """
 }
