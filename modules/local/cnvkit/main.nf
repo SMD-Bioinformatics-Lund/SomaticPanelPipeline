@@ -298,13 +298,13 @@ process MERGE_GENS {
             tabix !{meta.id}.merged.sorted.baf.bed.gz
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
 
-            echo "gens load sample --sample-id !${meta.id} --case-id !${process_group} --genome-build 38 --sample-type !${meta.type} --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !${meta.id}.gens_v4_somatic
+            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type !{meta.type} --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens_v4_somatic
         else
             tabix !{meta.id}.full.baf.bed.gz
             tabix !{meta.id}.full.cov.bed.gz
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
 
-            echo "gens load sample --sample-id !${meta.id} --case-id !${process_group} --genome-build 38 --sample-type !${meta.type} --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !${meta.id}.gens_v4_somatic
+            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type !{meta.type} --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens_v4_somatic
         fi
 
         cat <<-END_VERSIONS > versions.yml
