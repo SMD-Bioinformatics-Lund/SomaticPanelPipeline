@@ -13,7 +13,7 @@ process CSV_CHECK {
     script:
         def prefix = task.ext.prefix ?: "${samplesheet.baseName}"
         """
-        check_samplesheet.py -c ${samplesheet} -o samplecheck.txt
+        check_samplesheet.py -c ${samplesheet} -o samplecheck.txt --cmd-assays-json ${projectDir}/resources/cmd_assays.json
 
         if [[ -e "samplecheck.txt" ]]; then
             cp ${samplesheet} "${prefix}.checked.csv"
