@@ -19,6 +19,7 @@
    "mtuberculosis", 
    "kpneumoniae"  , 
    "unknown", 
-   "twistrnafusionv1-0"
+   "twistrnafusionv1-0",
+   "dev"
   ]
 }
