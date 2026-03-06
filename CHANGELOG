@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.15
+- Fixed issue created with GMShem keeps failing at check samplesheet.
+
 ## 3.1.14
 - Fixed Gens command where `!` is printed in the filename and ids in the command.
 
