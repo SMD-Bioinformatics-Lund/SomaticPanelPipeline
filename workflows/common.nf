@@ -16,6 +16,7 @@ include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
+include { VALIDATE_PARAMETERS           } from '../subworkflows/local/validate_params.nf'
 
 csv = file(params.csv)
 
@@ -44,6 +45,9 @@ workflow SPP_COMMON {
     // Checks input, creates meta-channel and decides whether data should be downsampled //
     CHECK_INPUT ( Channel.fromPath(csv), params.paired )
 
+	parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
+	VALIDATE_PARAMETERS(parameters_to_validate)
+    
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
     .set{ ch_trim }
