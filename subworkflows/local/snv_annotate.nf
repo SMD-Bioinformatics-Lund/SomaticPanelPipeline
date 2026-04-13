@@ -1,12 +1,13 @@
 #!/usr/bin/env nextflow
 
-include { PON_FILTER               } from '../../modules/local/filters/main'
-include { FFPE_PON_FILTER          } from '../../modules/local/filters/main'
-include { ANNOTATE_VEP             } from '../../modules/local/filters/main'
-include { MARK_GERMLINES           } from '../../modules/local/filters/main'
-include { FILTER_FOR_CNV           } from '../../modules/local/filters/main'
-include { VCFANNO                  } from '../../modules/local/filters/main'
-include { POST_ANNOTATION_FILTERS  } from '../../modules/local/filters/main'
+include { PON_FILTER                } from '../../modules/local/filters/main'
+include { FFPE_PON_FILTER           } from '../../modules/local/filters/main'
+include { ANNOTATE_VEP              } from '../../modules/local/filters/main'
+include { MARK_GERMLINES            } from '../../modules/local/filters/main'
+include { FILTER_FOR_CNV            } from '../../modules/local/filters/main'
+include { VCFANNO                   } from '../../modules/local/filters/main'
+include { POST_ANNOTATION_FILTERS   } from '../../modules/local/filters/main'
+include { CNV_BACKBONE_FILTER       } from '../../modules/local/filters/main'
 
 workflow SNV_ANNOTATE {
     take: 
@@ -49,7 +50,16 @@ workflow SNV_ANNOTATE {
         MARK_GERMLINES { ANNOTATE_VEP.out.vcf_vep }
         ch_versions = ch_versions.mix(MARK_GERMLINES.out.versions)
 
-        POST_ANNOTATION_FILTERS { MARK_GERMLINES.out.vcf_germline }
+        // CNV BACKBONE FILTER
+        CNV_BACKBONE_FILTER ( MARK_GERMLINES.out.vcf_germline, params.regions_backbone_idsnps )
+        ch_versions = ch_versions.mix( CNV_BACKBONE_FILTER.out.versions )
+
+        if (params.panel_profile_name.equals('gmshem') || params.panel_profile_name.equals('solid')) {
+            POST_ANNOTATION_FILTERS ( CNV_BACKBONE_FILTER.out.vcf_cnv_bb_filtered )
+        } else {
+            POST_ANNOTATION_FILTERS ( MARK_GERMLINES.out.vcf_germline )
+        }
+
         ch_versions = ch_versions.mix(POST_ANNOTATION_FILTERS.out.versions)
 
         // BAF for CNVkit //
