@@ -50,7 +50,7 @@ process CNVKIT2OVAHRDSCAR {
 
 process CNVKIT2SCARHRD {
     label "process_single"
-    tag "$id"
+    tag "${meta.id}"
 
     input:
         tuple val(group), val(meta), val(part), file(segments)
