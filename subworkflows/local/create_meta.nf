@@ -34,6 +34,7 @@ def create_fastq_channel(LinkedHashMap row, paired) {
 	meta.purity             = (row.containsKey("purity") ? row.purity : false)
 	meta.sequencing_run     = row.sequencing_run
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
+	meta.sex                = (row.containsKey("sex") ? row.sex : false)
 	meta.clarity_pool_id    = row.clarity_pool_id
     meta.paired             = paired
 	sub = false
