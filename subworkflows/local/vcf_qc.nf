@@ -6,6 +6,7 @@ include { PEDDY                    } from '../../modules/local/peddy/main'
 workflow VCF_QC {
     take:        
         vep_vcf                    // channel: [ val(group), val(meta), file("*.vep.vcf") ]
+        meta_ch                    // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
         ch_versions = Channel.empty()
@@ -14,7 +15,7 @@ workflow VCF_QC {
             meta.sex != false
         }
 
-        ped_ch = vep_vcf.map { group, meta, vcf ->
+        ped_ch = meta_ch.map { group, meta ->
 
             def sex_code = (
                 meta.sex == 'M'   ? 1 :

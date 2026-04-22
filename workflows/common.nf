@@ -92,6 +92,7 @@ workflow SPP_COMMON {
 
     VCF_QC (
         ch_vcf_anno.vep_vcf,
+        CHECK_INPUT.out.meta
     )
 
     CNV_CALLING ( 
