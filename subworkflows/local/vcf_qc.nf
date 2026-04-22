@@ -6,6 +6,7 @@ include { PEDDY                    } from '../../modules/local/peddy/main'
 workflow VCF_QC {
     take:        
         vep_vcf                    // channel: [ val(group), val(meta), file("*.vep.vcf") ]
+        tumor_germline             // channel: [ val(group), file(vcf), file(tbi) ]
         meta_ch                    // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
@@ -27,11 +28,14 @@ workflow VCF_QC {
             def ped_file = file("${meta.id}.ped")
             ped_file.text = ped_line
 
-            tuple(group, ped_file)
+            tuple(group, meta, ped_file)
         }
 
+        ped_ch_tumor = ped_ch.filter { group, meta, ped ->
+            meta.type == "T"
+        }.join(tumor_germline).view()
 
-        PEDDY { vep_vcf_filtered.join(ped_ch) }
+        PEDDY { ped_ch_tumor }
 
         CONTAMINATION { vep_vcf }
         ch_versions = ch_versions.mix(CONTAMINATION.out.versions)

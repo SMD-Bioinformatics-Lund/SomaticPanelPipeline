@@ -92,6 +92,7 @@ workflow SPP_COMMON {
 
     VCF_QC (
         ch_vcf_anno.vep_vcf,
+        ch_vcf_anno.germline_variants,
         CHECK_INPUT.out.meta
     )
 

@@ -7,7 +7,7 @@ process PEDDY {
         tuple val(group), val(meta), file(vcf), val(ped)
 
     output:
-        tuple val(group), val(meta), path("${group}.ped_check.csv"),path("${group}.peddy.ped"), path("${group}.sex_check.csv"), emit: peddy_files
+        tuple val(group), val(meta), path("*.ped_check.csv"),path("*.peddy.ped"), path("*.sex_check.csv"), emit: peddy_files
 
     when:
         task.ext.when == null || task.ext.when
