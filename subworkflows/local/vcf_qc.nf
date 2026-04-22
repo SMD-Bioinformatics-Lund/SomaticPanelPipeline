@@ -27,11 +27,11 @@ workflow VCF_QC {
             def ped_file = file("${meta.id}.ped")
             ped_file.text = ped_line
 
-            tuple(group, meta, ped_file)
+            tuple(group, ped_file)
         }
 
 
-        PEDDY { vep_vcf_filtered.join(ped_ch, by:[0,1]) }
+        PEDDY { vep_vcf_filtered.join(ped_ch) }
 
         CONTAMINATION { vep_vcf }
         ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
