@@ -4,7 +4,7 @@ process PEDDY {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(vcf), val(ped)
+        tuple val(group), val(meta), val(ped), file(vcf), file(tbi)
 
     output:
         tuple val(group), val(meta), path("*.ped_check.csv"),path("*.peddy.ped"), path("*.sex_check.csv"), emit: peddy_files
