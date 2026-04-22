@@ -16,11 +16,9 @@ workflow VCF_QC {
 
         ped_ch = vep_vcf.map { group, meta, vcf ->
 
-            def sex_value = meta.containsKey('sex') ? meta.sex : null
-
             def sex_code = (
-                sex_value == 'M'   ? 1 :
-                sex_value == 'F' ? 2 : 0
+                meta.sex == 'M'   ? 1 :
+                meta.sex == 'F' ? 2 : 0
             )
 
             def ped_line = "${group} ${meta.id} 0 0 ${sex_code} 2\n"
