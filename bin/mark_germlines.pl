@@ -7,6 +7,7 @@ use vcf2;
 use strict;
 use JSON;
 use Data::Dumper;
+use List::Util qw(max);
 
 my $MAX_VAF_NORMAL = 0.05;
 my $MIN_VAF_NORMAL = 0.35;
@@ -157,11 +158,13 @@ sub mini_rank {
     my $max_score = 0; my $gnomad = 0;
     for my $tx ( @{ $var->{INFO}->{CSQ} } ) {
         if( $tx->{Consequence} && $rank{"consequence_cutoff"} && $rank{"consequence_score"}) {
-            $max_score = conseqeunce($tx->{Consequence},\%rank);
+            my $score = conseqeunce($tx->{Consequence},\%rank);
+            $max_score = $score if $score > $max_score; 
         }
-        if ( $tx->{gnomADg} && $rank{"gnomad_cutoff"} ) {
-            my @afs =  split(",",$tx->{gnomADg_AF});
-            if ($afs[0] < $assay_json{"gnomad_cutoff"}) {
+         if ( ($tx -> {gnomADg_AF} || $tx -> {gnomAD_AF}) && $rank{"gnomad_cutoff"} ) {
+            my @afs_genome =  split(",",$tx->{gnomADg_AF});
+            my @afs_exome =  split(",",$tx->{gnomAD_AF});
+            if (($afs_genome[0] || $afs_exome[0])  < $assay_json{"gnomad_cutoff"}) {
                 $gnomad = 1;
             }
         }

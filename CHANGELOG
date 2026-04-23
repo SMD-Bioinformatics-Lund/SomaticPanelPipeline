@@ -1,5 +1,22 @@
 ## Changelog ##
 
+## 3.1.15
+- Fixed issue created with GMShem keeps failing at check samplesheet.
+
+## 3.1.14
+- Fixed Gens command where `!` is printed in the filename and ids in the command.
+
+## 3.1.13
+- Fix: Markgermline now takes the severe consequences from annotation VEP.
+- Updated likely_benign clinvar in solid_mg.json file
+- Also now takes the genomAd from either genome or exon frequencies.
+
+## 3.1.12
+- Fix: `GENS_V4` process removed and moved the command to generate `.gens_v4_somatic` file to `MERGE_GENS` process
+
+## 3.1.11
+- Fix: GENS v4 process attempted to load index files (e.g. .tbi) instead of the actual data files; corrected the load command to use the proper GENS v4 output files to prevent downstream failures.
+
 ## 3.1.10
 - Gens v4 output file name changed from `.gens_v4` -> `.gens_v4_somatic`
 
