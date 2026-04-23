@@ -32,15 +32,17 @@ workflow SNV_CALLING {
         PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
+        paired_calling_ch = bam_umi.groupTuple()
+
         // Variantcallers //
         // split by bed-file to speed up calling //
-        FREEBAYES ( bam_umi, beds)
+        FREEBAYES ( paired_calling_ch, beds)
         ch_versions         = ch_versions.mix(FREEBAYES.out.versions.first())
 
-        VARDICT ( bam_umi, beds)
+        VARDICT ( paired_calling_ch, beds)
         ch_versions         = ch_versions.mix(VARDICT.out.versions.first())
 
-        TNSCOPE ( bam_umi, beds)
+        TNSCOPE ( paired_calling_ch, beds)
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 

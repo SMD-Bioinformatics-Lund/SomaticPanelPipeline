@@ -73,7 +73,7 @@ workflow SPP_COMMON {
     .set { pgx_files }
 
     SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
