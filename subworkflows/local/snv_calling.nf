@@ -33,6 +33,7 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
         paired_calling_ch = bam_umi.groupTuple()
+        normal_bam_umi = bam_umi.filter { it[1].type == "N" }
 
         // Variantcallers //
         // split by bed-file to speed up calling //
@@ -46,9 +47,7 @@ workflow SNV_CALLING {
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 
-        if (bam_umi.filter( it -> it[1].type == "N" ) ) {
-            DNASCOPE(bam_umi)
-        }
+        DNASCOPE(normal_bam_umi)
 
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
         ch_versions         = ch_versions.mix(MELT.out.versions.first())
