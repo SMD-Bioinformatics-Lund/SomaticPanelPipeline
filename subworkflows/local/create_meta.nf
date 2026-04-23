@@ -4,22 +4,48 @@
 include { CSV_CHECK      } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
-	take:
+    take:
         csv     // file(csv)
         paired  // boolean
 
-	main:
-        CSV_CHECK ( csv )
-        checkedCsv = CSV_CHECK.out.csv.splitCsv( header:true, sep:',').set { csvmap }
+    main:
+        CSV_CHECK(csv)
+        checkedCSV = CSV_CHECK.out.csv.splitCsv(header:true, sep:',').set { csvmap }
 
-        fastq     = csvmap.map { create_fastq_channel(it, paired) }
-        meta      = csvmap.map { create_samples_channel(it, paired) }
+        reads     = csvmap.map { create_fastq_channel(it, paired) }
 
-	emit:
-        fastq        // channel: [ val(meta), [ reads ] ]
-        meta         // channel: [ sample_id, sex, phenotype, paternal_id, maternal_id, case_id ]
+        // FASTQ
+        fastq = reads.filter { it ->
+            def r1 = it[2].toString()
+            def r2 = it[3].toString()
+            r1.endsWith("fastq.gz") || r1.endsWith("fq.gz") &&
+            r2.endsWith("fastq.gz") || r2.endsWith("fq.gz")
+        }
 
+        // BAM + BAI
+        bam = reads.filter { it ->
+            def r1 = it[2].toString()
+            def r2 = it[3].toString()
+            r1.endsWith("bam") && (r2.endsWith("bai") || r2.endsWith("bam.bai"))
+        }
+
+        // VCF + index
+        vcf = reads.filter { it ->
+            def r1 = it[2].toString().toLowerCase()
+            def r2 = it[3].toString().toLowerCase()
+            r1.endsWith("vcf") &&
+                (r2.endsWith("tbi") || r2.endsWith("csi") || r2.endsWith("vcf.gz.tbi"))
+        }
+
+        meta = csvmap.map { create_samples_channel(it, paired) }
+
+    emit:
+        fastq
+        bam
+        vcf
+        meta
 }
+
 
 // Function to get list of [ meta, [ fastq_1, fastq_2 ] ]
 def create_fastq_channel(LinkedHashMap row, paired) {
@@ -34,7 +60,7 @@ def create_fastq_channel(LinkedHashMap row, paired) {
 	meta.purity             = (row.containsKey("purity") ? row.purity : false)
 	meta.sequencing_run     = row.sequencing_run
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
-	meta.sex                = (row.containsKey("sex") ? row.sex : false)
+    meta.sex                = (row.containsKey("sex") ? row.sex : false)
 	meta.clarity_pool_id    = row.clarity_pool_id
     meta.paired             = paired
 	sub = false
@@ -69,7 +95,7 @@ def create_samples_channel(LinkedHashMap row, paired) {
 	meta.purity             = (row.containsKey("purity") ? row.purity : false)
 	meta.sequencing_run     = row.sequencing_run
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
-	meta.sex                = (row.containsKey("sex") ? row.sex : false)
+    meta.sex                = (row.containsKey("sex") ? row.sex : false)
 	meta.clarity_pool_id    = row.clarity_pool_id
     meta.paired             = paired
 
