@@ -18,8 +18,8 @@ workflow CHECK_INPUT {
         fastq = reads.filter { it ->
             def r1 = it[2].toString()
             def r2 = it[3].toString()
-            r1.endsWith("fastq.gz") || r1.endsWith("fq.gz") &&
-            r2.endsWith("fastq.gz") || r2.endsWith("fq.gz")
+            (r1.endsWith("fastq.gz") || r1.endsWith("fq.gz")) &&
+            (r2.endsWith("fastq.gz") || r2.endsWith("fq.gz"))
         }
 
         // BAM + BAI

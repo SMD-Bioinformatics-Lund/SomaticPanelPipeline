@@ -3,6 +3,7 @@
 include { FREEBAYES                } from '../../modules/local/freebayes/main'
 include { VARDICT                  } from '../../modules/local/vardict/main'
 include { TNSCOPE                  } from '../../modules/local/sentieon/main'
+include { DNASCOPE                 } from '../../modules/local/sentieon/main'
 include { PINDEL_CONFIG            } from '../../modules/local/pindel/main'
 include { PINDEL_CALL              } from '../../modules/local/pindel/main'
 include { CONCATENATE_VCFS         } from '../../modules/local/concatenate_vcfs/main'
@@ -42,6 +43,10 @@ workflow SNV_CALLING {
         TNSCOPE ( bam_umi, beds)
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
+
+        if (bam_umi.filter( it -> it[1].type == "N" ) ) {
+            DNASCOPE(bam_umi)
+        }
 
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
         ch_versions         = ch_versions.mix(MELT.out.versions.first())
@@ -84,6 +89,7 @@ workflow SNV_CALLING {
     emit:
         concat_vcfs =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
         agg_vcf     =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
+        normal_vcf  =   DNASCOPE.out.normal_germline                     // channel: [ val(group), val(meta), path(vcf), path(index) ]
         versions    =   ch_versions                                      // channel: [ file(versions) ]
 
 }

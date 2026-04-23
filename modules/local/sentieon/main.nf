@@ -391,3 +391,27 @@ process FILTER_TNSCOPE {
         END_VERSIONS
         """
 }
+
+process DNASCOPE {
+    label "process_medium"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bais), file(bqsr)
+
+    output:
+        tuple val(group), val(meta), path("*vcf.gz"), path("*vcf.gz.tbi"), emit: normal_germline
+
+    script:
+        def args    = task.ext.args     ?: ''
+        def args2   = task.ext.args2    ?: ''
+
+        """
+        sentieon driver $args \\
+            -i $bam \\
+            --interval ${params.regions_bed} \\
+            -q $bqsr \\
+            --algo DNAscope \\
+            ${meta.id}.dnascope.vcf.gz
+        """
+}

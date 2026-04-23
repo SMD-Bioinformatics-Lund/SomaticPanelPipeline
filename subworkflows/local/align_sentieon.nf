@@ -7,8 +7,8 @@ include { BQSR_UMI               } from '../../modules/local/sentieon/main'
 
 workflow ALIGN_SENTIEON {
     take: 
-        fastq_input         // channel: [mandatory] [ val(meta), [ reads ] ]
-        alt_bam_path        // channel: [optional] [val(meta [bam,bai])]
+        fastq_input         // channel: [mandatory] [ val(meta), path([ reads ]) ]
+        alt_bam_path        // channel: [optional]  [ val(meta), path([bam,bai]) ]
         meta                // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
