@@ -5,17 +5,11 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
-include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
-include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
-include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
-include { BAM_QC                        } from '../subworkflows/local/bam_qc'
-include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
-include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
-include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
-include { FUSIONS                       } from '../subworkflows/local/fusions'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
+include { SNV_VALIDATE                  } from '../subworkflows/local/snv_validate'
+
 
 csv = file(params.csv)
 
@@ -37,7 +31,7 @@ Channel
 
 
 
-workflow SPP_COMMON {
+workflow VALIDATION {
 
     ch_versions = Channel.empty()
 
@@ -66,12 +60,6 @@ workflow SPP_COMMON {
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
 
-    // Create PGx CSV file
-    PHARMACOGENOMICS (
-        ch_mapped.bam_umi.groupTuple(),
-    )
-    .set { pgx_files }
-
     SNV_CALLING ( 
         ch_mapped.bam_umi.groupTuple(),
         ch_mapped.bam_dedup,
@@ -91,67 +79,11 @@ workflow SPP_COMMON {
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
 
-    VCF_QC (
-        ch_vcf_anno.vep_vcf,
-        ch_vcf_anno.germline_variants,
-        CHECK_INPUT.out.meta
-    )
-
-    CNV_CALLING ( 
-        ch_mapped.bam_umi, 
-        ch_vcf_anno.germline_variants,
-        CHECK_INPUT.out.meta,
-        ch_mapped.bam_dedup,
-        gatk_ref
-    )
-    .set { ch_cnvcalled }
-    ch_versions = ch_versions.mix(ch_cnvcalled.versions)
-
-    CNV_ANNOTATE (
-        ch_cnvcalled.tumor_vcf,
-        ch_cnvcalled.normal_vcf,
-        CHECK_INPUT.out.meta
-    )
-    .set { ch_cnv }
-    ch_versions = ch_versions.mix(ch_cnv.versions)
-
-
-    FUSIONS (
-        ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta,
-        ch_mapped.bam_dedup
-    )
-    .set { ch_fusion }
-    ch_versions = ch_versions.mix(ch_fusion.versions)
-
-    BIOMARKERS (
-        CHECK_INPUT.out.meta,
-        ch_cnvcalled.cnvkit_hrd,
-        ch_mapped.bam_umi, 
-        ch_mapped.bam_dedup
-    )
-    .set { ch_bio }
-    ch_versions = ch_versions.mix(ch_bio.versions)
-
-
-    ADD_TO_DB (
+    SNV_VALIDATE (
         ch_vcf_anno.finished_vcf,
-        ch_qc.lowcov.filter { item -> item[1] == 'T' },
-        ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
-        ch_cnv.segments,
-        ch_cnv.s_json,
-        ch_cnvcalled.gens,
-        ch_cnvcalled.gatcov_plot,
-        ch_fusion.fusions,
-        ch_bio.biomarkers,
-        ch_cnvcalled.cnvkit_plot
+        params.assay_config,
+        params.known_validation_snvs
     )
-
-    CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
-        CHECK_INPUT.out.meta
-    )
-
 }
 
 workflow.onComplete {
