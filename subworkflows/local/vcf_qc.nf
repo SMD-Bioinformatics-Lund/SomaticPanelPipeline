@@ -23,7 +23,7 @@ workflow VCF_QC {
                 meta.sex == 'F' ? 2 : 0
             )
 
-            def ped_line = "${group} ${meta.id} 0 0 ${sex_code} 2\n"
+            def ped_line = "${group}\t${meta.id}\t0\t0\t${sex_code}\t2\n"
 
             def ped_file = file("${meta.id}.ped")
             ped_file.text = ped_line
