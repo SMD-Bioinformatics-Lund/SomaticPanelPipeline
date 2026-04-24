@@ -96,8 +96,8 @@ workflow SPP_COMMON {
         ch_vcf.normal_germline,
         CHECK_INPUT.out.meta
     )
-    .set { ch_vcf_anno }
-    ch_versions = ch_versions.mix(ch_vcf_anno.versions)
+    .set { ch_vcf_germline_anno }
+    ch_versions = ch_versions.mix(ch_vcf_germline_anno.versions)
 
     VCF_QC (
         ch_vcf_anno.vep_vcf,
