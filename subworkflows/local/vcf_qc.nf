@@ -7,7 +7,7 @@ workflow VCF_QC {
     take:        
         vep_vcf                    // channel: [ val(group), val(meta), file("*.vep.vcf") ]
         tumor_germline             // channel: [ val(group), file(vcf), file(tbi) ]
-        normal_germline             // channel: [ val(group), val(meta) path(vcf), path(index) ]
+        normal_germline            // channel: [ val(group), val(meta) path(vcf), path(index) ]
         meta_ch                    // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
