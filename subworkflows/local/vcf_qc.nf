@@ -2,6 +2,7 @@
 
 include { CONTAMINATION            } from '../../modules/local/qc/main'
 include { PEDDY                    } from '../../modules/local/peddy/main'
+include { PEDDY2CDM                 } from '../../modules/local/qc/main'
 
 workflow VCF_QC {
     take:        
@@ -26,6 +27,8 @@ workflow VCF_QC {
         }.join(normal_germline, by:[0,1])
 
         PEDDY { ped_ch_tumor.mix(ped_ch_normal) }
+
+        PEDDY2CDM(PEDDY.out.peddy_files)
 
         CONTAMINATION { vep_vcf }
         ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
