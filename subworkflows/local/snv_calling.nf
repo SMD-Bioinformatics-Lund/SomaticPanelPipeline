@@ -88,9 +88,9 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(VT_AGG.out.versions.first())
 
     emit:
-        concat_vcfs =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
-        agg_vcf     =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
-        normal_vcf  =   DNASCOPE.out.normal_germline                     // channel: [ val(group), val(meta), path(vcf), path(index) ]
-        versions    =   ch_versions                                      // channel: [ file(versions) ]
+        concat_vcfs      =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
+        agg_vcf          =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
+        normal_germline  =   DNASCOPE.out.normal_germline                     // channel: [ val(group), val(meta), path(vcf), path(index) ]
+        versions         =   ch_versions                                      // channel: [ file(versions) ]
 
 }
