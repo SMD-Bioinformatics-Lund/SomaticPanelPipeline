@@ -1,0 +1,25 @@
+{
+  "cmd_assays": [
+   "wgs-hg38", 
+   "oncov2-0", 
+   "mody-cftr-aatv1-0", 
+   "myeloid-const", 
+   "GMSMyeloidv1-0", 
+   "PARPinhibv2-0",
+   "GMSHemv1-1", 
+   "gmssolidtumorv3-0", 
+   "gmssolidtumorrnav5-0", 
+   "rnaseq-fusion", 
+   "rnaseq-exp-breast", 
+   "tumwgs-solid", 
+   "tumwgs-hema", 
+   "gmssolidpgx", 
+   "saureus", 
+   "ecoli", 
+   "mtuberculosis", 
+   "kpneumoniae"  , 
+   "unknown", 
+   "twistrnafusionv1-0",
+   "dev"
+  ]
+}
