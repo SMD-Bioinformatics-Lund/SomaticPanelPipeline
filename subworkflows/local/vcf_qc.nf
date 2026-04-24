@@ -23,7 +23,7 @@ workflow VCF_QC {
 
         ped_ch_normal = meta_ch.filter { group, meta ->
             meta.type == "N"
-        }.join(normal_gerline)
+        }.join(normal_gerline, by:[0,1])
 
         PEDDY { ped_ch_tumor.mix(ped_ch_normal) }
 
