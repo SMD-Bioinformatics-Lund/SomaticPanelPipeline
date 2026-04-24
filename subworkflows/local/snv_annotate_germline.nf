@@ -2,7 +2,7 @@
 
 include { ANNOTATE_VEP  as NORMAL_VEP           } from '../../modules/local/filters/main'
 
-workflow SNV_ANNOTATE {
+workflow SNV_ANNOTATE_GERMLINE {
     take: 
         normal_germline // channel: [mandatory] [ val(group), val(meta), file(agg.vcf) ]
         meta            // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
@@ -10,8 +10,8 @@ workflow SNV_ANNOTATE {
     main:
         ch_versions = Channel.empty()
         normal_no_index = normal_germline.map {
-            group, meta, vcf, index ->
-            tuple(group, meta, vcf)
+            group, meta_data, vcf, index ->
+            tuple(group, meta_data, vcf)
         }
         // NON-OPTIONAL, NEEDED BY COYOTE
         NORMAL_VEP { normal_no_index }
