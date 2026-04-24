@@ -414,4 +414,11 @@ process DNASCOPE {
             --algo DNAscope \\
             ${meta.id}.dnascope.vcf.gz
         """
+
+    stub:
+
+        """
+        touch ${meta.id}.dnascope.vcf.gz
+        touch ${meta.id}.dnascope.vcf.gz.tbi
+        """
 }

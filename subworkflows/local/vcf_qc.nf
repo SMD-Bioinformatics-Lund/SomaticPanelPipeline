@@ -16,24 +16,10 @@ workflow VCF_QC {
             meta.sex != false
         }
 
-        ped_ch = meta_ch.map { group, meta ->
 
-            def sex_code = (
-                meta.sex == 'M'   ? 1 :
-                meta.sex == 'F' ? 2 : 0
-            )
-
-            def ped_line = "${group}\t${meta.id}\t0\t0\t${sex_code}\t2\n"
-
-            def ped_file = file("${meta.id}.ped")
-            ped_file.text = ped_line
-
-            tuple(group, meta, ped_file)
-        }
-
-        ped_ch_tumor = ped_ch.filter { group, meta, ped ->
+        ped_ch_tumor = meta_ch.filter { group, meta ->
             meta.type == "T"
-        }.join(tumor_germline).view()
+        }.join(tumor_germline)
 
         PEDDY { ped_ch_tumor }
 

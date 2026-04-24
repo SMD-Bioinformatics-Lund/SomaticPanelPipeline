@@ -4,7 +4,7 @@ process PEDDY {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), val(ped), file(vcf), file(tbi)
+        tuple val(group), val(meta), file(vcf), file(tbi)
 
     output:
         tuple val(group), val(meta), path("*.ped_check.csv"),path("*.peddy.ped"), path("*.sex_check.csv"), emit: peddy_files
@@ -14,8 +14,15 @@ process PEDDY {
 
     script:
         def prefix = task.ext.prefix ?: "${meta.id}"
+        
+        def sex_code = (
+            meta.sex == 'M' ? 1 :
+            meta.sex == 'F' ? 2 : 0
+        )
+
         """
-        peddy --sites hg38 $vcf $ped --prefix ${prefix}
+        echo -e "${group}\t${meta.id}\t0\t0\t${sex_code}\t2" > ${meta.id}.ped
+        peddy --sites hg38 $vcf ${meta.id}.ped --prefix ${prefix}
         """
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
