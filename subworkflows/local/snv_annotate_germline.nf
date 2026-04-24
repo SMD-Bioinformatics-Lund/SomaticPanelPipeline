@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-include { ANNOTATE_VEP  as NORMAL_VEP           } from '../../modules/local/filters/main'
+include { ANNOTATE_VEP  as ANNOTATE_VEP_GERLMINE         } from '../../modules/local/filters/main'
 
 workflow SNV_ANNOTATE_GERMLINE {
     take: 
@@ -14,10 +14,10 @@ workflow SNV_ANNOTATE_GERMLINE {
             tuple(group, meta_data, vcf)
         }
         // NON-OPTIONAL, NEEDED BY COYOTE
-        NORMAL_VEP { normal_no_index }
-        ch_versions = ch_versions.mix(NORMAL_VEP.out.versions)
+        ANNOTATE_VEP_GERLMINE { normal_no_index }
+        ch_versions = ch_versions.mix(ANNOTATE_VEP_GERLMINE.out.versions)
 
     emit:
-        vep_vcf             =   NORMAL_VEP.out.vcf_vep                           // channel: [ val(group), val(meta), file("*.vep.vcf") ]
+        vep_vcf             =   ANNOTATE_VEP_GERLMINE.out.vcf_vep                           // channel: [ val(group), val(meta), file("*.vep.vcf") ]
         versions            =   ch_versions                                      // channel: [ file(versions) ]
 }
