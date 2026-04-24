@@ -5,47 +5,42 @@ include { CSV_CHECK      } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
     take:
-        csv
-        paired
+        csv     // file(csv)
+        paired  // boolean
 
     main:
         CSV_CHECK(csv)
+        checkedCSV = CSV_CHECK.out.csv.splitCsv(header:true, sep:',').set { csvmap }
 
-        checkedCSV = CSV_CHECK.out.csv
-            .splitCsv(header:true, sep:',')
-            .set { csvmap }
+        reads     = csvmap.map { row -> create_fastq_channel(row, paired) }
 
-        // build meta once
-        meta_ch = csvmap.map { row ->
-            def meta = build_meta(row, paired)
-            tuple(row.group, meta, row)
+        // FASTQ
+        fastq = reads.filter { group, meta, r1, r2 ->
+            def read1 = r1.toString()
+            def read2 = r2.toString()
+            (read1.endsWith("fastq.gz") || read1.endsWith("fq.gz")) &&
+            (read2.endsWith("fastq.gz") || read2.endsWith("fq.gz"))
         }
 
-        // separate pure meta channel
-        meta = meta_ch.map { group, meta, row ->
-            tuple(group, meta)
+        // BAM + BAI
+        bam = reads.filter { group, meta, r1, r2 ->
+            def read1 = r1.toString()
+            def read2 = r2.toString()
+            read1.endsWith("bam") && (read2.endsWith("bai") || read2.endsWith("bam.bai"))
         }
 
-        // build reads from same meta
-        reads = meta_ch.map { group, meta_data, row ->
-            tuple(group, meta, file(row.read1), file(row.read2))
+        // VCF + index
+        vcf = reads.filter { group, meta, r1, r2 ->
+            def read1 = r1.toString()
+            def read2 = r2.toString()
+            read1.endsWith("vcf") &&
+                (read2.endsWith("tbi") || read2.endsWith("csi") || read2.endsWith("vcf.gz.tbi"))
         }
 
-        fastq = reads.filter { group, meta_data, r1, r2 ->
-            r1.name.endsWith("fastq.gz") || r1.name.endsWith("fq.gz")
-        }
-
-        bam = reads.filter { group, meta_data, r1, r2 ->
-            r1.name.endsWith("bam") &&
-            (r2.name.endsWith("bai") || r2.name.endsWith("bam.bai"))
-        }
-
-        vcf = reads.filter { group, meta_data, r1, r2 ->
-            def f1 = r1.name.toLowerCase()
-            def f2 = r2.name.toLowerCase()
-            f1.endsWith("vcf") &&
-            (f2.endsWith("tbi") || f2.endsWith("csi") || f2.endsWith("vcf.gz.tbi"))
-        }
+        meta = reads
+            .map { group, meta, r1, r2 ->
+                tuple( group, meta)
+            }
 
     emit:
         fastq
@@ -55,22 +50,22 @@ workflow CHECK_INPUT {
 }
 
 
-def build_meta(LinkedHashMap row, paired) {
-    def meta = [:]
-    meta.id                 = row.id
-    meta.group              = row.group
-    meta.diagnosis          = row.diagnosis
-    meta.type               = row.type
-    meta.clarity_sample_id  = row.clarity_sample_id
-    meta.ffpe               = row.containsKey("ffpe") && row.ffpe ? true : false
-    meta.purity             = row.containsKey("purity") ? row.purity : false
-    meta.sequencing_run     = row.sequencing_run
-    meta.reads              = row.containsKey("n_reads") ? row.n_reads : false
-    meta.sex                = row.containsKey("sex") ? row.sex : false
-    meta.clarity_pool_id    = row.clarity_pool_id
+// Function to get list of [ meta, [ fastq_1, fastq_2 ] ]
+def create_fastq_channel(LinkedHashMap row, paired) {
+	// create meta map
+	def meta = [:]
+	meta.id             	= row.id
+	meta.group              = row.group
+	meta.diagnosis          = row.diagnosis
+	meta.type               = row.type
+	meta.clarity_sample_id  = row.clarity_sample_id
+	meta.ffpe               = row.containsKey("ffpe") && row.ffpe ? true : false
+	meta.purity             = (row.containsKey("purity") ? row.purity : false)
+	meta.sequencing_run     = row.sequencing_run
+	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
+    meta.sex                = (row.containsKey("sex") ? row.sex : false)
+	meta.clarity_pool_id    = row.clarity_pool_id
     meta.paired             = paired
-
-    // compute sub ONCE
     def sub = false
     if (meta.reads && params.sample) {  
         if (meta.reads.toInteger() > params.sample_val) {
@@ -79,6 +74,9 @@ def build_meta(LinkedHashMap row, paired) {
         }
     }
     meta.sub = sub
+	// add path(s) of the fastq file(s) to the meta map
+	def fastq_meta = []
+	fastq_meta = [row.group, meta, file(row.read1), file(row.read2) ]
 
-    return meta
+	return fastq_meta
 }
