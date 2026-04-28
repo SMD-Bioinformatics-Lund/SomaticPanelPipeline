@@ -2,7 +2,7 @@
 
 include { CONTAMINATION            } from '../../modules/local/qc/main'
 include { PEDDY                    } from '../../modules/local/peddy/main'
-include { PEDDY2CDM                 } from '../../modules/local/qc/main'
+include { PEDDY2CDM                } from '../../modules/local/qc/main'
 
 workflow VCF_QC {
     take:        
