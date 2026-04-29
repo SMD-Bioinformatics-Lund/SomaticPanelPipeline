@@ -32,7 +32,7 @@ workflow VCF_QC {
         PEDDY2CDM(PEDDY.out.peddy_files)
 
         CONTAMINATION { vep_vcf }
-        ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
+        ch_versions = ch_versions.mix(CONTAMINATION.out.versions,PEDDY.out.versions)
         
     emit:
         qcdone                  =   CONTAMINATION.out.contamination_cdm                  // channel: [ tuple val(group), file("dist.txt"), file("sampleid.png") ]
