@@ -46,6 +46,7 @@ workflow SPP_QC {
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
         ch_trim.fastq_trim,
+        CHECK_INPUT.out.bam,
         CHECK_INPUT.out.meta
     )
     .set { ch_mapped }

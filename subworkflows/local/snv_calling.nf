@@ -3,6 +3,7 @@
 include { FREEBAYES                } from '../../modules/local/freebayes/main'
 include { VARDICT                  } from '../../modules/local/vardict/main'
 include { TNSCOPE                  } from '../../modules/local/sentieon/main'
+include { DNASCOPE                 } from '../../modules/local/sentieon/main'
 include { PINDEL_CONFIG            } from '../../modules/local/pindel/main'
 include { PINDEL_CALL              } from '../../modules/local/pindel/main'
 include { CONCATENATE_VCFS         } from '../../modules/local/concatenate_vcfs/main'
@@ -31,17 +32,22 @@ workflow SNV_CALLING {
         PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
+        paired_calling_ch = bam_umi.groupTuple()
+        normal_bam_umi = bam_umi.filter { it[1].type == "N" }
+
         // Variantcallers //
         // split by bed-file to speed up calling //
-        FREEBAYES ( bam_umi, beds)
+        FREEBAYES ( paired_calling_ch, beds)
         ch_versions         = ch_versions.mix(FREEBAYES.out.versions.first())
 
-        VARDICT ( bam_umi, beds)
+        VARDICT ( paired_calling_ch, beds)
         ch_versions         = ch_versions.mix(VARDICT.out.versions.first())
 
-        TNSCOPE ( bam_umi, beds)
+        TNSCOPE ( paired_calling_ch, beds)
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
+
+        DNASCOPE(normal_bam_umi)
 
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
         ch_versions         = ch_versions.mix(MELT.out.versions.first())
@@ -82,8 +88,9 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(VT_AGG.out.versions.first())
 
     emit:
-        concat_vcfs =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
-        agg_vcf     =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
-        versions    =   ch_versions                                      // channel: [ file(versions) ]
+        concat_vcfs      =   CONCATENATE_VCFS_BCFTOOLS.out.concatenated_vcfs  // channel: [ val(group), val(vc), file(vcf.gz) ]
+        agg_vcf          =   BT_AGG.out.vcf_concat                            // channel: [ val(group), val(meta), file(agg.vcf) ]
+        normal_germline  =   DNASCOPE.out.normal_germline                     // channel: [ val(group), val(meta), path(vcf), path(index) ]
+        versions         =   ch_versions                                      // channel: [ file(versions) ]
 
 }

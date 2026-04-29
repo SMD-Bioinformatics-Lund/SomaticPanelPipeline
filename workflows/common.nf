@@ -8,6 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
+include { SNV_ANNOTATE_GERMLINE         } from '../subworkflows/local/snv_annotate_germline'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { BAM_QC                        } from '../subworkflows/local/bam_qc'
@@ -52,6 +53,7 @@ workflow SPP_COMMON {
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
         ch_trim.fastq_trim,
+        CHECK_INPUT.out.bam,
         CHECK_INPUT.out.meta
     )
     .set { ch_mapped }
@@ -72,7 +74,7 @@ workflow SPP_COMMON {
     .set { pgx_files }
 
     SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
@@ -90,8 +92,18 @@ workflow SPP_COMMON {
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
 
+    SNV_ANNOTATE_GERMLINE (
+        ch_vcf.normal_germline,
+        CHECK_INPUT.out.meta
+    )
+    .set { ch_vcf_germline_anno }
+    ch_versions = ch_versions.mix(ch_vcf_germline_anno.versions)
+
     VCF_QC (
         ch_vcf_anno.vep_vcf,
+        ch_vcf_anno.germline_variants,
+        ch_vcf.normal_germline,
+        CHECK_INPUT.out.meta
     )
 
     CNV_CALLING ( 
