@@ -14,15 +14,16 @@ workflow VCF_QC {
     main:
         ch_versions = Channel.empty()
 
-        vep_vcf_filtered = vep_vcf.filter { group, meta, vcf ->
+        // Apply sex filter once on meta channel
+        meta_filtered = meta_ch.filter { group, meta ->
             meta.sex != false
         }
 
-        ped_ch_tumor = meta_ch.filter { group, meta ->
+        ped_ch_tumor = meta_filtered.filter { group, meta ->
             meta.type == "T"
         }.join(tumor_germline)
 
-        ped_ch_normal = meta_ch.filter { group, meta ->
+        ped_ch_normal = meta_filtered.filter { group, meta ->
             meta.type == "N"
         }.join(normal_germline, by:[0,1])
 
