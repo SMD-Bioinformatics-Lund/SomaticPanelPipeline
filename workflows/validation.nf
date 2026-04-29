@@ -5,11 +5,11 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
-include { BAM_QC                        } from '../subworkflows/local/bam_qc'
-include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
-include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
+include { SNV_VALIDATE                  } from '../subworkflows/local/snv_validate'
+
 
 csv = file(params.csv)
 
@@ -31,7 +31,7 @@ Channel
 
 
 
-workflow SPP_QC {
+workflow VALIDATION {
 
     ch_versions = Channel.empty()
 
@@ -79,15 +79,11 @@ workflow SPP_QC {
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
 
-    VCF_QC (
-        ch_vcf_anno.vep_vcf,
+    SNV_VALIDATE (
+        ch_vcf_anno.finished_vcf,
+        params.assay_config,
+        params.known_validation_snvs
     )
-
-    CUSTOM_DUMPSOFTWAREVERSIONS (
-        ch_versions.unique().collectFile(name: 'collated_versions.yml'),
-        CHECK_INPUT.out.meta
-    )
-
 }
 
 workflow.onComplete {
