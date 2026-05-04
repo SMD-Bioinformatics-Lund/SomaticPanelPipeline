@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.1.16
+- Filtered out variants arising from backbone probe regions and IDSNPS (e.g., CCDC51, HLA-A) in solid, hematology assay, but parp_inhib, myeloid and lymphoid profiles remains unchanged.
+
 ## 3.1.15
 - Fixed issue created with GMShem keeps failing at check samplesheet.
 
