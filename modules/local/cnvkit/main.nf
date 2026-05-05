@@ -194,7 +194,7 @@ process CNVKIT_CALL {
 
     output:
         tuple val(group), val(meta), val(part), file("*.${part}.call*.cns"),            emit: cnvkitsegment
-        tuple val(group), val(meta), val(part), file("*.${part}_logr_ballele.cnvkit"),  emit: cnvkit_baflogr
+        tuple val(group), val(meta), val(part), file("*.${part}_logr_ballele.cnvkit"),  emit: cnvkit_baflogr, optional: true
         tuple val(group), val(meta), val(part), file("*.${part}.cnvkit.vcf"),           emit: cnvkit_vcf
         path "versions.yml",                                                            emit: versions
 
@@ -214,9 +214,20 @@ process CNVKIT_CALL {
         }
 
         """
+        export MPLCONFIGDIR="\$PWD/.matplotlib"
+        mkdir -p "\$MPLCONFIGDIR"
+        
         $call
         $callvcf
-        cnvkit.py export nexus-ogt -o ${prefix}.${part}_logr_ballele.cnvkit ${cnr} ${vcf}
+
+        if zcat -f ${vcf} | grep -qv '^#'; then
+            cnvkit.py export nexus-ogt \
+                -o ${prefix}.${part}_logr_ballele.cnvkit \
+                ${cnr} \
+                ${vcf}
+        else
+            echo "Skipping CNVkit nexus-ogt export: empty VCF"
+        fi
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
