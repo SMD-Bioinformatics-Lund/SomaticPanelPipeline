@@ -17,6 +17,7 @@ process FREEBAYES {
         def args    = task.ext.args                ?: ''
         def args2   = task.ext.args2               ?: ''
         def args3   = task.ext.args3               ?: ''
+        def args4   = task.ext.args4               ?: ''
 
         if( meta.id.size() >= 2 ) {
 
@@ -30,8 +31,11 @@ process FREEBAYES {
             ${bams[tumor_idx]} \\
             ${bams[normal_idx]} > freebayes_${bed}.vcf.raw
 
-            vcffilter $args2 freebayes_${bed}.vcf.raw \\
-            | vcffilter $args3 \\
+            bcftools norm $args2 -o normalized_freebayes_${bed}.vcf.raw freebayes_${bed}.vcf.raw
+            tabix -p vcf normalized_freebayes_${bed}.vcf.raw
+
+            vcffilter $args3 normalized_freebayes_${bed}.vcf.raw \\
+            | vcffilter $args4 \\
             | vcfglxgt > freebayes_${bed}.filt1.vcf
 
             filter_freebayes_somatic.pl freebayes_${bed}.filt1.vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > freebayes_filtered_${bed}.vcf
@@ -54,8 +58,11 @@ process FREEBAYES {
             -F ${params.fb_var_freq_cutoff_up} \\
             $bams > freebayes_${bed}.vcf.raw
 
-            vcffilter $args2 freebayes_${bed}.vcf.raw \\
-            | vcffilter $args3 \\
+            bcftools norm $args2 -o normalized_freebayes_${bed}.vcf.raw  freebayes_${bed}.vcf.raw
+            tabix -p vcf normalized_freebayes_${bed}.vcf.raw
+
+            vcffilter $args3 normalized_freebayes_${bed}.vcf.raw \\
+            | vcffilter $args4 \\
             | vcfglxgt > freebayes_${bed}.filt1.vcf
 
             filter_freebayes_unpaired.pl freebayes_${bed}.filt1.vcf > freebayes_filtered_${bed}.vcf
