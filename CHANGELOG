@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.2.0
+- Massive `SomaticPanelPipeline_2021-06-24.sif` container has been split into its respective individual containers which is easy to update and maintain.
+
 ## 3.1.17
 - Fixed CNVkit call step to skip optional Nexus OGT BAF/LogR export when the input VCF has no variant records.
 
