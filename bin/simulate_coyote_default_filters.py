@@ -12,7 +12,6 @@ from pprint import pprint
 
 GNOMAD_KEY = "gnomAD_AF"
 TIER = 3
-#known_variants_missed.append(f"Pop_af:{pop_af}  tumor_af:{tumor_af}  variant_depth:{variant_depth} depth:{depth} normal_af:{normal_af}  filters:{filters} vep_consequences:{all_consequences}")
 
 def main(args):
     """
@@ -27,6 +26,7 @@ def main(args):
     statistics = _read_and_filter_vcf(args.vcf,config,args.tumor_id,known)
     pprint(statistics)
     if args.known:
+        print("Variants known from Coyote export")
         pprint(known_statistics)
 
 def cli():
@@ -243,7 +243,17 @@ def _hard_filters_cli(config,filters,statistics,pop_af,reason_for_filter):
 
     return var_is_kept
 
-def _soft_filters_coyote(config,statistics,tumor_af,pop_af,variant_depth, depth, normal_af,all_consequences,reason_for_filter):
+def _soft_filters_coyote(
+        config: dict,
+        statistics: dict,
+        tumor_af: float,
+        pop_af: float,
+        variant_depth: int,
+        depth: int,
+        normal_af: float,
+        all_consequences: list,
+        reason_for_filter: list
+    ):
     """
     """
     var_is_shown = True
