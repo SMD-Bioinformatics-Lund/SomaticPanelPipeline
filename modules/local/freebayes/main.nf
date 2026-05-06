@@ -31,7 +31,7 @@ process FREEBAYES {
             ${bams[tumor_idx]} \\
             ${bams[normal_idx]} > freebayes_${bed}.vcf.raw
 
-            bcftools norm $args2 -o normalized_freebayes_${bed}.raw.gz.gz freebayes_${bed}.vcf.raw
+            bcftools norm $args2 -o normalized_freebayes_${bed}.raw.vcf.gz freebayes_${bed}.vcf.raw
             tabix -p vcf normalized_freebayes_${bed}.raw.vcf.gz
 
             zcat normalized_freebayes_${bed}.raw.vcf.gz | vcffilter $args3 \\
@@ -58,7 +58,7 @@ process FREEBAYES {
             -F ${params.fb_var_freq_cutoff_up} \\
             $bams > freebayes_${bed}.vcf.raw
 
-            bcftools norm $args2 -o normalized_freebayes_${bed}.raw.gz.gz freebayes_${bed}.vcf.raw
+            bcftools norm $args2 -o normalized_freebayes_${bed}.raw.vcf.gz freebayes_${bed}.vcf.raw
             tabix -p vcf normalized_freebayes_${bed}.raw.vcf.gz
 
              zcat normalized_freebayes_${bed}.raw.vcf.gz |vcffilter $args3 \\
