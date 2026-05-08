@@ -23,11 +23,12 @@ def main(args):
     else:
         known = {}
 
-    statistics = _read_and_filter_vcf(args.vcf,config,args.tumor_id,known)
-    pprint(statistics)
+    statistics = _read_and_filter_vcf(args.vcf, config, args.tumor_id, known)
+
     if args.known:
-        print("Variants known from Coyote export")
-        pprint(known_statistics)
+        _print_summary(statistics, known_statistics)
+    else:
+        _print_summary(statistics)
 
 def cli():
     """
@@ -295,6 +296,52 @@ def _match_known(all_hgvsp,all_hgvsc,matches):
         if match.get('hgvsc') in all_hgvsc:
             return match
     return False
+
+
+def _print_summary(statistics, known_statistics=None):
+    print("\n" + "="*60)
+    print("FILTER SUMMARY")
+    print("="*60)
+
+    print("\nHard filter failures:")
+    print(f"  PON: {statistics['fail_pon']}")
+    print(f"  Other: {statistics['fail_other_filter']}")
+    print(f"  Population (hard): {statistics['fail_pop_load']}")
+
+    print("\nSoft filter failures:")
+    print(f"  Tumor VAF: {statistics['fail_tvaf']}")
+    print(f"  Population (soft): {statistics['fail_pop_filter']}")
+    print(f"  Control VAF: {statistics['fail_control_vaf']}")
+    print(f"  Depth: {statistics['fail_dp']}")
+    print(f"  Alt reads: {statistics['fail_vd']}")
+    print(f"  VEP consequence: {statistics['fail_vep']}")
+
+    print("\nRetained overrides:")
+    print(f"  Germline retained: {statistics['retained_germline']}")
+
+    print("\nFinal counts:")
+    print(f"  Variants passing all filters: {statistics['variants_found_under_filters']}")
+
+    if known_statistics:
+        print("\n" + "="*60)
+        print("KNOWN VARIANT PERFORMANCE")
+        print("="*60)
+
+        print(f"  Known variants (input): {known_statistics['found']}")
+        print(f"  Tier ≤ {TIER}: {known_statistics['tiered']}")
+        print(f"  False positives in known: {known_statistics['false_positives']}")
+        print(f"  Germline in known: {known_statistics['germline']}")
+
+        print("\nDetection:")
+        print(f"  Tiered variants found: {statistics['tiered_variants_found']}")
+        print(f"  Tiered variants missed: {statistics['tiered_variants_missed']}")
+        print(f"  Known false positives found: {statistics['false_postives_found']}")
+
+        # optional recall metric
+        denom = statistics['tiered_variants_found'] + statistics['tiered_variants_missed']
+        if denom > 0:
+            recall = statistics['tiered_variants_found'] / denom
+            print(f"\n  Recall (tier ≤ {TIER}): {recall:.3f}")
 
 if __name__ == "__main__":
     cli()

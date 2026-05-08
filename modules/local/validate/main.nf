@@ -17,8 +17,10 @@ process VALIDATE_COYOTE_SNV {
     script:
         def prefix  = task.ext.prefix   ?: "${group}"
         def args    = task.ext.args     ?: ''
+        tumor_idx = meta.type.findIndexOf{ type -> type == 'tumor' || type == 'T' }
+
         """
-        simulate_coyote_default_filters.py --vcf $vcf --known $known_variants --config $assay_config > ${prefix}.results.txt
+        simulate_coyote_default_filters.py --vcf $vcf --known $known_variants --config $assay_config --tumor_id ${meta.id[tumor_idx]} > ${prefix}.results.txt
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             python: \$(python --version 2>&1| sed -e 's/Python //g')
