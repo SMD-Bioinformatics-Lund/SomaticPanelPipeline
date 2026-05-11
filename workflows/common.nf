@@ -152,7 +152,7 @@ workflow SPP_COMMON {
         ch_cnv.segments,
         ch_cnv.s_json,
         ch_cnvcalled.gens,
-        ch_cnvcalled.gatcov_plot,
+        ch_cnvcalled.gatkcov_plot,
         ch_fusion.fusions,
         ch_bio.biomarkers,
         ch_cnvcalled.cnvkit_plot
