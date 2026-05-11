@@ -10,6 +10,7 @@ include { SNV_CALLING                   } from '../subworkflows/local/snv_callin
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { SNV_ANNOTATE_GERMLINE         } from '../subworkflows/local/snv_annotate_germline'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
+include { CNV_CALLING_GERMLINE          } from '../subworkflows/local/cnv_calling_germline'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
@@ -18,32 +19,27 @@ include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annota
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
 
-csv = file(params.csv)
-
-params.paired = csv.countLines() > 2 ? true : false
-
-
-// Split bed file in to smaller parts to be used for parallel variant calling
-Channel
-    .fromPath("${params.regions_bed}")
-    .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
-    .splitText( by: 1000, file: 'bedpart.bed' )
-    .set { beds }
-
-Channel
-    .fromPath(params.gatkreffolders)
-    .splitCsv(header:true)
-    .map{ row-> tuple(row.i, row.refpart) }
-    .set{ gatk_ref}
-
-
-
 workflow SPP_COMMON {
+    csv = file(params.csv)
+    params.paired = csv.countLines() > 2 ? true : false
 
-    ch_versions = Channel.empty()
+    // Split bed file in to smaller parts to be used for parallel variant calling
+    channel
+        .fromPath("${params.regions_bed}")
+        .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
+        .splitText( by: 1000, file: 'bedpart.bed' )
+        .set { beds }
+
+    channel
+        .fromPath(params.gatkreffolders)
+        .splitCsv(header:true)
+        .map{ row-> tuple(row.i, row.refpart) }
+        .set{ gatk_ref}
+
+    ch_versions = channel.empty()
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
-    CHECK_INPUT ( Channel.fromPath(csv), params.paired )
+    CHECK_INPUT ( channel.fromPath(csv), params.paired )
 
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
@@ -111,19 +107,25 @@ workflow SPP_COMMON {
         ch_vcf_anno.germline_variants,
         CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup,
-        gatk_ref
     )
     .set { ch_cnvcalled }
     ch_versions = ch_versions.mix(ch_cnvcalled.versions)
 
+    CNV_CALLING_GERMLINE ( 
+        ch_mapped.bam_umi, 
+        CHECK_INPUT.out.meta,
+        gatk_ref
+    )
+    .set { ch_cnvcalled_germline }
+    ch_versions = ch_versions.mix(ch_cnvcalled.versions)
+
     CNV_ANNOTATE (
         ch_cnvcalled.tumor_vcf,
-        ch_cnvcalled.normal_vcf,
+        ch_cnvcalled_germline.normal_vcf,
         CHECK_INPUT.out.meta
     )
     .set { ch_cnv }
     ch_versions = ch_versions.mix(ch_cnv.versions)
-
 
     FUSIONS (
         ch_trim.fastq_trim,
@@ -161,31 +163,32 @@ workflow SPP_COMMON {
         CHECK_INPUT.out.meta
     )
 
+    workflow.onComplete {
+
+        def msg = """\
+            Pipeline execution summary
+            ---------------------------
+            Completed at: ${workflow.complete}
+            Duration    : ${workflow.duration}
+            Success     : ${workflow.success}
+            scriptFile  : ${workflow.scriptFile}
+            workDir     : ${workflow.workDir}
+            csv         : ${params.csv}
+            exit status : ${workflow.exitStatus}
+            errorMessage: ${workflow.errorMessage}
+            errorReport :
+            """
+            .stripIndent()
+        def error = """\
+            ${workflow.errorReport}
+            """
+            .stripIndent()
+
+        def base = csv.getBaseName()
+        def logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
+        logFile.text = msg
+        logFile.append(error)
+    }
+
 }
 
-workflow.onComplete {
-
-    def msg = """\
-        Pipeline execution summary
-        ---------------------------
-        Completed at: ${workflow.complete}
-        Duration    : ${workflow.duration}
-        Success     : ${workflow.success}
-        scriptFile  : ${workflow.scriptFile}
-        workDir     : ${workflow.workDir}
-        csv         : ${params.csv}
-        exit status : ${workflow.exitStatus}
-        errorMessage: ${workflow.errorMessage}
-        errorReport :
-        """
-        .stripIndent()
-    def error = """\
-        ${workflow.errorReport}
-        """
-        .stripIndent()
-
-    base = csv.getBaseName()
-    logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
-    logFile.text = msg
-    logFile.append(error)
-}
