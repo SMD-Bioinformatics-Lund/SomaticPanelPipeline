@@ -145,18 +145,17 @@ workflow SPP_COMMON {
     ch_versions = ch_versions.mix(ch_bio.versions)
 
 
-    ADD_TO_DB (
-        ch_vcf_anno.finished_vcf,
-        ch_qc.lowcov.filter { item -> item[1] == 'T' },
-        ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
-        ch_cnv.segments,
-        ch_cnv.s_json,
-        ch_cnvcalled.gens,
-        ch_cnvcalled.gatkcov_plot,
-        ch_fusion.fusions,
-        ch_bio.biomarkers,
-        ch_cnvcalled.cnvkit_plot
-    )
+    // ADD_TO_DB (
+    //     ch_vcf_anno.finished_vcf,
+    //     ch_qc.lowcov.filter { item -> item[1] == 'T' },
+    //     ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
+    //     ch_cnv.segments,
+    //     ch_cnv.s_json,
+    //     ch_cnvcalled.gens,
+    //     ch_cnvcalled.gatkcov_plot,
+    //     ch_fusion.fusions,
+    //     ch_bio.biomarkers,
+    // )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml'),
