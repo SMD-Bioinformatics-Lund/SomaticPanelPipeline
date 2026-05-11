@@ -249,8 +249,8 @@ process PEDDY2CDM {
 		tuple val(group), val(meta), path(ped_check),path(peddy_ped), path(sex_check)
 
 	output:
-		tuple val(group), path("*peddy.json"), emit: json
-		tuple val(group), path("*peddy2cdm"), emit: cdm
+		tuple val(group), val(meta), path("*peddy.json"), emit: json
+		tuple val(group), val(meta), path("*peddy2cdm"), emit: cdm
 
 	script:
         def args    = task.ext.args     ?: ''
