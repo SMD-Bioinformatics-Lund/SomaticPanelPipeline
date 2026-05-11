@@ -108,6 +108,13 @@ def main():
 
     parser.add_argument("--alpha", type=float, default=0.6)
 
+    parser.add_argument(
+        "--min-allele-depth",
+        type=int,
+        default=100,
+        help="Minimum total allele depth for BAF plotting"
+    )
+
     args = parser.parse_args()
 
     ###########################################################################
@@ -184,7 +191,13 @@ def main():
     # LOAD HETS
     ###########################################################################
 
-    hets = pd.read_csv(args.hets, sep="\t", comment="@")
+    hets = pd.read_csv(
+        args.hets,
+        sep="\t",
+        comment="@",
+        dtype=str,
+        low_memory=False
+    )
 
     h_chrom_col = detect_column(hets, ["CONTIG", "Chromosome", "chr"])
 
@@ -193,6 +206,16 @@ def main():
     ref_col = detect_column(hets, ["REF_COUNT", "REFERENCE_COUNT"])
 
     alt_col = detect_column(hets, ["ALT_COUNT", "ALTERNATE_COUNT"])
+
+    ###########################################################################
+    # CONVERT NUMERIC COLUMNS
+    ###########################################################################
+
+    hets[h_pos_col] = pd.to_numeric(hets[h_pos_col])
+
+    hets[ref_col] = pd.to_numeric(hets[ref_col])
+
+    hets[alt_col] = pd.to_numeric(hets[alt_col])
 
     ###########################################################################
     # STANDARDIZE HETS CHROMOSOME NAMES
@@ -233,7 +256,32 @@ def main():
     # COMPUTE BAF
     ###########################################################################
 
-    hets["BAF"] = compute_baf(hets, ref_col, alt_col)
+    ###########################################################################
+    # COMPUTE TOTAL DEPTH
+    ###########################################################################
+
+    hets["TOTAL_DEPTH"] = (
+        hets[ref_col] +
+        hets[alt_col]
+    )
+
+    ###########################################################################
+    # FILTER LOW-DEPTH LOCI
+    ###########################################################################
+
+    hets = hets[
+        hets["TOTAL_DEPTH"] >= args.min_allele_depth
+    ].copy()
+
+    ###########################################################################
+    # COMPUTE BAF
+    ###########################################################################
+
+    hets["BAF"] = compute_baf(
+        hets,
+        ref_col,
+        alt_col
+    )
 
     ###########################################################################
     # PLOT

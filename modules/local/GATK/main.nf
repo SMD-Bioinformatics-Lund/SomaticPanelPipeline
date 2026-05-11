@@ -100,12 +100,6 @@ process GATKCOV_COUNT {
             --standardized-copy-ratios ${prefix}.standardizedCR.tsv \\
             --denoised-copy-ratios ${prefix}.denoisedCR.tsv
 
-        gatk PlotDenoisedCopyRatios \\
-            --standardized-copy-ratios ${prefix}.standardizedCR.tsv \\
-            --denoised-copy-ratios ${prefix}.denoisedCR.tsv \\
-            $args3 \\
-            --output . --output-prefix ${prefix}
-
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             gatk4: \$(echo \$(gatk --version 2>&1) | sed 's/^.*(GATK) v//; s/ .*\$//')
@@ -141,7 +135,7 @@ process GATKCOV_CALL {
 
     output:
         tuple val(group), file("*.called.seg"),     emit: gatcov_called
-        tuple val(group), file("*.modeled.png"),    emit: gatcov_plot
+        tuple val(group), file("*.hets.tsv"),       emit: gatkcov_hetero
         path "versions.yml",                        emit: versions
 
     when:
@@ -184,14 +178,6 @@ process GATKCOV_CALL {
             --input ${prefix}.cr.seg \\
             --output ${prefix}.called.seg \\
             $args2
-
-        gatk PlotModeledSegments \\
-            --denoised-copy-ratios ${denoised[tumor_idx]} \\
-            --allelic-counts ${prefix}.hets.tsv \\
-            --segments ${prefix}.modelFinal.seg \\
-            $args3 \\
-            --output . \\
-            --output-prefix ${prefix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
