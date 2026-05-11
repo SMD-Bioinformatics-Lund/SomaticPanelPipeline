@@ -124,6 +124,7 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(JOIN_TUMOR.out.versions)
 
     emit:
+        gatkcov_plot =  channel.empty()
         cnvkit_hrd  =   cnvkit_hrd                      // channel: [ val(group), val(meta), val(part), file(call.cns) ]
         tumor_vcf   =   JOIN_TUMOR.out.merged_vcf       // channel: [ val(group), val(vc), file(tumor.merged.vcf) ]
         gens        =   MERGE_GENS.out.dbload           // channel: [ val(group), val(meta), file(gens) ]
