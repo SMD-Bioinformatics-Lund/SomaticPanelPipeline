@@ -30,4 +30,5 @@ container/recipes/*.def
 container/*.def
 container/sif/*sif
 container/containers.yml
-
+bin/__pycache__/
+__pycache__

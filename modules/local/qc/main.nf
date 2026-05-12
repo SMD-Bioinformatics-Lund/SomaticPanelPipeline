@@ -44,7 +44,6 @@ process LOWCOV {
         def args2   = task.ext.args2    ?: ""
         def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
-        source activate sambamba
         panel_depth.pl $bam $args > lowcov.bed
         overlapping_genes.pl lowcov.bed $args2 > ${prefix}.lowcov.bed
 
@@ -57,7 +56,6 @@ process LOWCOV {
     stub:
         def prefix  = task.ext.prefix   ?: "${meta.id}"
         """
-        source activate sambamba
         touch ${prefix}.lowcov.bed
 
         cat <<-END_VERSIONS > versions.yml
@@ -140,11 +138,11 @@ process CONTAMINATION {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
             """
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args > ${meta.id[tumor_idx]}.value
+            find_contaminant.py --vcf $vcf --case-id ${meta.id[tumor_idx]} $args --out ${meta.id[tumor_idx]}.value
             echo "--overwrite --sample-id ${meta.id[tumor_idx]} --sequencing-run ${meta.sequencing_run[tumor_idx]} --assay ${params.cdm} --contamination" > ${meta.id[tumor_idx]}.1
             paste -d " " ${meta.id[tumor_idx]}.1 ${meta.id[tumor_idx]}.value > ${meta.id[tumor_idx]}.contaminationpy
             
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args2 > ${meta.id[normal_idx]}.value
+            find_contaminant.py --vcf $vcf --case-id ${meta.id[tumor_idx]} $args2 --out ${meta.id[normal_idx]}.value
             echo "--overwrite --sample-id ${meta.id[normal_idx]} --sequencing-run ${meta.sequencing_run[normal_idx]} --assay ${params.cdm} --contamination" > ${meta.id[normal_idx]}.1
             paste -d " " ${meta.id[normal_idx]}.1 ${meta.id[normal_idx]}.value > ${meta.id[normal_idx]}.contaminationpy
 
@@ -156,7 +154,7 @@ process CONTAMINATION {
         }
         else {
             """
-            find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} $args > ${meta.id[0]}.value
+            find_contaminant.py --vcf $vcf --case-id ${meta.id[0]} $args --out ${meta.id[0]}.value
             echo "--overwrite --sample-id ${meta.id[0]} --sequencing-run ${meta.sequencing_run[0]} --assay ${params.cdm} --contamination" > ${meta.id[0]}.1
             paste -d " " ${meta.id[0]}.1 ${meta.id[0]}.value > ${meta.id[0]}.contaminationpy
 

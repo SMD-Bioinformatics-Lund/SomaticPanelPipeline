@@ -115,7 +115,8 @@ process AGGREGATE_VCFS {
         }
 
         """
-        aggregate_vcf.pl --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} |vcf-sort -c > ${prefix}.${norm_sw}.agg.vcf
+        aggregate_vcf.py --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} --out ${prefix}.${norm_sw}.agg.vcf1
+        vcf-sort -c ${prefix}.${norm_sw}.agg.vcf1 > ${prefix}.${norm_sw}.agg.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

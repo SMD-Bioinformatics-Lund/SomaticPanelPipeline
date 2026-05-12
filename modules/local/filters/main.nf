@@ -21,7 +21,7 @@ process PON_FILTER {
         def pons_str = pons.join(",")
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${prefix}.agg.pon.vcf
+        filter_with_pon.py --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} --out ${prefix}.agg.pon.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -67,7 +67,7 @@ process FFPE_PON_FILTER {
         def pons_str = pons.join(",")
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${prefix}.agg.pon.ponffpe.vcf
+        filter_with_ffpe_pon.py --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} --out ${prefix}.agg.pon.ponffpe.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -155,7 +155,7 @@ process MARK_GERMLINES {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
+            fix_vep_gnomad.py --vcf $vcf --out ${prefix}.agg.pon.vep.fix.vcf
             mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}p.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
@@ -166,7 +166,7 @@ process MARK_GERMLINES {
         }
         else if( meta.id.size() == 1 ) {
             """
-            fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
+            fix_vep_gnomad.py --vcf $vcf --out ${prefix}.agg.pon.vep.fix.vcf
             mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[0]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml

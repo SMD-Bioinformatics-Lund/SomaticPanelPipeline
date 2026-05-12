@@ -31,7 +31,7 @@ process VARDICT {
             | var2vcf_paired.pl -N "${meta.id[tumor_idx]}|${meta.id[normal_idx]}" \\
             -f $params.vardict_var_freq_cutoff_p > vardict_${bed}.vcf.raw
 
-            filter_vardict_somatic.pl vardict_${bed}.vcf.raw ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > vardict_${bed}.vcf
+            filter_vardict_somatic.py --vcf vardict_${bed}.vcf.raw --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out vardict_${bed}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -51,7 +51,7 @@ process VARDICT {
             | var2vcf_valid.pl -N ${meta.id[0]} \\
             -E -f 0.01 > vardict_${bed}.vcf.raw
 
-            filter_vardict_unpaired.pl vardict_${bed}.vcf.raw > vardict_${bed}.vcf
+            filter_vardict_unpaired.py --vcf vardict_${bed}.vcf.raw --out vardict_${bed}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

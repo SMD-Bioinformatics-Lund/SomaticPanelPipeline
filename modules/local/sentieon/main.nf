@@ -362,7 +362,7 @@ process FILTER_TNSCOPE {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            filter_tnscope_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > ${vcf}.vcf
+            filter_tnscope_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out ${vcf}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -372,7 +372,7 @@ process FILTER_TNSCOPE {
         }
         else if( meta.id.size() == 1 ) {
             """
-            filter_tnscope_unpaired.pl $vcf > ${vcf}.vcf
+            filter_tnscope_unpaired.py --vcf $vcf --out ${vcf}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

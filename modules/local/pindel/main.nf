@@ -72,7 +72,7 @@ process PINDEL_CALL {
         """
         pindel $args -i $pindel_config -o tmpout -T ${task.cpus}
         pindel2vcf $args2 -P tmpout -v ${prefix}_pindel_unfilt.vcf
-        filter_pindel_somatic.pl ${prefix}_pindel_unfilt.vcf ${prefix}_pindel.vcf
+        filter_pindel_somatic.py --vcf ${prefix}_pindel_unfilt.vcf --out ${prefix}_pindel.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

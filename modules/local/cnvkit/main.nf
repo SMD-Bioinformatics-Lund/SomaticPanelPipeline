@@ -158,7 +158,7 @@ process CNVKIT_GENS {
         def args    = task.ext.args   ?: ''
         def prefix  = task.ext.prefix ?: "${meta.id}"
         """
-        generate_gens_data_from_cnvkit.pl $cnr $vcf ${meta.id}
+        generate_gens_data_from_cnvkit.py --cnr $cnr --vcf $vcf --sample-id ${meta.id} --out-prefix ${prefix}
         mv ${meta.id}.baf.bed.gz ${prefix}.${part}.baf.bed.gz
         mv ${meta.id}.cov.bed.gz ${prefix}.${part}.cov.bed.gz
 
