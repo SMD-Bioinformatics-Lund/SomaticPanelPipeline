@@ -198,6 +198,7 @@ process GATKCOV_CALL {
 
         touch ${prefix}.called.seg
         touch ${prefix}.modeled.png
+        touch ${prefix}.hets.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
