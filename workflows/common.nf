@@ -105,6 +105,8 @@ workflow SPP_COMMON {
         ch_vcf.normal_germline,
         CHECK_INPUT.out.meta
     )
+    .set { ch_qc_vcf }
+    ch_versions = ch_versions.mix(ch_qc_vcf.versions)
 
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
