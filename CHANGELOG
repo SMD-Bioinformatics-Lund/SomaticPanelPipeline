@@ -1,5 +1,7 @@
 ## Changelog ##
 
+## 3.2.1
+- fixed the missing versions output emitted from the CONTAMINATION process in vcf_qc
 
 ## 3.2.0
 - Added sex check as vcf qc
