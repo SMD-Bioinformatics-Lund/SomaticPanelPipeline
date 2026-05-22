@@ -37,5 +37,6 @@ workflow VCF_QC {
     emit:
         qcdone                  =   CONTAMINATION.out.contamination_cdm                  // channel: [ tuple val(group), file("dist.txt"), file("sampleid.png") ]
         results                 =   CONTAMINATION.out.contamination_result_files         // channel: [ val(group), val(meta), file(cdm) ]
+        versions                =   ch_versions
 
 }
