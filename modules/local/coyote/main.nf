@@ -391,3 +391,61 @@ process COYOTE_YAML {
         printf "$import_command" >> ${process_group}.coyote3.yaml
         """
 }
+
+
+process OUTPUT_FILES {
+    label "process_single" // check 
+    tag "$group" // to check what I should put
+
+    input:
+        tuple val(group), val(labels), path(files, stageAs: "?/*") // if files have the same name, they are staged 
+
+    output:
+        tuple val(group), path("${group}_coyote.json_INFO"), emit:json_INFO
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def json_map = [labels, files.collect {it.name}]
+            .transpose()
+            .collectEntries { label, fname -> [(label): fname]  } 
+
+        def json_str = groovy.json.JsonOutput.toJson(json_map)       
+        """
+        echo '${json_str}' > ${group}_coyote.json_INFO
+        """
+    stub:
+    """
+    touch ${group}_coyote.json_INFO
+    
+    """
+}
+
+
+
+process  OUTPUTS_YAML_COYOYE {
+    label "process_single"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), path(vcf), path(json_INFO)
+
+    output:
+        tuple val(group), path("${group}_coyote3_new.yaml"), emit: yaml_coyote_new
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+
+        """
+        echo "not implemented yet" > ${group}_coyote3_new.yaml
+        """
+
+    stub:
+        """
+        touch ${group}_coyote3_new.yaml
+        """
+}

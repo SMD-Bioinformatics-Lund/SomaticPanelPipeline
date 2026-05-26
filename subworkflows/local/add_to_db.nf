@@ -3,7 +3,7 @@
 include { COYOTE_YAML          } from '../../modules/local/coyote/main'
 include { COYOTE               } from '../../modules/local/coyote/main'
 include { OUTPUT_FILES         } from '../../modules/local/coyote/main'
-include { OUTPUTS_YAML_COYOYE } from '../../modules/local/coyote/main'
+include { OUTPUTS_YAML_COYOTE  } from '../../modules/local/coyote/main'
 
 workflow ADD_TO_DB {
 
@@ -56,12 +56,14 @@ workflow ADD_TO_DB {
         optional_json = lc_d4.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }
-        OUTPUT_FILES ( ch_coyote_info.groupTuple() )
-        OUTPUTS_YAML_COYOYE ( vcf.join(OUTPUT_FILES.out.json_INFO) ) 
+        ch_coyote_info_grouped = ch_coyote_info.groupTuple()
+        ch_coyote_info_grouped.view { "COYOTE INFO: $it" } // remove when no longer needed for debugging
+        OUTPUT_FILES ( ch_coyote_info_grouped )
+        OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) ) 
 
     emit:
         coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
         coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
-        coyotedone = OUTPUTS_YAML_COYOYE.out.yaml_coyote // channel: [ val(group), file(coyote) ]
+        coyotedone = OUTPUTS_YAML_COYOTE.out.yaml_coyote_new // channel: [ val(group), file(coyote) ]
 }
 
