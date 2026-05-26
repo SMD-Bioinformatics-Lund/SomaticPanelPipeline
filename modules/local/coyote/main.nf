@@ -423,8 +423,7 @@ process OUTPUT_FILES {
 }
 
 
-
-process  OUTPUTS_YAML_COYOYE {
+process  OUTPUTS_YAML_COYOTE {
     label "process_single"
     tag "$group"
 
