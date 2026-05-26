@@ -17,7 +17,6 @@ include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
-include { OUTPUT_FILES                  } from '../modules/local/coyote/main'
 
 csv = file(params.csv)
 
@@ -42,7 +41,6 @@ Channel
 workflow SPP_COMMON {
 
     ch_versions = Channel.empty()
-    ch_coyoye_info = Channel.empty() // Gather data for .INFO on output files for export into Coyote
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
     CHECK_INPUT ( Channel.fromPath(csv), params.paired )
@@ -68,13 +66,6 @@ workflow SPP_COMMON {
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
-    ch_coyoye_info = ch_coyoye_info
-        .mix(ch_qc.lowcov
-            .filter { item -> item[1] == 'T' }
-            .map {group, type, file -> tuple(group, 'lowcov', file) }) // using directly the naming in coyote yaml for lowcov.bed
-        .mix(ch_qc.lowcov_d4
-            .filter { item -> item[1] == 'T' }
-            .map {group, type, file -> tuple(group, 'cov', file) }) // using directly the naming in coyote yaml for coyote_cov_json
 
     // Create PGx CSV file
     PHARMACOGENOMICS (
@@ -126,11 +117,6 @@ workflow SPP_COMMON {
     )
     .set { ch_cnvcalled }
     ch_versions = ch_versions.mix(ch_cnvcalled.versions)
-    ch_coyoye_info = ch_coyoye_info
-        .mix(ch_cnvcalled.gatcov_plot
-            .map { group, file -> tuple(group, 'cnvprofile_gatk', file) }) // file is modeled.png (preferred for coyote)
-        .mix(ch_cnvcalled.cnvkit_plot
-            .map { group, meta, part, file -> tuple(group, 'cnvprofile_cnvkit', file) }) // file is cnvkit_overview.png (if modeled.png absent)
 
     CNV_ANNOTATE (
         ch_cnvcalled.tumor_vcf,
@@ -139,9 +125,6 @@ workflow SPP_COMMON {
     )
     .set { ch_cnv }
     ch_versions = ch_versions.mix(ch_cnv.versions)
-    ch_coyoye_info = ch_coyoye_info
-        .mix(ch_cnv.s_json
-            .map { group, file -> tuple(group, 'cnv', file) }) // using directly the naming in coyote yaml)
 
 
     FUSIONS (
@@ -151,9 +134,6 @@ workflow SPP_COMMON {
     )
     .set { ch_fusion }
     ch_versions = ch_versions.mix(ch_fusion.versions)
-    ch_coyoye_info = ch_coyoye_info
-        .mix(ch_fusion.fusions
-            .map { group, file -> tuple(group, 'transloc', file) }) // using directly the naming in coyote yaml for merged.annotated.vcf
 
     BIOMARKERS (
         CHECK_INPUT.out.meta,
@@ -163,12 +143,6 @@ workflow SPP_COMMON {
     )
     .set { ch_bio }
     ch_versions = ch_versions.mix(ch_bio.versions)
-    ch_coyoye_info = ch_coyoye_info
-        .mix(ch_bio.biomarkers
-            .map { group, file -> tuple(group, 'biomarkers', file) }) // using directly the naming in coyote yaml for bio.json
-    
-    // Output INFO for Coyoye
-    OUTPUT_FILES(ch_coyoye_info.groupTuple())
 
 
     ADD_TO_DB (
@@ -181,8 +155,7 @@ workflow SPP_COMMON {
         ch_cnvcalled.gatcov_plot,
         ch_fusion.fusions,
         ch_bio.biomarkers,
-        ch_cnvcalled.cnvkit_plot,
-        OUTPUT_FILES.out.json_INFO
+        ch_cnvcalled.cnvkit_plot
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
