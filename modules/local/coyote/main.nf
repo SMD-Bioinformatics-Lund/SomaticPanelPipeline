@@ -407,7 +407,7 @@ process OUTPUT_FILES {
         task.ext.when == null || task.ext.when
 
     script:
-        def json_map = [labels, files.collect {it.name}]
+        def json_map = [labels, files.collect {it.fileName.toString()}]
             .transpose()
             .collectEntries { label, fname -> [(label): fname]  } 
 
@@ -421,6 +421,7 @@ process OUTPUT_FILES {
     
     """
 }
+
 
 
 process  OUTPUTS_YAML_COYOTE {
