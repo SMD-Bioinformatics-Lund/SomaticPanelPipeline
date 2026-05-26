@@ -407,7 +407,7 @@ process OUTPUT_FILES {
         task.ext.when == null || task.ext.when
 
     script:
-        def json_map = [labels, files.collect {it.fileName.toString()}]
+        def json_map = [labels, files.collect {it.toString().replaceAll('.+/', '')}]
             .transpose()
             .collectEntries { label, fname -> [(label): fname]  } 
 
