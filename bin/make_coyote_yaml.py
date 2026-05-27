@@ -99,11 +99,11 @@ def main():
         'pipeline_version':        args.pipeline_version,
         'case_ffpe':               tumor_sample['ffpe'],
         'case_sequencing_run':     tumor_sample['sequencing_run'],
-        'case_reads':              tumor_sample['reads'],
+        'case_reads':              tumor_reads,
         'case_purity':             tumor_purity,
         'control_ffpe':            normal_sample['ffpe']                if is_paired else None,
         'control_sequencing_run':  normal_sample['sequencing_run']      if is_paired else None,
-        'control_reads':           normal_sample['reads']               if is_paired else None,
+        'control_reads':           normal_reads                         if is_paired else None,
         'control_purity':          normal_purity,
         'paired':                  is_paired,
     }
