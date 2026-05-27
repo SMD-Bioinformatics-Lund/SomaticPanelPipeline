@@ -8,7 +8,7 @@ def parse_args():
         description='Generate a COYOTE YAML document from SomaticPanelPipeline outputs and all_samples_metadata'
     )
     parser.add_argument('--group',            required=True, help='sample group name')
-    parser.add_argument('--all_samples_meta',             required=True, help='path to all_samples_meta JSON file - one dict per sample')
+    parser.add_argument('--meta',             required=True, help='path to meta JSON file - one dict per sample')
     parser.add_argument('--vcf',              required=True, help='VCF filename')
     parser.add_argument('--json_info',        required=True, help='path to JSON file containing output filenames')
     parser.add_argument('--subdir',           required=True, help='pipeline subdirectory for building /access/ paths')
@@ -49,7 +49,7 @@ def main():
     # e.g. single: [{"id": "HD829", "type": "T", ...}]
     # e.g. paired: [{"id": "HD829", "type": "T", ...}, {"id": "26MD", "type": "N", ...}]
 
-    with open(args.all_samples_meta) as meta_file:
+    with open(args.meta) as meta_file:
         all_samples_meta = json.load(meta_file)
 
     # output_files maps Coyote YAML keys to their staged filenames
