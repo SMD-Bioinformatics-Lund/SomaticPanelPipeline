@@ -67,7 +67,7 @@ def main():
     coyote_group_name = args.group + 'p' if is_paired else args.group
 
     tumor_purity   = float(tumor_sample['purity']) if tumor_sample['purity'] else None
-    normal_purity  = float(normal_sample['purity']) if ispaired and normal_sample['purity'] else None
+    normal_purity  = float(normal_sample['purity']) if is_paired and normal_sample['purity'] else None
 
     # fixed fields — always present regardless of profile
     coyote_doc = {
