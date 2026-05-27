@@ -458,7 +458,7 @@ process  OUTPUTS_YAML_COYOTE {
             --environment      '${environment}' \\
             --pipeline_name    '${workflow.manifest.name}' \\
             --pipeline_version '${workflow.manifest.version}' \\
-            --out              ${group}.coyote3_new.yaml
+            --out              ${group}_coyote3_new.yaml
             
         """
 
