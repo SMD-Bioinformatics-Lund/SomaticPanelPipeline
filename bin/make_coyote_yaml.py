@@ -42,9 +42,9 @@ def write_yaml(coyote_doc, out_filepath):
                 # numbers are written without quotes
                 yaml_file.write(f"{yaml_key}: {yaml_value}\n")
             elif isinstance(yaml_value, str) and yaml_value.startswith('/access/'):
-                # paths are written without quotes.
+                # to fit the old yaml way where paths are written without quotes.
                 yaml_file.write(f"{yaml_key}: {yaml_value}\n")
-            else:  # all other cases treated as strings qhich are single-quoted
+            else:  # all other cases treated as strings which are single-quoted
                 yaml_file.write(f"{yaml_key}: '{yaml_value}'\n")
 
 def main():
