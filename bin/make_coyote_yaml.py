@@ -80,7 +80,7 @@ def main():
         'genome_build':            38,
         'vcf_files':               build_access_path(args.subdir, 'vcf', args.vcf),
         'sample_no':               len(all_samples_meta),
-        'case_id':                 tumor_samplea['id'],
+        'case_id':                 tumor_sample['id'],
         'control_id':              normal_sample['id']                 if is_paired else None,
         'profile':                 args.environment,
         'assay':                   args.assay,
