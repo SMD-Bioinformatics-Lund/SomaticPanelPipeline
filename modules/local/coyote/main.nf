@@ -392,11 +392,11 @@ process COYOTE_YAML {
         """
 }
 
-
 process OUTPUT_FILES {
     label "process_single" // check 
     tag "$group" // to check what I should put
-
+    // this process is to create the json file with names of the files to be loaded into coyote, and
+    // associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
     input:
         tuple val(group), val(labels), path(files, stageAs: "?/*") // if files have the same name, they are staged 
 
@@ -422,11 +422,10 @@ process OUTPUT_FILES {
     """
 }
 
-
-
 process  OUTPUTS_YAML_COYOTE {
     label "process_single"
     tag "$group"
+    // this process creates the yaml file for loading into coyote.
 
     input:
         tuple val(group), val(meta), path(vcf), path(json_INFO)
