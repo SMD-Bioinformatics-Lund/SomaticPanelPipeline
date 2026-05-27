@@ -34,9 +34,6 @@ workflow ADD_TO_DB {
         }.set { cnvkit_png }
 
         ch_coyote_info = ch_coyote_info
-        .mix(lowcov
-            .filter { group, type, file -> type == 'T' || type == 'tumor' }
-            .map {group, type, file -> tuple(group, 'lowcov', file) }) // using directly the naming in coyote yaml for lowcov.bed
         .mix(lowcov_d4
             .filter { group, type, file -> type == 'T' || type == 'tumor' }
             .map {group, type, file -> tuple(group, 'cov', file) }) // using directly the naming in coyote yaml for coyote_cov_json
