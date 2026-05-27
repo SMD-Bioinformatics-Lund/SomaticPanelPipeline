@@ -439,9 +439,27 @@ process  OUTPUTS_YAML_COYOTE {
 
     script:
         environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
-
+        def meta_json    = groovy.json.JsonOutput.toJson(meta) // groovy.json.JsonOutput built-in Groovy class.
+        // meta written as temp json instead of passed as a shell argument below 
+        // avoid shell issues if meta fields contain special characters.
+        // converting meta to json for easier passing of metadata to python
         """
-        echo "not implemented yet" > ${group}_coyote3_new.yaml
+        cat << 'META_EOF' > meta.json
+        ${meta_json}
+        META_EOF
+
+        make_coyote_yaml.py \\
+            --group            '${group}' \\
+            --meta             meta.json \\
+            --vcf              ${vcf} \\
+            --json_info        ${json_INFO} \\
+            --subdir           '${params.subdir}' \\
+            --assay            '${params.coyote_group}' \\
+            --environment      '${environment}' \\
+            --pipeline_name    '${workflow.manifest.name}' \\
+            --pipeline_version '${workflow.manifest.version}' \\
+            --out              ${group}.coyote3_new.yaml
+            
         """
 
     stub:
