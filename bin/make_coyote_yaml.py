@@ -35,12 +35,15 @@ def write_yaml(coyote_doc, out_filepath):
                  # YAML null for absent values
                 yaml_file.write(f"{yaml_key}: null\n")
             elif isinstance(yaml_value, bool):
+                # Checks if the value is a Python boolean
                 # YAML booleans must be lowercase true/false
                 yaml_file.write(f"{yaml_key}: {'true' if yaml_value else 'false'}\n")
             elif isinstance(yaml_value, (int, float)):
                 # numbers are written without quotes
+            elif isinstance(yaml_value, str) and yaml_value.startswith('/access/'):
+                # paths are written without quotes.
                 yaml_file.write(f"{yaml_key}: {yaml_value}\n")
-            else:  # strings are single-quoted
+            else:  # all other cases treated as strings qhich are single-quoted
                 yaml_file.write(f"{yaml_key}: '{yaml_value}'\n")
 
 def main():
@@ -65,6 +68,10 @@ def main():
 
     # for paired samples coyote expects the group name suffixed with 'p'
     coyote_group_name = args.group + 'p' if is_paired else args.group
+
+    # reads and purity are converted to int and float types, respectively, for YAML output
+    tumor_reads  = int(tumor_sample['reads'])  if tumor_sample['reads']  else None
+    normal_reads = int(normal_sample['reads']) if is_paired and normal_sample['reads'] else None
 
     tumor_purity   = float(tumor_sample['purity']) if tumor_sample['purity'] else None
     normal_purity  = float(normal_sample['purity']) if is_paired and normal_sample['purity'] else None
