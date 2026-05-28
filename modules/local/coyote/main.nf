@@ -431,7 +431,7 @@ process  OUTPUTS_YAML_COYOTE {
         tuple val(group), val(meta), path(vcf), path(json_INFO)
 
     output:
-        tuple val(group), path("${group}_coyote3_new.yaml"), emit: yaml_coyote_new
+        tuple val(group), path("${group}.coyote3.yaml"), emit: yaml_coyote3
 
     when:
         task.ext.when == null || task.ext.when
@@ -457,12 +457,12 @@ process  OUTPUTS_YAML_COYOTE {
             --environment      '${environment}' \\
             --pipeline_name    '${workflow.manifest.name}' \\
             --pipeline_version '${workflow.manifest.version}' \\
-            --out              ${group}_coyote3_new.yaml
+            --out              ${group}.coyote3.yaml
             
         """
 
     stub:
         """
-        touch ${group}_coyote3_new.yaml
+        touch ${group}.coyote3.yaml
         """
 }

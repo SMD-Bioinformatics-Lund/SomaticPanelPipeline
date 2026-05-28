@@ -52,14 +52,14 @@ workflow ADD_TO_DB {
         optional = lc.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         optional_json = lc_d4.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
         COYOTE { vcf.join(optional) }
-        COYOTE_YAML { vcf.join(optional_json) }
+        // COYOTE_YAML { vcf.join(optional_json) }
         ch_coyote_info_grouped = ch_coyote_info.groupTuple()
         OUTPUT_FILES ( ch_coyote_info_grouped )
         OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) ) 
 
     emit:
         coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
-        coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
-        coyotedone = OUTPUTS_YAML_COYOTE.out.yaml_coyote_new // channel: [ val(group), file(coyote) ]
+        //coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
+        coyoteyaml = OUTPUTS_YAML_COYOTE.out.yaml_coyote3 // channel: [ val(group), file(coyote) ]
 }
 
