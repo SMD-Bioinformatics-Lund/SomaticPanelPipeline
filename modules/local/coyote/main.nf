@@ -393,8 +393,8 @@ process COYOTE_YAML {
 }
 
 process OUTPUT_FILES {
-    label "process_single" // check 
-    tag "$group" // to check what I should put
+    label "process_single"  
+    tag "$group" 
     // this process is to create the json file with names of the optional files to be loaded into coyote, which
     // are associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
     input:
