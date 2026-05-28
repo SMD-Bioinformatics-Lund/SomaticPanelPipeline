@@ -54,7 +54,6 @@ workflow ADD_TO_DB {
         COYOTE { vcf.join(optional) }
         COYOTE_YAML { vcf.join(optional_json) }
         ch_coyote_info_grouped = ch_coyote_info.groupTuple()
-        ch_coyote_info_grouped.view { "COYOTE INFO: $it" } // remove when no longer needed for debugging
         OUTPUT_FILES ( ch_coyote_info_grouped )
         OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) ) 
 

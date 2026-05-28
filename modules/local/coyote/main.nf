@@ -395,8 +395,8 @@ process COYOTE_YAML {
 process OUTPUT_FILES {
     label "process_single" // check 
     tag "$group" // to check what I should put
-    // this process is to create the json file with names of the files to be loaded into coyote, and
-    // associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
+    // this process is to create the json file with names of the optional files to be loaded into coyote, which
+    // are associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
     input:
         tuple val(group), val(labels), path(files, stageAs: "?/*") // if files have the same name, they are staged 
 
@@ -407,11 +407,11 @@ process OUTPUT_FILES {
         task.ext.when == null || task.ext.when
 
     script:
-        def json_map = [labels, files.collect {it.toString().replaceAll('.+/', '')}]
-            .transpose()
+        def json_map = [labels, files.collect {it.toString().replaceAll('.+/', '')}] // remove path, keep file name only.
+            .transpose() // pair each <label> with corresponding file names.
             .collectEntries { label, fname -> [(label): fname]  } 
 
-        def json_str = groovy.json.JsonOutput.toJson(json_map)       
+        def json_str = groovy.json.JsonOutput.toJson(json_map) // Converts the Groovy map into a valid JSON string      
         """
         echo '${json_str}' > ${group}_coyote.json_INFO
         """
@@ -439,9 +439,9 @@ process  OUTPUTS_YAML_COYOTE {
     script:
         environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         def meta_json    = groovy.json.JsonOutput.toJson(meta) // groovy.json.JsonOutput built-in Groovy class.
-        // meta written as temp json instead of passed as a shell argument below 
-        // avoid shell issues if meta fields contain special characters.
-        // converting meta to json for easier passing of metadata to python
+        // meta written as a json instead of passed as a shell argument below 
+        // avoid shell issues if meta fields contain special characters and
+        // for easier passing of metadata to python
         """
         cat << 'META_EOF' > meta.json
         ${meta_json}
