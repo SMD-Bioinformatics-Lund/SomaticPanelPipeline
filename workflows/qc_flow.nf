@@ -61,7 +61,7 @@ workflow SPP_QC {
     ch_versions = ch_versions.mix(ch_qc.versions)
 
     SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
