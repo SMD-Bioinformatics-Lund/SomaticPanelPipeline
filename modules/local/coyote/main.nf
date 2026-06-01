@@ -462,6 +462,7 @@ process  OUTPUTS_YAML_COYOTE {
         """
 
     stub:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         """
         echo "STUB: make_coyote_yaml.py would run with:"
         echo "  --group            ${group}"
