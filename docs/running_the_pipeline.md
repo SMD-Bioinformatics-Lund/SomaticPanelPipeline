@@ -8,7 +8,7 @@ Requirements for running the pipeline:
     * [Singularity/3.8.0](https://docs.sylabs.io/guides/4.4/user-guide/#)
     * Java/13.0.2
     * perl: 5.26.2 (unsure, might be in a container)
-* [auxiliary files](docs/auxiliary_files.md)
+* [Auxiliary files](docs/auxiliary_files.md)
 
 ## Source code
 
@@ -27,7 +27,7 @@ The main config file is called `nextflow_hopper.config` and can be found in the 
 ### Nextflow
 
 Nextflow is a workflow orchestration framework that facilitates the creation, execution, and maintenance of reproducible computational pipelines. Its flexibility allows workflows to be deployed across different computing environments with minimal modifications.
-The pipeline is implemented using the DSL2 (.........?) syntax
+The pipeline is implemented using the DSL2 syntax.
 To run Nextflow, you will also need to have Java installed.
 
 ### Singularity
@@ -47,7 +47,7 @@ module load nextflow
 
 ### Running in stb-run mode
 
-The `stub-run` (or `stub`) nextflow command allows to test the workflow logic of the pipeline, as a "dry-run" without executing the real scripts, and outputing dummy files. The stub block present in each process script will be run. In case the stub block is absent, the script section is executed instead.
+The `stub-run` (or `stub`) nextflow command allows to test the workflow logic of the pipeline, as a "dry-run" without executing the real scripts, and outputing dummy files. The stub block must be present in each process script, otherwise the script section will be executed instead.
 
 ```bash
 nextflow run main.nf \
@@ -59,7 +59,6 @@ nextflow run main.nf \
 
 Note that the profile hg38 is always associated with the profile of analysis you want to run.
 
-
 ### Running the pipeline
 ```bash
 nextflow run main.nf \
@@ -68,4 +67,6 @@ nextflow run main.nf \
         --csv <path_to_input_csv_file>
 ```
 Note that the profile hg38 is always associated with the profile of analysis you want to run.
-Use the command `-resume`if you want to re-run the pipeline and only execute the missing/changed steps from a previous run.
+Other usefull commands:
+- the command `-resume`if you want to re-run the pipeline and only execute the missing/changed steps from a previous run.
+- the --dev params allows you to redirect the results directory to results_dev

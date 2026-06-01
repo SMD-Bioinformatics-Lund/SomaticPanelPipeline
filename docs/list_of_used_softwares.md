@@ -10,11 +10,14 @@
 | gatk4         | 4.1.9.0      | Open-Source | https://github.com/broadinstitute/gatk                 |
 | genefuse      | 0.8.0        | Open-Source | https://github.com/OpenGene/GeneFuse                   |
 | manta         | 1.6.0        | Open-Source | https://github.com/Illumina/manta                      |
+| melt          | 2.2.2        | Open-Source | https://melt.igs.umaryland.edu/                        |
 | msisensor-pro | 1.2.0        | Open-Source | https://github.com/xjtu-omics/msisensor-pro            |
-| r             | 4.1.0        | Open-Source | https://www.r-project.org/                             |
+| peddy         | 0.4.8        | Open-Source | 
 | sambamba      | 0.8.0        | Open-Source | https://lomereiter.github.io/sambamba/                 |
+| scarHDR       | 4.1.0        | Open-Source | https://github.com/sztup/scarHRD                       |
 | sentieon      | 202112.07    | Commercial  | https://www.sentieon.com                               |
 | snpEff        | 4.3t         | Open-Source | https://pcingola.github.io/SnpEff/                     |
+| seqtk         | 1.3          | Open-Source | https://github.com/lh3/seqtk                           |
 | svdb          | 2.2.0        | Open-source | https://github.com/J35P312/svdb                        |
 | tabix         | 1.12         | Open-Source | https://www.htslib.org/doc/tabix.html                  |
 | vardict       | 1.8.2        | Open-Source | https://github.com/AstraZeneca-NGS/VarDict             |

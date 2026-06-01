@@ -9,5 +9,22 @@ Starting from raw FASTQ files, SPP performs alignment, quality control, SNV/inde
 * [Running the pipeline](docs/running_the_pipeline.md)
 * Input:
     * [containers](docs/containers.md)
+    * [Sentieon license](docs/containers.md)
 * [List of used softwares](docs/list_of_used_softwares.md)
-* Outputs
+
+## Pipeline overview
+
+The SomaticPanelPipeline
+
+A typical workflow
+
+1-Validate input CSV and create sample metadata
+2-Downsample and/or trim reads if required by the assay
+3-Align reads with BWA-MEM and process UMI tags, deduplicate and apply BQSR
+4-Calculate BAM QC and coverage metrics, check ID-SNPs for sample identity
+5-Call SNVs and indels in parallel across bed regions using Freebayes, VarDict, TNscope and Pindel
+6-Filter SNV calls against panel-of-normals (PoN), annotate with VEP and mark germline variants
+7-Call copy number variants using CNVkit and GATK, detect structural variants with Manta
+8-Annotate and segment CNV calls, calculate HRD and MSI biomarkers
+9-Detect DNA fusions using Genefuse and Manta
+10-Aggregate all results and import into the Coyote variant interpretation database
