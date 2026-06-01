@@ -463,6 +463,17 @@ process  OUTPUTS_YAML_COYOTE {
 
     stub:
         """
+        echo "STUB: make_coyote_yaml.py would run with:"
+        echo "  --group            ${group}"
+        echo "  --meta             meta.json"
+        echo "  --vcf              ${vcf}"
+        echo "  --json_info        ${json_INFO}"
+        echo "  --subdir           ${params.subdir}"
+        echo "  --assay            ${params.coyote_group}"
+        echo "  --environment      ${environment}"
+        echo "  --pipeline_name    ${workflow.manifest.name}"
+        echo "  --pipeline_version ${workflow.manifest.version}"
+        echo "  --out              ${group}.coyote3.yaml"
         touch ${group}.coyote3.yaml
         """
 }
