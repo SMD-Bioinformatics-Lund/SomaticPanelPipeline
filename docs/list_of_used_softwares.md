@@ -1,0 +1,25 @@
+| Tool          | Version      | Type        | Source                                                 |
+|---------------|--------------|-------------|--------------------------------------------------------|
+| bcftools      | 1.12         | Open-Source | https://github.com/samtools/bcftools                   |
+| bedtools      | 2.30.0       | Open-Source | https://bedtools.readthedocs.io                        |
+| bgzip         | 1.12         | Open-Source | https://www.htslib.org/doc/bgzip.html                  |
+| bwa           | 0.7.17-r1188 | Open-Source | https://github.com/lh3/bwa                             |
+| cnvkit        | 0.9.9        | Open-Source | https://github.com/etal/cnvkit                         |
+| d4tools       | 0.3.11       | Open-Source | https://github.com/38/d4-format                        | 
+| freebayes     | 1.3.5        | Open-Source | https://github.com/freebayes/freebayes                 |
+| gatk4         | 4.1.9.0      | Open-Source | https://github.com/broadinstitute/gatk                 |
+| genefuse      | 0.8.0        | Open-Source | https://github.com/OpenGene/GeneFuse                   |
+| manta         | 1.6.0        | Open-Source | https://github.com/Illumina/manta                      |
+| msisensor-pro | 1.2.0        | Open-Source | https://github.com/xjtu-omics/msisensor-pro            |
+| r             | 4.1.0        | Open-Source | https://www.r-project.org/                             |
+| sambamba      | 0.8.0        | Open-Source | https://lomereiter.github.io/sambamba/                 |
+| sentieon      | 202112.07    | Commercial  | https://www.sentieon.com                               |
+| snpEff        | 4.3t         | Open-Source | https://pcingola.github.io/SnpEff/                     |
+| svdb          | 2.2.0        | Open-source | https://github.com/J35P312/svdb                        |
+| tabix         | 1.12         | Open-Source | https://www.htslib.org/doc/tabix.html                  |
+| vardict       | 1.8.2        | Open-Source | https://github.com/AstraZeneca-NGS/VarDict             |
+| vcfanno       | 0.3.2        | Open-Source | https://github.com/brentp/vcfanno                      |
+| vcffilter     |  1.0.2       | Open-source | https://github.com/jameshicks/vcffilter                |
+| vcftools      | 0.1.16       | Open-Source | https://github.com/vcftools/vcftools                   |
+| vep           | 103.1        | Open-Source | https://www.ensembl.org/info/docs/tools/vep/index.html |
+| vt            | 0.5          | Open-Source | https://github.com/atks/vt/tree/master                 |
