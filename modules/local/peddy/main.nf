@@ -26,7 +26,7 @@ process PEDDY {
         peddy --sites hg38 $vcf ${meta.id}.ped --prefix ${prefix}
 
         cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
+        "${task.process}":
             peddy: \$(echo \$(python -m peddy --version 2>&1) | sed 's/^.*peddy, version //')
         END_VERSIONS
         """
@@ -38,7 +38,7 @@ process PEDDY {
         echo $meta > ${prefix}.sex_check.csv
 
         cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
+        "${task.process}":
             peddy: \$(echo \$(python -m peddy --version 2>&1) | sed 's/^.*peddy, version //')
         END_VERSIONS
         """
