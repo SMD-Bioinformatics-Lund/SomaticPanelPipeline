@@ -1,5 +1,11 @@
 ## Changelog ##
 
+## 3.2.3
+- QC: New entry separate from the main SPP entry point.
+  - Calls a minimized pipeline to only get QC from sample
+  - alignment + freebayes calling for QC parameters
+  - should be called from a bjorn workflow for tumors waiting for normals
+
 ## 3.2.2
 - Hotfix for indentation for peddy version output
 
