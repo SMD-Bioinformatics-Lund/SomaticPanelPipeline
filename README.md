@@ -8,6 +8,7 @@ Starting from raw FASTQ files, SPP performs alignment, quality control, SNV/inde
 * [Pipeline overview](docs/pipeline_overview.png)
 * [Running the pipeline](docs/running_the_pipeline.md)
 * Input:
+    * [auxiliary files](docs/auxiliary_files.md)
     * [containers](docs/containers.md)
     * [Sentieon license](docs/containers.md)
 * [List of used softwares](docs/list_of_used_softwares.md)
@@ -18,16 +19,15 @@ The SomaticPanelPipeline
 
 A typical workflow
 
-1. Validate input CSV and create sample metadata
-2. Downsample and/or trim reads if required by the assay
-3. Align reads with BWA-MEM and process UMI tags, deduplicate and apply BQSR
-4. Calculate BAM QC and coverage metrics, check ID-SNPs for sample identity
-5. Call SNVs and indels in parallel across bed regions using Freebayes, VarDict, TNscope and Pindel
-6. Filter SNV calls against panel-of-normals (PoN), annotate with VEP and mark germline variants
-7. Call copy number variants using CNVkit and GATK, detect structural variants with Manta
-8. Annotate and segment CNV calls, calculate HRD (and MSI biomarkers for solid tumors)
-9. Detect DNA fusions using Genefuse and Manta (solid tumors)
-10. Aggregate all results and import into the Coyote variant interpretation database
+1. Validate input CSV and optionally downsample and trim the reads
+2. Align reads to the reference genome using Sentieon BWA, mark duplicates and perform base quality score recalibration
+3. Calculate alignment QC metrics, coverage, verify normal/tumor sample identity using ID-SNPs
+4. Call SNVs and indels across genomic regions using Freebayes, VarDict, and optionally TNscope and Pindel
+5. Filter SNVs against panel-of-normals (PoN), annotate with VEP, then mark germline variants
+6. Call CNVs using CNVkit and GATK, detect structural variants with Manta
+7. Annotate CNV calls with gene information
+8. Detect DNA fusions and compute microsatellite instability (MSI) and homologous recombination deficiency (HRD) scores (solid tumors only)
+9. Aggregate all results and import into the Coyote variant interpretation database
 
 Pipeline overview:
 ![Pipeline](docs/pipeline_overview.png)

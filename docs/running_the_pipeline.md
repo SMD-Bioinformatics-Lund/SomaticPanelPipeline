@@ -57,16 +57,16 @@ nextflow run main.nf \
         --csv <path_to_input_csv_file>
 ```
 
-Note that the profile hg38 is always associated with the profile of analysis you want to run.
+Note that the profile `hg38` needs to always be included with the profile of analysis you want to run.
 
-### Running the pipeline
+### Running the pipeline with real data
 ```bash
 nextflow run main.nf \
         -entry SPP \
         -profile hg38,<name_of_profile_from nextflow.config> \
         --csv <path_to_input_csv_file>
 ```
-Note that the profile hg38 is always associated with the profile of analysis you want to run.
+Note that the profile hg38 needs to always be included with the profile of analysis you want to run.
 Other usefull commands:
 - the command `-resume`if you want to re-run the pipeline and only execute the missing/changed steps from a previous run.
-- the --dev params allows you to redirect the results directory to results_dev
+- the `--dev` params allows you to redirect the results directory to results_dev
