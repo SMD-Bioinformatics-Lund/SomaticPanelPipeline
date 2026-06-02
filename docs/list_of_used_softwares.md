@@ -12,7 +12,7 @@
 | manta         | 1.6.0        | Open-Source | https://github.com/Illumina/manta                      |
 | melt          | 2.2.2        | Open-Source | https://melt.igs.umaryland.edu/                        |
 | msisensor-pro | 1.2.0        | Open-Source | https://github.com/xjtu-omics/msisensor-pro            |
-| peddy         | 0.4.8        | Open-Source | 
+| peddy         | 0.4.8        | Open-Source | https://github.com/brentp/peddy                        |
 | sambamba      | 0.8.0        | Open-Source | https://lomereiter.github.io/sambamba/                 |
 | scarHDR       | 4.1.0        | Open-Source | https://github.com/sztup/scarHRD                       |
 | sentieon      | 202112.07    | Commercial  | https://www.sentieon.com                               |
