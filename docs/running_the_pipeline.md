@@ -45,9 +45,9 @@ module load nextflow
 
 ## Running the pipeline
 
-### Running in stb-run mode
+### Running in stub-run mode
 
-The `stub-run` (or `stub`) nextflow command allows to test the workflow logic of the pipeline, as a "dry-run" without executing the real scripts, and outputing dummy files. The stub block must be present in each process script, otherwise the script section will be executed instead.
+The `stub-run` (or `stub`) nextflow command allows to test the workflow logic of the pipeline, as a "dry-run", without executing the real scripts, and outputing dummy files. The stub block must be present in each nextflow process, otherwise the script section will be executed instead.
 
 ```bash
 nextflow run main.nf \
