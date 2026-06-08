@@ -5,6 +5,7 @@ include { CNVKIT2OVAHRDSCAR           } from '../../modules/local/hrdsw/main'
 include { CNVKIT2SCARHRD              } from '../../modules/local/hrdsw/main'
 include { SCARHRD                     } from '../../modules/local/hrdsw/main'
 include { BIOMARKERS_TO_JSON          } from '../../modules/local/filters/main'
+include { CALL_LOH                     } from '../../modules/local/loh/main'
 
 
 workflow BIOMARKERS {
@@ -41,6 +42,15 @@ workflow BIOMARKERS {
         }
         else {
             output = Channel.empty()
+        }
+
+
+        // Loss of Heterozygosity (LOH) calculation and type evaluation
+        // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is either cnvkit_segments from CNVKIT_CALL (gmshem) 
+        // or from CNVKIT_CALL_TC (solid).
+        if (params.loh) {
+            CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns -> meta.type == "T" } )
+            ch_versions = ch_versions.mix(CALL_LOH.out.versions)
         }
 
     emit:
