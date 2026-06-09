@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Description: This script identifies LOH events and classifies their type based on the output from CNVKIT_CALL (or CNVKIT_CALL_TC). 
+Description: This script identifies LOH events and classifies their type based on the output cnvkitsegment from CNVKIT_CALL (or CNVKIT_CALL_TC). 
 It outputs these LOH events as well as a corresponding bed file for visualization in Coyote.
 
 Necessary input is the txt output file from scarHRD.
@@ -53,11 +53,11 @@ with open(args.input, "r") as cns, \
         # LOH defined as minor allele == 0
         if minor_cn == 0:
             if total_cn == 0:
-                loh_type = "HOMDEL"
+                loh_type = "HOM_DEL"
             elif total_cn == 1:
                 loh_type = "LOH_DEL"
             elif total_cn == 2:
-                loh_type = "CNLOH"
+                loh_type = "CN_LOH"
             elif total_cn > 2:
                 loh_type = "LOH_AMP"
             else:

@@ -6,7 +6,9 @@ process CALL_LOH {
         tuple val(group), val(meta), val(part), file(cns)
 
     output:
-        tuple val(group), val(meta), val(part), file("*.${part}.loh.bed") emit: loh_bed
+        tuple val(group), val(meta), val(part), file("*.${part}.loh.bed"),  emit: loh_bed
+        tuple val(group), val(meta), val(part), file("*.${part}.loh.txt"),  emit: loh_txt
+        path "versions.yml",                                                emit: versions
 
     when:
         task.ext.when == null || task.ext.when

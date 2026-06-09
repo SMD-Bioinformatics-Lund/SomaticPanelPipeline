@@ -49,12 +49,18 @@ workflow BIOMARKERS {
         // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is either cnvkit_segments from CNVKIT_CALL (gmshem) 
         // or from CNVKIT_CALL_TC (solid).
         if (params.loh) {
-            CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns -> meta.type == "T" } )
+            CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns ->  meta.type == "T" } )
             ch_versions = ch_versions.mix(CALL_LOH.out.versions)
+            // simplify loh channel 
+            loh_ch = CALL_LOH.out.loh_bed.map { group, meta, part, bed -> tuple(group, bed) }
+        }
+        else {
+            loh_ch = Channel.empty()
         }
 
     emit:
         biomarkers  =   output          // channel: [ val(group), file(bio.json) ]
         versions    =   ch_versions     // channel: [ file(versions) ]
+        loh_bed     =   loh_ch          // channel: [ val(group), file("*.loh.bed") ]
 
 }
