@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 """
-Description: This script identifies LOH events and classifies their type based on the input cnvkitsegment (cnvkit_hrd) from CNVKIT_CALL 
-(or CNVKIT_CALL_TC). 
-Ths python script outputs these LOH events with category labels as well as a corresponding bed file for visualization.
+Description: This script identifies LOH events and classifies their type based on the input cnvkitsegment (cnvkit_hrd) 
+from CNVKIT_CALL (or CNVKIT_CALL_TC). 
+This python script outputs these LOH events with category labels (tab delimited file) as well as a corresponding bed file for visualization.
 
-Procedure:  1) filter on the minor allele (cn2) == 0 (LOH)
+Procedure:  1) filters on the minor allele (cn2) == 0 (LOH)
             2) Attributes a LOH type based on total_cn (total allele copy number)
 """
 
 import argparse
 
 parser = argparse.ArgumentParser(description="Process CNVkit .cns output to identify and classify LOH events.")
-parser.add_argument('--input',   required=True, help='input .cns file from CNVkit (tab-delimited)')
-parser.add_argument('--sample',  required=True, help='sample ID to use in output')
+parser.add_argument('--input',   required=True, help='input .cns file from CNVkit (tab-delimited) in CNVKIT_CALL(_TC) process')
+parser.add_argument('--sample',  required=True, help='sample ID to use in the output loh_cat')
 parser.add_argument('--out_cat',     required=True, help='output filename for LOH results')
 parser.add_argument('--out_bed', required=True, help='output filename for LOH BED file')
 args = parser.parse_args()
@@ -52,13 +52,13 @@ with open(args.input, "r") as cns, \
         # LOH defined as minor allele == 0
         if minor_cn == 0:
             if total_cn == 0:
-                loh_type = "HOM_DEL"
+                loh_type = "HOM_DEL" # homozygous deletion
             elif total_cn == 1:
-                loh_type = "LOH_DEL"
+                loh_type = "LOH_DEL" # LOH with one copy loss
             elif total_cn == 2:
-                loh_type = "CN_LOH"
+                loh_type = "CN_LOH" # copy-neutral LOH
             elif total_cn > 2:
-                loh_type = "LOH_AMP"
+                loh_type = "LOH_AMP" # LOH with copy number gain (amplification)
             else:
                 loh_type = "undetermined"
 
