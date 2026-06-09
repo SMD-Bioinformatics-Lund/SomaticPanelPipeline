@@ -6,9 +6,9 @@ process CALL_LOH {
         tuple val(group), val(meta), val(part), file(cns)
 
     output:
-        tuple val(group), val(meta), val(part), file("*.${part}.loh.bed"),  emit: loh_bed
-        tuple val(group), val(meta), val(part), file("*.${part}.loh.txt"),  emit: loh_txt
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta), val(part), file("*.${part}.loh.bed"),      emit: loh_bed
+        tuple val(group), val(meta), val(part), file("*.${part}.loh_cat.txt"),  emit: loh_cat
+        path "versions.yml",                                                    emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -19,7 +19,7 @@ process CALL_LOH {
         cnvkit_segments_loh.py \
             --input ${cns} \
             --sample ${meta.id} \
-            --out ${group}.${meta.id}.${part}.loh.txt
+            --out_cat ${group}.${meta.id}.${part}.loh_cat.txt
             --out_bed ${group}.${meta.id}.${part}.loh.bed
 
         
@@ -31,7 +31,7 @@ process CALL_LOH {
     
     stub:
         """
-        touch ${group}.${meta.id}.${part}.loh.txt
+        touch ${group}.${meta.id}.${part}.loh_cat.txt
         touch ${group}.${meta.id}.${part}.loh.bed
         
         """

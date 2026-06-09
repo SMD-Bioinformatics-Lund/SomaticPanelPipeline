@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Description: This script identifies LOH events and classifies their type based on the output cnvkitsegment from CNVKIT_CALL (or CNVKIT_CALL_TC). 
-It outputs these LOH events as well as a corresponding bed file for visualization in Coyote.
-
-Necessary input is the txt output file from scarHRD.
+Description: This script identifies LOH events and classifies their type based on the input cnvkitsegment (cnvkit_hrd) from CNVKIT_CALL 
+(or CNVKIT_CALL_TC). 
+Ths python script outputs these LOH events with category labels as well as a corresponding bed file for visualization.
 
 Procedure:  1) filter on the minor allele (cn2) == 0 (LOH)
             2) Attributes a LOH type based on total_cn (total allele copy number)
@@ -15,12 +14,12 @@ import argparse
 parser = argparse.ArgumentParser(description="Process CNVkit .cns output to identify and classify LOH events.")
 parser.add_argument('--input',   required=True, help='input .cns file from CNVkit (tab-delimited)')
 parser.add_argument('--sample',  required=True, help='sample ID to use in output')
-parser.add_argument('--out',     required=True, help='output filename for LOH results')
+parser.add_argument('--out_cat',     required=True, help='output filename for LOH results')
 parser.add_argument('--out_bed', required=True, help='output filename for LOH BED file')
 args = parser.parse_args()
 
 with open(args.input, "r") as cns, \
-     open(args.out,     'w') as out_file, \
+     open(args.out_cat, 'w') as out_file, \
      open(args.out_bed, 'w') as bed_file:
 
     out_file.write("sampleID\tChromosome\tStart_position\tEnd_position\ttotal_cn\tmajor_cn\tminor_cn\tloh_type\n")
