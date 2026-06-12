@@ -6,7 +6,7 @@ process CALL_LOH {
         tuple val(group), val(meta), val(part), file(cns)
 
     output:
-        tuple val(group), val(meta), val(part), file("*.${part}.loh_cat.txt"),  emit: loh_cat
+        tuple val(group), val(meta), val(part), file("*.${part}.loh_cat.tsv"),  emit: loh_cat
         path "versions.yml",                                                    emit: versions
 
     when:
@@ -19,7 +19,7 @@ process CALL_LOH {
             --input ${cns} \
             --sample ${meta.id} \
             --sex ${meta.sex} \
-            --out_cat ${group}.${meta.id}.${part}.loh_cat.txt
+            --out_cat ${group}.${meta.id}.${part}.loh_cat.tsv
 
         
         cat <<-END_VERSIONS > versions.yml
@@ -30,7 +30,7 @@ process CALL_LOH {
     
     stub:
         """
-        touch ${group}.${meta.id}.${part}.loh_cat.txt
+        touch ${group}.${meta.id}.${part}.loh_cat.tsv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
