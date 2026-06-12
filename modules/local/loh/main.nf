@@ -31,6 +31,11 @@ process CALL_LOH {
     stub:
         """
         touch ${group}.${meta.id}.${part}.loh_cat.txt
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+        END_VERSIONS
         
         """
 }
