@@ -19,6 +19,7 @@ process CALL_LOH {
         cnvkit_segments_loh.py \
             --input ${cns} \
             --sample ${meta.id} \
+            --sex ${meta.sex} \
             --out_cat ${group}.${meta.id}.${part}.loh_cat.txt
             --out_bed ${group}.${meta.id}.${part}.loh.bed
 

@@ -51,16 +51,16 @@ workflow BIOMARKERS {
         if (params.loh) {
             CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns ->  meta.type == "T" } )
             ch_versions = ch_versions.mix(CALL_LOH.out.versions)
-            // simplify loh channel 
-            loh_ch = CALL_LOH.out.loh_bed.map { group, meta, part, bed -> tuple(group, bed) }
+            // simplify loh output channels 
+            loh_cat_ch = CALL_LOH.out.loh_txt.map { group, meta, part, txt -> tuple(group, txt) }
         }
         else {
-            loh_ch = Channel.empty()
+            loh_cat_ch = Channel.empty()
         }
 
     emit:
-        biomarkers  =   output          // channel: [ val(group), file(bio.json) ]
-        versions    =   ch_versions     // channel: [ file(versions) ]
-        loh_bed     =   loh_ch          // channel: [ val(group), file("*.loh.bed") ]
+        biomarkers  =   output         // channel: [ val(group), file(bio.json) ]
+        versions    =   ch_versions    // channel: [ file(versions) ]
+        loh_cat     =   loh_cat_ch     // channel: [ val(group), file("*.loh.txt") ]
 
 }
