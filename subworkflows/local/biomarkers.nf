@@ -52,7 +52,7 @@ workflow BIOMARKERS {
             CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns ->  meta.type == "T" } )
             ch_versions = ch_versions.mix(CALL_LOH.out.versions)
             // simplify loh output channels 
-            loh_cat_ch = CALL_LOH.out.loh_txt.map { group, meta, part, txt -> tuple(group, txt) }
+            loh_cat_ch = CALL_LOH.out.loh_cat.map { group, meta, part, txt -> tuple(group, txt) }
         }
         else {
             loh_cat_ch = Channel.empty()
