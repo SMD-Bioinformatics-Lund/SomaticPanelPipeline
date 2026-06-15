@@ -11,6 +11,7 @@ include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annota
 include { SNV_ANNOTATE_GERMLINE         } from '../subworkflows/local/snv_annotate_germline'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
+include { GENS                          } from '../subworkflows/local/gens'
 include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { VCF_QC                        } from '../subworkflows/local/vcf_qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
@@ -144,6 +145,10 @@ workflow SPP_COMMON {
     .set { ch_bio }
     ch_versions = ch_versions.mix(ch_bio.versions)
 
+    GENS (
+    ch_cnvcalled.gens_v4,
+    ch_bio.loh_cat
+    )
 
     ADD_TO_DB (
         ch_vcf_anno.finished_vcf,
