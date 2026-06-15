@@ -10,6 +10,9 @@ workflow GENS {
     main:   
         ch_versions = Channel.empty()
 
+        // --- debug views ---
+        merged_gens_v4.view { "MERGED_GENS_V4: $it" }
+
         // group per sample baf/cov into one per sample group
         ch_gens_v4_grouped  = merged_gens_v4
             .groupTuple()
@@ -17,8 +20,13 @@ workflow GENS {
                 tuple(group, meta_list, baf_files, cov_files)
             }
         
+        ch_gens_v4_grouped.view { "GROUPED: $it" }
+        loh_cat.view { "LOH_CAT: $it" }
+        
         ch_gens_yaml_input = ch_gens_v4_grouped
             .join(loh_cat)
+        
+        ch_gens_yaml_input.view { "JOIN_INPUT: $it" }
 
         GENS_YAML ( ch_gens_yaml_input )
         ch_versions = ch_versions.mix(GENS_YAML.out.versions)
