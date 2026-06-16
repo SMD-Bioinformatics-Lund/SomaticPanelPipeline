@@ -170,14 +170,14 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(JOIN_TUMOR.out.versions)
 
     emit:
-        gatcov_plot        =  GATKCOV_CALL.out.gatcov_plot    // channel: [ val(group), file(modeled.png) ]
-        cnvkit_plot        =  cnvkitplot                      // channel: [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
-        cnvkit_hrd         =  cnvkit_hrd                      // channel: [ val(group), val(meta), val(part), file(call.cns) ]
-        tumor_vcf          =  JOIN_TUMOR.out.merged_vcf       // channel: [ val(group), val(vc), file(tumor.merged.vcf) ]
-        normal_vcf         =  JOIN_NORMAL.out.merged_vcf      // channel: [ val(group), val(vc), file(normal.merged.vcf) ]
-        gens               =  MERGE_GENS.out.dbload           // channel: [ val(group), val(meta), file(gens) ]
-        gens_v4            =  MERGE_GENS.out.gens_v4          // channel: [ val(group), val(meta), file(gens_v4) ]
-        new_gens_yaml =  MERGE_GENS.out.new_gens_yaml         // channel: [ val(group), val(meta), file(baf.bed.gz), file(cov.bed.gz) ]
-        versions           =  ch_versions                     // channel: [ file(versions) ]
+        gatcov_plot              =  GATKCOV_CALL.out.gatcov_plot               // channel: [ val(group), file(modeled.png) ]
+        cnvkit_plot              =  cnvkitplot                                 // channel: [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
+        cnvkit_hrd               =  cnvkit_hrd                                 // channel: [ val(group), val(meta), val(part), file(call.cns) ]
+        tumor_vcf                =  JOIN_TUMOR.out.merged_vcf                  // channel: [ val(group), val(vc), file(tumor.merged.vcf) ]
+        normal_vcf               =  JOIN_NORMAL.out.merged_vcf                 // channel: [ val(group), val(vc), file(normal.merged.vcf) ]
+        gens                     =  MERGE_GENS.out.dbload                      // channel: [ val(group), val(meta), file(gens) ]
+        gens_v4                  =  MERGE_GENS.out.gens_v4                     // channel: [ val(group), val(meta), file(gens_v4) ]
+        ouputs_for_new_gens_yaml =  MERGE_GENS.out.ouputs_for_new_gens_yaml    // channel: [ val(group), val(meta), file(baf.bed.gz), file(cov.bed.gz) ]
+        versions                 =  ch_versions                                // channel: [ file(versions) ]
 
 }
