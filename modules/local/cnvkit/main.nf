@@ -266,8 +266,9 @@ process MERGE_GENS {
         tuple val(group), val(meta), file(baf), file(cov)
 
     output:
-        tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"), optional: true,    emit: merged_gens
-        tuple val(group), val(meta), file("*baf.bed.gz"), file("*cov.bed.gz"),   optional: true,    emit: merged_gens_for_v4
+        tuple val(group), val(meta), file("*baf.bed.gz*"), file("*cov.bed.gz*"),                             optional: true,    emit: merged_gens
+        tuple val(group), val(meta), file("*baf.bed.gz"), file("*cov.bed.gz"),                               optional: true,    emit: merged_gens_for_v4
+        tuple val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*"), optional: true,    emit: new_gens_yaml
         tuple val(group), val(meta), file("*.gens"),                                                emit: dbload
         tuple val(group), val(meta), file("*.gens_v4_somatic"),                                     emit: gens_v4
         path "versions.yml",                                                                        emit: versions
@@ -296,7 +297,9 @@ process MERGE_GENS {
             sed 's/^/d_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
             bedtools sort -i !{meta.id}.merged.cov.bed > !{meta.id}.merged.sorted.cov.bed
             bgzip !{meta.id}.merged.sorted.cov.bed
+            cp !{meta.id}.merged.sorted.cov.bed.gz !{meta.id}.final.sorted.cov.bed.gz
             tabix !{meta.id}.merged.sorted.cov.bed.gz
+            tabix !{meta.id}.final.sorted.cov.bed.gz
             for i in $( ls *.baf.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.baf.bed ; done
             bedtools sort -i !{meta.id}.base.baf.bed > !{meta.id}.base.baf.bed.sort
             sed 's/^/o_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
@@ -306,13 +309,19 @@ process MERGE_GENS {
             sed 's/^/d_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
             bedtools sort -i !{meta.id}.merged.baf.bed > !{meta.id}.merged.sorted.baf.bed
             bgzip !{meta.id}.merged.sorted.baf.bed
+            cp !{meta.id}.merged.sorted.baf.bed.gz !{meta.id}.final.sorted.baf.bed.gz
             tabix !{meta.id}.merged.sorted.baf.bed.gz
+            tabix !{meta.id}.final.sorted.baf.bed.gz
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
 
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type !{meta.type} --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens_v4_somatic
         else
             tabix !{meta.id}.full.baf.bed.gz
             tabix !{meta.id}.full.cov.bed.gz
+            cp !{meta.id}.full.baf.bed.gz !{meta.id}.final.sorted.baf.bed.gz
+            cp !{meta.id}.full.cov.bed.gz !{meta.id}.final.sorted.cov.bed.gz
+            tabix !{meta.id}.final.sorted.baf.bed.gz
+            tabix !{meta.id}.final.sorted.cov.bed.gz
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
 
             echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type !{meta.type} --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens_v4_somatic

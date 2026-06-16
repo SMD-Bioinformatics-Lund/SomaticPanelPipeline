@@ -4,31 +4,35 @@ include { GENS_YAML                   } from '../../modules/local/gens/main'
 
 workflow GENS {
     take: 
-        merged_gens_v4   // channel: [ val(group), val(meta), file(baf.bed.gz), file(cov.bed.gz) ] -- from MERGE_GENS.out.merged_gens_for_v4
-        loh_cat          // channel: [ val(group), val(meta), file(*.loh_cat.tsv) ] -- from BIOMARKERS.out.loh_cat (always emitted, placeholder if !params.loh)
+        new_gens_yaml   // channel: [ val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*")] -- from MERGE_GENS.out.new_gens_yaml
+        loh_cat         // channel: [ val(group), val(meta), val(part), file("*.loh_cat.tsv") ] -- from BIOMARKERS.out.loh_cat
     
     main:   
         ch_versions = Channel.empty()
 
         // --- debug views ---
-        merged_gens_v4.view { "MERGED_GENS_V4: $it" }
+        new_gens_yaml.view { "new_gens_yaml: $it" }
 
         // group per sample baf/cov into one per sample group
-        ch_gens_v4_grouped  = merged_gens_v4
+        ch_new_gens_yaml_grouped  = new_gens_yaml
             .groupTuple()
             .map{ group, meta_list, baf_files, cov_files -> 
-                tuple(group, meta_list, baf_files, cov_files)
+                tuple(group, meta_list, baf_files, cov_files) // should be grouped by group and meta here?
             }
         
-        ch_gens_v4_grouped.view { "GROUPED: $it" }
+        ch_new_gens_yaml_grouped.view { "ch_new_gens_yaml_grouped: $it" }
         loh_cat.view { "LOH_CAT: $it" }
         
-        ch_gens_yaml_input = ch_gens_v4_grouped
-            .join(loh_cat)
+
+        loh_cat_ch = loh_cat.map { group, meta, part, tsv -> tuple(group, meta, tsv) }
+
+        ch_gens_yaml_input = ch_new_gens_yaml_grouped
+            .join(loh_cat_ch)
         
-        ch_gens_yaml_input.view { "JOIN_INPUT: $it" }
+        ch_gens_yaml_input.view { "ch_gens_yaml_input: $it" }
 
         GENS_YAML ( ch_gens_yaml_input )
+
         ch_versions = ch_versions.mix(GENS_YAML.out.versions)
 
     emit:

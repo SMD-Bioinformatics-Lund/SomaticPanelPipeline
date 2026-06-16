@@ -13,6 +13,7 @@ process GENS_YAML {
         task.ext.when == null || task.ext.when
 
     script:
+        def args          = task.ext.args ?: ''
         def prefix        = task.ext.prefix ?: "${group}"
         def process_group = meta_list.any { it.paired } ? group + 'p' : group
         def sample_ids    = meta_list.collect { it.id }
@@ -24,15 +25,14 @@ process GENS_YAML {
         """
         gens_yaml.py \\
             --case_id ${process_group} \\
-            --genome_build 38 \\
-            --gens_accessdir ${params.gens_accessdir} \\
             --sample_ids ${sample_ids.join(' ')} \\
             --sample_types ${sample_types.join(' ')} \\
             --sample_sexes ${sexes.join(' ')} \\
             --baf_filenames ${baf_names.join(' ')} \\
             --cov_filenamess ${cov_names.join(' ')} \\
             --loh_cat_filename ${loh_cat} \\
-            --output ${prefix}.gens_somatic.yaml
+            --output ${prefix}.gens_somatic.yaml ?? 
+            ${args}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
