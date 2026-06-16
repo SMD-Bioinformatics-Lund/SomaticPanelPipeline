@@ -177,7 +177,7 @@ workflow CNV_CALLING {
         normal_vcf         =  JOIN_NORMAL.out.merged_vcf      // channel: [ val(group), val(vc), file(normal.merged.vcf) ]
         gens               =  MERGE_GENS.out.dbload           // channel: [ val(group), val(meta), file(gens) ]
         gens_v4            =  MERGE_GENS.out.gens_v4          // channel: [ val(group), val(meta), file(gens_v4) ]
-        merged_gens_for_v4 =  MERGE_GENS.out.merged_gens_for_v4 // channel: [ val(group), val(meta), file(baf.bed.gz), file(cov.bed.gz) ]
+        new_gens_yaml =  MERGE_GENS.out.new_gens_yaml         // channel: [ val(group), val(meta), file(baf.bed.gz), file(cov.bed.gz) ]
         versions           =  ch_versions                     // channel: [ file(versions) ]
 
 }
