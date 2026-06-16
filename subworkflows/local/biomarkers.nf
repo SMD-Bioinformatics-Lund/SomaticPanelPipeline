@@ -48,10 +48,11 @@ workflow BIOMARKERS {
         // Loss of Heterozygosity (LOH) calculation and type evaluation
         // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is either cnvkit_segments from CNVKIT_CALL (gmshem) 
         // or from CNVKIT_CALL_TC (solid).
+        // params.loh in the process config in biomarkers.config 
         CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns ->  meta.type == "T" } )
         ch_versions = ch_versions.mix(CALL_LOH.out.versions)
  
-        loh_cat_ch = Channel.empty().mix(loh_cat_ch) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
+        loh_cat_ch = Channel.empty().mix(CALL_LOH.out.loh_cat) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
 
 
     emit:
