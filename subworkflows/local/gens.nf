@@ -22,7 +22,7 @@ workflow GENS {
             ch_gens_yaml_input = ch_grouped
                 .join(loh_cat
                     .map { group, meta, part, tsv ->
-                        tuple(group, tsv)
+                        tuple(group, tsv) // drop meta and part, not needed for join
                     }
                 )
             } 
@@ -33,17 +33,6 @@ workflow GENS {
                     tuple(group, meta_list, baf_files, cov_files, null)
                 }
         }
-
-
-
-        // Drop meta and part for loh_cat - only group is needed to join with ch_grouped
-        //ch_loh = loh_cat
-        //    .map { group, meta, part, tsv 
-        //        -> tuple(group, tsv) }
-        
-        // Join on group → [ group, [meta_T, meta_N], [baf_T, baf_N], [cov_T, cov_N], tsv ]
-        //ch_gens_yaml_input = ch_grouped
-        //    .join(ch_loh)
 
         GENS_YAML ( ch_gens_yaml_input )
 
