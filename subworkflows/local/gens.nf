@@ -4,7 +4,7 @@ include { GENS_YAML                   } from '../../modules/local/gens/main'
 
 workflow GENS {
     take: 
-        new_gens_yaml   // channel: [ val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*")] -- from MERGE_GENS.out.new_gens_yaml
+        ouputs_for_new_gens_yaml   // channel: [ val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*")] -- from MERGE_GENS.out.ouputs_for_new_gens_yaml
         loh_cat         // channel: [ val(group), val(meta), val(part), file("*.loh_cat.tsv") ] -- from BIOMARKERS.out.loh_cat
     
     main:   
