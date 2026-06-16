@@ -29,9 +29,9 @@ process GENS_YAML {
             --sample_types ${sample_types.join(' ')} \\
             --sample_sexes ${sexes.join(' ')} \\
             --baf_filenames ${baf_names.join(' ')} \\
-            --cov_filenamess ${cov_names.join(' ')} \\
+            --cov_filenames ${cov_names.join(' ')} \\
             --loh_cat_filename ${loh_cat} \\
-            --output ${prefix}.gens_somatic.yaml ?? 
+            --output ${prefix}.gens_somatic.yaml \\ 
             ${args}
 
         cat <<-END_VERSIONS > versions.yml
