@@ -283,8 +283,8 @@ process TNSCOPE {
         each file(bed)
 
     output:
-        tuple val(group), val(meta), file("tnscope_${bed}.vcf.raw"),        emit: vcfparts_tnscope
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta), file("tnscope_${bed}.vcf.raw.merged.clean"),        emit: vcfparts_tnscope
+        path "versions.yml",                                                             emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -305,6 +305,8 @@ process TNSCOPE {
                 $args2 \\
                 --min_tumor_allele_frac ${params.tnscope_var_freq_cutoff_p} \\
                 tnscope_${bed}.vcf.raw
+            sentieon pyexec /opt/sentieon-scripts/merge_mnp/merge_mnp.py tnscope_${bed}.vcf.raw ${params.genome_file} > tnscope_${bed}.vcf.raw.merged
+            grep -vP ".*\t.*\t.*\t.*\t.*\tMERGED" tnscope_${bed}.vcf.raw.merged > tnscope_${bed}.vcf.raw.merged.clean
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -321,6 +323,8 @@ process TNSCOPE {
                 $args2 \\
                 --min_tumor_allele_frac ${params.tnscope_var_freq_cutoff_up} \\
                 tnscope_${bed}.vcf.raw
+            sentieon pyexec /opt/sentieon-scripts/merge_mnp/merge_mnp.py tnscope_${bed}.vcf.raw ${params.genome_file} > tnscope_${bed}.vcf.raw.merged
+            grep -vP ".*\t.*\t.*\t.*\t.*\tMERGED" tnscope_${bed}.vcf.raw.merged > tnscope_${bed}.vcf.raw.merged.clean
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -331,7 +335,7 @@ process TNSCOPE {
 
     stub:
         """
-        touch tnscope_${bed}.vcf.raw
+        touch tnscope_${bed}.vcf.raw.merged.clean
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
