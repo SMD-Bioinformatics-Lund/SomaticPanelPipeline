@@ -4,32 +4,27 @@ include { GENS_YAML                   } from '../../modules/local/gens/main'
 
 workflow GENS {
     take: 
-        ouputs_for_new_gens_yaml   // channel: [ val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*")] -- from MERGE_GENS.out.ouputs_for_new_gens_yaml
-        loh_cat         // channel: [ val(group), val(meta), val(part), file("*.loh_cat.tsv") ] -- from BIOMARKERS.out.loh_cat
+        ouputs_for_new_gens_yaml    // channel: [ val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*")] 
+                                    // -- from MERGE_GENS.out.ouputs_for_new_gens_yaml
+        loh_cat                     // channel: [ val(group), val(meta, type="T"), val(part), file("*.loh_cat.tsv") ] 
+                                    // -- one item per group (tumor only), from BIOMARKERS.out.loh_cat
     
     main:   
         ch_versions = Channel.empty()
 
-        // --- debug views ---
-        new_gens_yaml.view { "new_gens_yaml: $it" }
-
-        // group per sample baf/cov into one per sample group
-        ch_new_gens_yaml_grouped  = new_gens_yaml
+        // Collapse per-sample rows into one per group:
+        // → [ group, [meta_T, meta_N], [baf_T, baf_N], [cov_T, cov_N] ]
+        ch_grouped  = ouputs_for_new_gens_yaml
             .groupTuple()
-            .map{ group, meta_list, baf_files, cov_files -> 
-                tuple(group, meta_list, baf_files, cov_files) // should be grouped by group and meta here?
-            }
         
-        ch_new_gens_yaml_grouped.view { "ch_new_gens_yaml_grouped: $it" }
-        loh_cat.view { "LOH_CAT: $it" }
+        // Drop meta and part for loh_cat - onyl group is needed to join with ch_grouped
+        ch_loh = loh_cat
+            .map { group, meta, part, tsv 
+                -> tuple(group, tsv) }
         
-
-        loh_cat_ch = loh_cat.map { group, meta, part, tsv -> tuple(group, meta, tsv) }
-
-        ch_gens_yaml_input = ch_new_gens_yaml_grouped
-            .join(loh_cat_ch)
-        
-        ch_gens_yaml_input.view { "ch_gens_yaml_input: $it" }
+        // Join on group → [ group, [meta_T, meta_N], [baf_T, baf_N], [cov_T, cov_N], tsv ]
+        ch_gens_yaml_input = ch_grouped
+            .join(ch_loh)
 
         GENS_YAML ( ch_gens_yaml_input )
 

@@ -1,8 +1,9 @@
 process CALL_LOH {
     label "process_single"
-    tag "$group"
+    tag "${meta.id}"
 
     input: 
+        // tumor-only: filtered to meta.type == "T" before calling this process
         tuple val(group), val(meta), val(part), file(cns)
 
     output:
