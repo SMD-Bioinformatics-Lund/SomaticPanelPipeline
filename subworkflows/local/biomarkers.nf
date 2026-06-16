@@ -11,7 +11,7 @@ include { CALL_LOH                     } from '../../modules/local/loh/main'
 workflow BIOMARKERS {
     take: 
         meta                   // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
-        cnvkitsegments         // channel: [mandatory] [ val(group), val(meta), val(part(backbone)), file("${group}.${meta.id}.${part}.call*.cns") ]
+        cnvkitsegments         // channel: [mandatory] [ val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns") ]
         bam_umi                // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr) ]
         bam_dedup              // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(marked_bai), file(bqsr) ]
 
@@ -50,13 +50,13 @@ workflow BIOMARKERS {
         // or from CNVKIT_CALL_TC (solid).
         CALL_LOH ( cnvkitsegments.filter { group, meta, part, cns ->  meta.type == "T" } )
         ch_versions = ch_versions.mix(CALL_LOH.out.versions)
-        // simplify loh output channels 
-        loh_cat_ch = CALL_LOH.out.loh_cat.map { group, meta, part, tsv -> tuple(group, tsv) }
-        
+ 
+        loh_cat_ch = Channel.empty().mix(loh_cat_ch) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
+
 
     emit:
         biomarkers  =   output         // channel: [ val(group), file(bio.json) ]
         versions    =   ch_versions    // channel: [ file(versions) ]
-        loh_cat     =   loh_cat_ch     // channel: [ val(group), file("*.loh_cat.tsv") ]
+        loh_cat     =   loh_cat_ch     // channel: [ val(group), val(meta), val(part), file("*.loh_cat.tsv") ]
 
 }

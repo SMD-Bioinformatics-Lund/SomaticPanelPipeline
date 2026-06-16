@@ -7,14 +7,13 @@ process CALL_LOH {
 
     output:
         tuple val(group), val(meta), val(part), file("*.loh_cat.tsv"),  emit: loh_cat
-        path "versions.yml",                                                    emit: versions
+        path "versions.yml",                                            emit: versions
 
     when:
         task.ext.when == null || task.ext.when
     
     script:
         def prefix = task.ext.prefix ?: "${group}.${meta.id}${part}"
-        if (params.loh) {
         
             """
             cnvkit_segments_loh.py \
@@ -29,17 +28,6 @@ process CALL_LOH {
                 python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
-        }
-        else {
-            """
-            touch ${prefix}.loh_cat.tsv # create a file for profile when LOH not calculated, usefull later for GENS export
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
-            END_VERSIONS
-            """
-        }
     
     stub:
         def prefix = task.ext.prefix ?: "${group}.${meta.id}${part}"
