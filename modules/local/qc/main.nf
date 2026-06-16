@@ -240,3 +240,34 @@ process LOWCOV_D4 {
         END_VERSIONS
         """
 }
+
+process PEDDY2CDM {
+    label "process_single"
+	tag "${meta.id}"
+
+	input:
+		tuple val(group), val(meta), path(ped_check),path(peddy_ped), path(sex_check)
+
+	output:
+		tuple val(group), val(meta), path("*peddy.json"), emit: json
+		tuple val(group), val(meta), path("*peddy2cdm"), emit: cdm
+
+	script:
+        def args    = task.ext.args     ?: ''
+        def args2   = task.ext.args2    ?: ''
+		def sample_arg =  " ${meta.id}:${meta.sequencing_run}"
+			
+		"""
+		peddy2cdm.py \
+		--ped $ped_check \
+		--sex $sex_check \
+		--sample $sample_arg $args $args2
+		"""
+		
+	stub:
+		"""
+		touch "${group}_peddy.json"
+		touch "${group}.peddy2cdm"
+	    """
+
+}

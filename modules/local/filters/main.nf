@@ -664,6 +664,46 @@ process BEDTOOLS_INTERSECT {
         """
 }
 
+process CNV_BACKBONE_FILTER {
+    label "process_single"
+    tag "${meta.group}"
+
+    input:
+        tuple val(group), val(meta), file(vcf)
+        val(bed)
+
+    output:
+        tuple val(group), val(meta), file("*.cnv_bb_filtered.vcf"), emit: vcf_cnv_bb_filtered
+        path "versions.yml",                                        emit: versions
+    
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args    = task.ext.args     ?: ''
+        def prefix  = task.ext.prefix   ?: "${group}"
+        """
+        bedtools intersect -a $vcf -b $bed $args > ${prefix}.agg.pon.vep.markgerm.cnv_bb_filtered.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix  = task.ext.prefix ?: "${group}"
+        """
+        echo $vcf
+        touch ${prefix}.agg.pon.vep.markgerm.cnv_bb_filtered.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
+        END_VERSIONS
+        """
+}
+
 process POST_ANNOTATION_FILTERS {
     label "process_single"
     tag "$group"
