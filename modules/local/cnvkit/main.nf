@@ -353,7 +353,10 @@ process MERGE_GENS {
         echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${meta.id}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.${filename_mod}.cov.bed.gz" > ${meta.id}.gens_v4_somatic
         
         touch ${meta.id}.${filename_mod}.cov.bed.gz 
-        touch ${meta.id}.${filename_mod}.baf.bed.gz 
+        touch ${meta.id}.${filename_mod}.baf.bed.gz
+
+        touch ${meta.id}.final.sorted.baf.bed.gz
+        touch ${meta.id}.final.sorted.cov.bed.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
