@@ -17,17 +17,35 @@ workflow GENS {
         ch_grouped  = ouputs_for_new_gens_yaml
             .groupTuple()
         
-        // Drop meta and part for loh_cat - onyl group is needed to join with ch_grouped
-        ch_loh = loh_cat
-            .map { group, meta, part, tsv 
-                -> tuple(group, tsv) }
+        if( params.loh ) {
+
+            ch_gens_yaml_input = ch_grouped
+                .join(loh_cat
+                    .map { group, meta, part, tsv ->
+                        tuple(group, tsv)
+                    }
+                )
+            } 
+        else {
+
+            ch_gens_yaml_input = ch_grouped
+                .map { group, meta_list, baf_files, cov_files ->
+                    tuple(group, meta_list, baf_files, cov_files, null)
+                }
+        }
+
+
+
+        // Drop meta and part for loh_cat - only group is needed to join with ch_grouped
+        //ch_loh = loh_cat
+        //    .map { group, meta, part, tsv 
+        //        -> tuple(group, tsv) }
         
         // Join on group → [ group, [meta_T, meta_N], [baf_T, baf_N], [cov_T, cov_N], tsv ]
-        ch_gens_yaml_input = ch_grouped
-            .join(ch_loh)
+        //ch_gens_yaml_input = ch_grouped
+        //    .join(ch_loh)
 
         GENS_YAML ( ch_gens_yaml_input )
-        GENS_YAML.out.gens_yaml.view()
 
         ch_versions = ch_versions.mix(GENS_YAML.out.versions)
 

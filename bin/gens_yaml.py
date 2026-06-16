@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--sample_sexes',   required=True, nargs='+', help='Sample sexes, one per sample, same order as --sample_ids (. if unknown)')
     parser.add_argument('--baf_filenames',  required=True, nargs='+', help='BAF bed.gz filenames, one per sample, same order as --sample_ids')
     parser.add_argument('--cov_filenames',  required=True, nargs='+', help='Coverage bed.gz filenames, one per sample, same order as --sample_ids')
-    parser.add_argument('--loh_cat_filename', required=True, help='LOH category tsv filename (tumor sample only); always provided, may be an empty if LOH not calculated')
+    parser.add_argument('--loh_cat_filename', required=False, default=None, help='LOH category tsv filename (tumor sample only); provided only for solid and GMSHem')
     parser.add_argument('--out',            required=True, help='Output YAML filename')
     return parser.parse_args()
 
