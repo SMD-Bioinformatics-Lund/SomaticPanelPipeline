@@ -27,6 +27,7 @@ workflow GENS {
             .join(ch_loh)
 
         GENS_YAML ( ch_gens_yaml_input )
+        GENS_YAML.out.gens_yaml.view()
 
         ch_versions = ch_versions.mix(GENS_YAML.out.versions)
 
