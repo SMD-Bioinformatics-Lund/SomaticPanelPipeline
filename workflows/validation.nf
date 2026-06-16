@@ -10,33 +10,20 @@ include { SNV_CALLING                   } from '../subworkflows/local/snv_callin
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { SNV_VALIDATE                  } from '../subworkflows/local/snv_validate'
 
-
-csv = file(params.csv)
-
 params.paired = csv.countLines() > 2 ? true : false
 
-
-// Split bed file in to smaller parts to be used for parallel variant calling
-Channel
-    .fromPath("${params.regions_bed}")
-    .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
-    .splitText( by: 1000, file: 'bedpart.bed' )
-    .set { beds }
-
-Channel
-    .fromPath(params.gatkreffolders)
-    .splitCsv(header:true)
-    .map{ row-> tuple(row.i, row.refpart) }
-    .set{ gatk_ref}
-
-
-
 workflow VALIDATION {
-
-    ch_versions = Channel.empty()
+    csv = file(params.csv)
+    ch_versions = channel.empty()
+    // Split bed file in to smaller parts to be used for parallel variant calling
+    channel
+        .fromPath("${params.regions_bed}")
+        .ifEmpty { exit 1, "Regions bed file not found: ${params.regions_bed}" }
+        .splitText( by: 1000, file: 'bedpart.bed' )
+        .set { beds }
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
-    CHECK_INPUT ( Channel.fromPath(csv), params.paired )
+    CHECK_INPUT ( channel.fromPath(csv), params.paired )
 
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
@@ -84,31 +71,4 @@ workflow VALIDATION {
         params.assay_config,
         params.known_validation_snvs
     )
-}
-
-workflow.onComplete {
-
-    def msg = """\
-        Pipeline execution summary
-        ---------------------------
-        Completed at: ${workflow.complete}
-        Duration    : ${workflow.duration}
-        Success     : ${workflow.success}
-        scriptFile  : ${workflow.scriptFile}
-        workDir     : ${workflow.workDir}
-        csv         : ${params.csv}
-        exit status : ${workflow.exitStatus}
-        errorMessage: ${workflow.errorMessage}
-        errorReport :
-        """
-        .stripIndent()
-    def error = """\
-        ${workflow.errorReport}
-        """
-        .stripIndent()
-
-    base = csv.getBaseName()
-    logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
-    logFile.text = msg
-    logFile.append(error)
 }
