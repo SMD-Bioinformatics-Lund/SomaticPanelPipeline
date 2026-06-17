@@ -33,7 +33,7 @@ process GENS_YAML {
             --baf_filenames ${baf_names.join(' ')} \\
             --cov_filenames ${cov_names.join(' ')} \\
             --loh_cat_filename ${loh_cat} \\
-            --out ${prefix}.gens_somatic.yaml \\ 
+            --out ${prefix}.gens_somatic.yaml \\
             ${args}
 
         cat <<-END_VERSIONS > versions.yml

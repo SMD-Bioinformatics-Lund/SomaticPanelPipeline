@@ -14,7 +14,7 @@ process CALL_LOH {
         task.ext.when == null || task.ext.when
     
     script:
-        def prefix = task.ext.prefix ?: "${group}.${meta.id}${part}"
+        def prefix = task.ext.prefix ?: "${group}.${meta.id}_${part}"
         
             """
             cnvkit_segment_to_loh.py \
@@ -31,7 +31,7 @@ process CALL_LOH {
             """
     
     stub:
-        def prefix = task.ext.prefix ?: "${group}.${meta.id}${part}"
+        def prefix = task.ext.prefix ?: "${group}.${meta.id}_${part}"
         """
         touch ${prefix}.loh_cat.tsv
 
