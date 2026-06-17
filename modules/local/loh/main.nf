@@ -8,6 +8,7 @@ process CALL_LOH {
 
     output:
         tuple val(group), val(meta), val(part), file("*.loh_cat.tsv"),  emit: loh_cat
+        tuple val(group), val(meta), val(part), file("*.loh_cat.bed"),  emit: loh_bed
         path "versions.yml",                                            emit: versions
 
     when:
@@ -22,6 +23,7 @@ process CALL_LOH {
                 --sample ${meta.id} \
                 --sex ${meta.sex} \
                 --out_cat ${prefix}.loh_cat.tsv
+                --out_bed ${prefix}.loh_cat.bed
 
         
             cat <<-END_VERSIONS > versions.yml
@@ -34,6 +36,7 @@ process CALL_LOH {
         def prefix = task.ext.prefix ?: "${group}.${meta.id}_${part}"
         """
         touch ${prefix}.loh_cat.tsv
+        touch ${prefix}.loh_cat.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

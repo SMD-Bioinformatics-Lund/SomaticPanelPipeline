@@ -147,7 +147,7 @@ workflow SPP_COMMON {
 
     GENS (
         ch_cnvcalled.ouputs_for_new_gens_yaml, 
-        ch_bio.loh_cat
+        ch_bio.loh_bed
     )
     .set { ch_gens }
     ch_versions = ch_versions.mix(ch_gens.versions)

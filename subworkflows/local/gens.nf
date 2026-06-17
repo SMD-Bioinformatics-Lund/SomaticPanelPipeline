@@ -6,8 +6,8 @@ workflow GENS {
     take: 
         ouputs_for_new_gens_yaml    // channel: [ val(group), val(meta), file("*.final.sorted.baf.bed.gz*"), file("*.final.sorted.cov.bed.gz*")] 
                                     // -- from MERGE_GENS.out.ouputs_for_new_gens_yaml
-        loh_cat                     // channel: [ val(group), val(meta, type="T"), val(part), file("*.loh_cat.tsv") ] 
-                                    // -- one item per group (tumor only), from BIOMARKERS.out.loh_cat
+        loh_bed                     // channel: [ val(group), val(meta, type="T"), val(part), file("*.loh_cat.bed") ] 
+                                    // -- one item per group (tumor only), from BIOMARKERS.out.loh_bed
     
     main:   
         ch_versions = Channel.empty()
@@ -20,9 +20,9 @@ workflow GENS {
         if( params.loh ) {
 
             ch_gens_yaml_input = ch_grouped
-                .join(loh_cat
-                    .map { group, meta, part, tsv ->
-                        tuple(group, tsv) // drop meta and part, not needed for join
+                .join(loh_bed
+                    .map { group, meta, part, bed ->
+                        tuple(group, bed) // drop meta and part, not needed for join
                     }
                 )
             } 

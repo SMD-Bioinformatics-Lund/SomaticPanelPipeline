@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--sample_sexes',   required=True, nargs='+', help='Sample sexes, one per sample, same order as --sample_ids (. if unknown)')
     parser.add_argument('--baf_filenames',  required=True, nargs='+', help='BAF bed.gz filenames, one per sample, same order as --sample_ids')
     parser.add_argument('--cov_filenames',  required=True, nargs='+', help='Coverage bed.gz filenames, one per sample, same order as --sample_ids')
-    parser.add_argument('--loh_cat_filename', required=False, default=None, help='LOH category tsv filename (tumor sample only); provided only for solid and GMSHem')
+    parser.add_argument('--loh_bed_filename', required=False, default=None, help='LOH category bed filename (tumor sample only); provided only for solid and GMSHem')
     parser.add_argument('--out',            required=True, help='Output YAML filename')
     return parser.parse_args()
 
@@ -26,23 +26,23 @@ def build_access_path(gens_accessdir, filename):
     return f"{gens_accessdir}/{filename}"
 
 
-def check_loh_cat_has_content(loh_cat_filename):
+def check_loh_bed_has_content(loh_bed_filename):
     """
-    Returns True if the loh_cat file has content and should be referenced in the YAML.
+    Returns True if the loh_bed file has content and should be referenced in the YAML.
 
-    CALL_LOH always emits a *.loh_cat.tsv file: real content when params.loh is true,
+    CALL_LOH always emits a *.loh_cat.bed file: real content when params.loh is true,
     an empty (touched) file otherwise. A missing path or a 0-byte file is
     treated as unusable.
     """
-    if not loh_cat_filename:
+    if not loh_bed_filename:
         return False
-    if not os.path.exists(loh_cat_filename):
+    if not os.path.exists(loh_bed_filename):
         return False
-    return os.path.getsize(loh_cat_filename) > 0
+    return os.path.getsize(loh_bed_filename) > 0
 
 
 def build_sample_entries(sample_ids, sample_types, sample_sexes, baf_filenames, cov_filenames,
-                          gens_accessdir, loh_cat_filename, loh_annotation_usable):
+                          gens_accessdir, loh_bed_filename, loh_annotation_usable):
     """
     Build the list of per-sample dicts for the YAML 'samples' section.
 
@@ -70,7 +70,7 @@ def build_sample_entries(sample_ids, sample_types, sample_sexes, baf_filenames, 
         if loh_annotation_usable and is_tumor_sample:
             sample_entry['sample_annotations'] = [
                 {
-                    'file': build_access_path(gens_accessdir, loh_cat_filename),
+                    'file': build_access_path(gens_accessdir, loh_bed_filename),
                     'name': 'LOH',
                 }
             ]
@@ -134,7 +134,7 @@ def main():
                 f"{arg_name} has {len(values)}"
             )
 
-    loh_annotation_usable = check_loh_cat_has_content(args.loh_cat_filename)
+    loh_annotation_usable = check_loh_bed_has_content(args.loh_bed_filename)
 
     sample_entries = build_sample_entries(
         sample_ids=args.sample_ids,
@@ -143,7 +143,7 @@ def main():
         baf_filenames=args.baf_filenames,
         cov_filenames=args.cov_filenames,
         gens_accessdir=args.gens_accessdir,
-        loh_cat_filename=args.loh_cat_filename,
+        loh_bed_filename=args.loh_bed_filename,
         loh_annotation_usable=loh_annotation_usable,
     )
 

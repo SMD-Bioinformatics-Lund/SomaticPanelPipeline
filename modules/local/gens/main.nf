@@ -3,7 +3,7 @@ process GENS_YAML {
     tag "$group"
 
     input:
-        tuple val(group), val(meta_list), file(baf_files), file(cov_files), val(loh_cat) // loh_cat can be null, and thus cannot be file=> val instead
+        tuple val(group), val(meta_list), file(baf_files), file(cov_files), val(loh_bed) // loh_bed can be null, and thus cannot be file=> val instead
 
     output:
         tuple val(group), file("*.gens_somatic.yaml"), emit: gens_yaml
@@ -22,7 +22,7 @@ process GENS_YAML {
         def baf_names    = [baf_files].flatten().collect { it.name }
         def cov_names    = [cov_files].flatten().collect { it.name }
 
-        def loh_args     = loh_cat ? "--loh_cat_filename ${loh_cat}" : ""
+        def loh_args     = loh_bed ? "--loh_bed_filename ${loh_bed}" : ""
 
         """
         gens_yaml.py \\
@@ -32,7 +32,7 @@ process GENS_YAML {
             --sample_sexes ${sexes.join(' ')} \\
             --baf_filenames ${baf_names.join(' ')} \\
             --cov_filenames ${cov_names.join(' ')} \\
-            --loh_cat_filename ${loh_cat} \\
+            --loh_bed_filename ${loh_bed} \\
             --out ${prefix}.gens_somatic.yaml \\
             ${args}
 

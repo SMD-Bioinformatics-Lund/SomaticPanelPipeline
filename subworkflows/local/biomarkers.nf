@@ -53,12 +53,12 @@ workflow BIOMARKERS {
         CALL_LOH ( cnvkitsegments_tumor )
         ch_versions = ch_versions.mix(CALL_LOH.out.versions)
  
-        loh_cat_ch = Channel.empty().mix(CALL_LOH.out.loh_cat) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
+        loh_bed_ch = Channel.empty().mix(CALL_LOH.out.loh_bed) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
 
 
     emit:
         biomarkers  =   output         // channel: [ val(group), file(bio.json) ]
         versions    =   ch_versions    // channel: [ file(versions) ]
-        loh_cat     =   loh_cat_ch     // channel: [ val(group), val(meta, type="T"), val(part), file("*.loh_cat.tsv") ]
+        loh_bed     =   loh_bed_ch     // channel: [ val(group), val(meta, type="T"), val(part), file("*.loh_cat.bed") ]
 
 }
