@@ -17,7 +17,7 @@ process CALL_LOH {
         def prefix = task.ext.prefix ?: "${group}.${meta.id}${part}"
         
             """
-            cnvkit_segments_loh.py \
+            cnvkit_segment_loh.py \
                 --input ${cns} \
                 --sample ${meta.id} \
                 --sex ${meta.sex} \
