@@ -22,7 +22,7 @@ process CALL_LOH {
                 --input ${cns} \
                 --sample ${meta.id} \
                 --sex ${meta.sex} \
-                --out_cat ${prefix}.loh_cat.tsv
+                --out_cat ${prefix}.loh_cat.tsv \
                 --out_bed ${prefix}.loh_cat.bed
 
         
