@@ -58,6 +58,7 @@ workflow CNV_CALLING {
 
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
             cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
+            cnvkitsegment_for_loh = cnvkit_hrd
             // tuple val(group), val(meta), val(part), file("${group}.${meta.id}.${meta.type}.${part}.vcf"), emit: cnvkit_vcf
             cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[2] == "full" && it[1].type == "T" }.map { val -> tuple(val[0], val[2], val[3]  )}
             CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
@@ -100,6 +101,7 @@ workflow CNV_CALLING {
             // assign correct part full,exon,backbone to relevant upcoming analysis //
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
             cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment
+            cnvkitsegment_for_loh = CNVKIT_CALL_TC.out.cnvkitsegment.filter { group, meta, part, cns -> part == "backbone" }
             cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[2] == "full" && it[1].type == "T" }.map { val -> tuple(val[0], val[2], val[3]  )}
             CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
@@ -173,6 +175,7 @@ workflow CNV_CALLING {
         gatcov_plot              =  GATKCOV_CALL.out.gatcov_plot               // channel: [ val(group), file(modeled.png) ]
         cnvkit_plot              =  cnvkitplot                                 // channel: [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
         cnvkit_hrd               =  cnvkit_hrd                                 // channel: [ val(group), val(meta), val(part), file(call.cns) ]
+        cnvkitsegment_for_loh    =  cnvkitsegment_for_loh                      // channel: [ val(group), val(meta), val(part), file(call.cns) ]
         tumor_vcf                =  JOIN_TUMOR.out.merged_vcf                  // channel: [ val(group), val(vc), file(tumor.merged.vcf) ]
         normal_vcf               =  JOIN_NORMAL.out.merged_vcf                 // channel: [ val(group), val(vc), file(normal.merged.vcf) ]
         gens                     =  MERGE_GENS.out.dbload                      // channel: [ val(group), val(meta), file(gens) ]

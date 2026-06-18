@@ -139,6 +139,7 @@ workflow SPP_COMMON {
     BIOMARKERS (
         CHECK_INPUT.out.meta,
         ch_cnvcalled.cnvkit_hrd,
+        ch_cnvcalled.cnvkitsegment_for_loh,
         ch_mapped.bam_umi, 
         ch_mapped.bam_dedup
     )

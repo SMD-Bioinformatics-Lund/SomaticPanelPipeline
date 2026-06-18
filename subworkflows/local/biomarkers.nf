@@ -12,6 +12,7 @@ workflow BIOMARKERS {
     take: 
         meta                   // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
         cnvkitsegments         // channel: [mandatory] [ val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns") ]
+        cnvkitsegment_for_loh  // channel: [mandatory] [ val(group), val(meta), val(part), file("${group}.${meta.id}.${part}.call*.cns") ]
         bam_umi                // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr) ]
         bam_dedup              // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(marked_bai), file(bqsr) ]
 
@@ -46,10 +47,10 @@ workflow BIOMARKERS {
 
 
         // Loss of Heterozygosity (LOH) calculation and type evaluation
-        // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is either cnvkit_segments from CNVKIT_CALL (gmshem) 
-        // or from CNVKIT_CALL_TC (solid).
+        // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is cnvkitsegments from CNVKIT_CALL using "full" .cns (gmshem) 
+        // or "backbone" .cns (solid).
         // params.loh in the process config in biomarkers.config
-        cnvkitsegments_tumor = cnvkitsegments.filter { group, meta, part, cns -> meta.type == "T" } 
+        cnvkitsegments_tumor = cnvkitsegment_for_loh.filter { group, meta, part, cns -> meta.type == "T" } 
         CALL_LOH ( cnvkitsegments_tumor )
         ch_versions = ch_versions.mix(CALL_LOH.out.versions)
  
