@@ -37,7 +37,7 @@ parser.add_argument('--out_bed', required=True, help='output BED file for LOH re
 args = parser.parse_args()
 
 with open(args.input, "r") as cns, \
-     open(args.out_cat, 'w') as out_file\
+     open(args.out_cat, 'w') as out_file, \
      open(args.out_bed, 'w') as bed_file:
 
     out_file.write("Chromosome\tStart_position\tEnd_position\ttotal_cn\tmajor_cn\tminor_cn\tloh_type\tsampleID\n")
