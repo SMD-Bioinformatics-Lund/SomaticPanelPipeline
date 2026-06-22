@@ -47,8 +47,7 @@ workflow BIOMARKERS {
 
 
         // Loss of Heterozygosity (LOH) calculation and type evaluation
-        // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is cnvkitsegments from CNVKIT_CALL using "full" .cns (gmshem) 
-        // or "backbone" .cns (solid).
+        // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is cnvkitsegments from CNVKIT_CALL using "full" .cns (gmshem & solid) 
         // params.loh in the process config in biomarkers.config
         cnvkitsegments_tumor = cnvkitsegment_for_loh.filter { group, meta, part, cns -> meta.type == "T" } 
         CALL_LOH ( cnvkitsegments_tumor )
