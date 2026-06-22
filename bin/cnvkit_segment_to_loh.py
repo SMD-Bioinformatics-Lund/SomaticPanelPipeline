@@ -14,10 +14,13 @@ Procedure:  1)  Parse CNVkit segmented total copy number (CN) and allele-specifi
                 to ensure that cn1 is the major- and cn2 is the minor allele (cn1 >= cn2). 
             2) Identify LOH events as segments where the minor allele copy number equals zero (cn2 == 0).
             3) Classify LOH events into categories based on total copy number:
-                - HOM_DEL: homozygous deletion (total CN = 0)
-                - LOH_DEL: deletion with LOH (total CN = 1)
-                - CN_LOH: copy-neutral LOH (total CN = 2)
-                - LOH_AMP: amplification with LOH (total CN > 2)
+                - HOM_DEL: homozygous deletion (total CN = 0, minor_cn=0)
+                - LOH_DEL: deletion with LOH (total CN = 1, minor_cn=0)
+                - CN_LOH: copy-neutral LOH (total CN = 2, minor_cn=0)
+                - LOH_AMP: amplification with LOH (total CN > 2, minor_cn=0)
+                BAF rescue classes, as CNVkit is very conservative and can ignore some cases of CN_LOH
+                - CN_LOH_RESCUE_HIGH (cn = 2, cn1 & cn2 = 1, BAF < 0.35 or > 0.65, segment >= 10Mb, probes >= 100)
+                - CN_LOH_RESCUE_MODERATE (cn = 2, cn1 & cn2 = 1, BAF < 0.40 or > 0.60, segment >= 10Mb, probes >= 100)
             4) Flag probable LOH events when allele-specific information is missing but total CN 
             indicates a single-copy state (CN = 1).
             5) Generate a tsv file with all info and a BED file (9-column format) for visualization where each LOH class 
@@ -28,7 +31,7 @@ Procedure:  1)  Parse CNVkit segmented total copy number (CN) and allele-specifi
 import argparse
 
 parser = argparse.ArgumentParser(description="Process CNVkit .cns output to identify and classify LOH events.")
-parser.add_argument('--input',   required=True, help='input .cns file from CNVkit (tab-delimited) in CNVKIT_CALL(_TC) process')
+parser.add_argument('--input',   required=True, help='input .cns file from CNVkit (tab-delimited) in CNVKIT_CALL process')
 parser.add_argument('--sample',  required=True, help='sample ID to use in the output loh_cat')
 parser.add_argument('--sex',     required=True, help='sex to drop Y chr detection if female')
 parser.add_argument('--out_cat', required=True, help='output filename for LOH results')
@@ -36,40 +39,106 @@ parser.add_argument('--out_bed', required=True, help='output BED file for LOH re
 
 args = parser.parse_args()
 
+# ------------------------------------------------------------------
+# CN-LOH rescue thresholds
+# ------------------------------------------------------------------
+
+MIN_SEGMENT_SIZE = 10_000_000   # 10 Mb
+MIN_PROBES = 100
+
 with open(args.input, "r") as cns, \
      open(args.out_cat, 'w') as out_file, \
      open(args.out_bed, 'w') as bed_file:
 
-    out_file.write("Chromosome\tStart_position\tEnd_position\ttotal_cn\tmajor_cn\tminor_cn\tloh_type\tsampleID\n")
-
     header = next(cns)
+
     if not header:
         raise ValueError("Input file is empty or missing a header.")
 
-    for line in cns:
-        fields = line.strip().split("\t")
-        chromosome = fields[0]
-        start      = fields[1]
-        end        = fields[2]
-        # fields[3] = gene, fields[4] = log2, fields[5] = baf (may be empty)
-        # fields[6] = ci_hi, fields[7] = ci_lo
-        cn_raw  = fields[8]
-        cn1_raw = fields[9]   # major allele cn1, cn1 >= cn2 guaranteed by CNVkit > v0.9.0
-        cn2_raw = fields[10]  # minor allele cn2
+    # -------------------------
+    # TSV header
+    # -------------------------
+    out_file.write(
+        "Chromosome\t"
+        "Start_position\t"
+        "End_position\t"
+        "total_cn\t"
+        "major_cn\t"
+        "minor_cn\t"
+        "BAF\t"
+        "BAF_shift\t"
+        "segment_size_bp\t"
+        "probes\t"
+        "loh_type\t"
+        "sampleID\n")
 
+    for line in cns:
+        fields = line.rstrip("\n").split("\t")
+
+        chromosome = fields[0].strip()
+
+        start_raw  = fields[1].strip()
+        end_raw    = fields[2].strip()
+
+        # fields[3] = gene, fields[4] = log2
+
+        baf_raw = fields[5].strip()  # may be empty
+
+        # fields[6] = ci_hi, fields[7] = ci_lo
+        cn_raw  = fields[8].strip()
+        cn1_raw = fields[9].strip()   # major allele cn1, cn1 >= cn2 guaranteed by CNVkit > v0.9.0
+        cn2_raw = fields[10].strip()  # minor allele cn2
+
+        probes_raw = fields[12].strip()
+        
+        # -------------------------
         # Skip Y chromosome if meta indicates a female patient
-        if args.sex == "F" and chromosome in {"chrY", "Y"}: # is it always reported as F or M ?
+        # -------------------------
+        if args.sex.upper() == "F" and chromosome in {"chrY", "Y"}: # is it always reported as F or M ?
             continue
 
-        # Parse total copy number; skip segment if unavailable or invalid
+        # -------------------------
+        # Calculate segment size
+        # -------------------------
+        try:
+            start = int(start_raw)
+            end = int(end_raw)
+        except ValueError:
+            continue
+
+        segment_bp = end - start
+
+        # -------------------------
+        # BAF + shift
+        # -------------------------
+        try:
+            baf = float(baf_raw)
+            baf_shift = abs(baf - 0.5)
+        except ValueError:
+            baf = None
+            baf_shift = None
+        
+        # -------------------------
+        # Probes
+        # -------------------------
+        try:
+            probes = int(probes_raw)
+        except ValueError:
+            probes = None
+
+        # -------------------------
+        # total Copy number; skip segment if unavailable or invalid
+        # -------------------------
         try:
             total_cn = int(cn_raw)
         except ValueError:
             continue
         
-        # Detect missing allele-specific CN
-        cn1_empty = cn1_raw.strip() == ""
-        cn2_empty = cn2_raw.strip() == ""
+        # -------------------------
+        # Allele-specific CN, Detect missing allele-specific CN
+        # -------------------------
+        cn1_empty = (cn1_raw == "")
+        cn2_empty = (cn2_raw == "")
 
         # Parse allele-specific CNs
         # Determine allele-specific copy numbers:
@@ -83,13 +152,13 @@ with open(args.input, "r") as cns, \
                 minor_cn = int(cn2_raw)
             except ValueError:
                 continue
-            both_missing = False
+            missing_alleles  = False
 
         elif cn1_empty and cn2_empty:
             # Both missing — cannot determine allele state
             major_cn = None
             minor_cn = None
-            both_missing = True
+            missing_alleles  = True
 
         elif cn1_empty:
             # cn1 (major_cn) missing only, deduct it from total cn
@@ -98,7 +167,7 @@ with open(args.input, "r") as cns, \
                 major_cn = total_cn - minor_cn
             except ValueError:
                 continue
-            both_missing = False
+            missing_alleles  = False
 
         else:
             # cn2 (minor_cn) missing only, deduct it from total
@@ -107,13 +176,19 @@ with open(args.input, "r") as cns, \
                 minor_cn = total_cn - major_cn
             except ValueError:
                 continue
-            both_missing = False
+            missing_alleles  = False
+        
+        loh_type = None
 
+        # -------------------------
+        # 1. Confirmed LOH (CNVkit)
+        # -------------------------
 
         # LOH classification
         # Identify LOH events as segments where minor allele copy number is zero
         # and classify based on total copy number state
-        if both_missing is False and minor_cn == 0: # Confirmed LOH: minor allele is absent
+        if missing_alleles is False and minor_cn == 0: # Confirmed LOH: minor allele is absent
+            
             if total_cn == 0:
                 loh_type = "HOM_DEL" # homozygous deletion, both alleles lost
             elif total_cn == 1:
@@ -124,35 +199,91 @@ with open(args.input, "r") as cns, \
                 loh_type = "LOH_AMP" # LOH with amplification, one allele lost but total CN > 2 (e.g. one allele lost but the other is amplified)
             else:
                 loh_type = "undetermined"
-
-        elif both_missing and total_cn == 1:
+            
+        # --------------------------------
+        # 2. CN-LOH RESCUE HIGH confidence
+        # --------------------------------
+        elif (
+            not missing_alleles
+            and total_cn == 2
+            and major_cn == 1
+            and minor_cn == 1
+            and baf_shift is not None
+            and probes is not None
+            and segment_bp >= MIN_SEGMENT_SIZE
+            and probes >= MIN_PROBES
+            and baf_shift >= 0.15
+            ):
+            loh_type = "CN_LOH_RESCUE_HIGH"
+            
+        # -------------------------
+        # 3. CN-LOH rescue MODERATE
+        # -------------------------
+        elif (
+            not missing_alleles
+            and total_cn == 2
+            and major_cn == 1
+            and minor_cn == 1
+            and baf_shift is not None
+            and probes is not None
+            and segment_bp >= MIN_SEGMENT_SIZE
+            and probes >= MIN_PROBES
+            and baf_shift >= 0.10
+            ):
+            loh_type = "CN_LOH_RESCUE_MODERATE"
+            
+        # -------------------------
+        # 4. putative LOH
+        # -------------------------
+        elif missing_alleles and total_cn == 1:
             # Probable LOH: single copy but allele-specific CN unavailable
             # total_cn=1 with no BAF data, LOH cannot be confirmed, but is suspected
             loh_type = "PROB_LOH_DEL"
 
         else:
             continue  # not LOH, skip
+            
+
+        # -------------------------
+        #     output values
+        # -------------------------
 
         # Convert None → "." for TSV output
         major_str = str(major_cn) if major_cn is not None else "."
         minor_str = str(minor_cn) if minor_cn is not None else "."
+        baf_str = f"{baf:.6f}" if baf is not None else "."
+        baf_shift_str = f"{baf_shift:.4f}" if baf_shift is not None else "."
+        probes_str = str(probes) if probes is not None else "."
 
         # tsv output for LOH category file
-        out_file.write(f"{chromosome}\t{start}\t{end}\t{total_cn}\t{major_str}\t{minor_str}\t{loh_type}\t{args.sample}\n")
-
-        # bed output for LOH regions (for visualization in GENS)
+        out_file.write(
+            f"{chromosome}\t{start}\t{end}\t"
+            f"{total_cn}\t{major_str}\t{minor_str}\t"
+            f"{baf_str}\t{baf_shift_str}\t"
+            f"{segment_bp}\t{probes_str}\t"
+            f"{loh_type}\t{args.sample}\n")
+            
+        # -------------------------
+        # BED output for LOH regions (for visualization in GENS)
+        # -------------------------
         # BED format, LOH label + RGB color track fields
         if loh_type == "HOM_DEL":
             color = "139,69,19"      # brown
         elif loh_type == "LOH_DEL":
-            color = "255,0,0"        # red
+            color = "105,137,207"    # medium blue
         elif loh_type == "CN_LOH":
-            color = "0,102,204"      # blue
+            color = "135,9,112"      # dark pink
+        elif loh_type == "CN_LOH_RESCUE_HIGH":
+            color = "138,80,127"     # medium pink
+        elif loh_type == "CN_LOH_RESCUE_MODERATE":
+            color = "242,162,227"    # light pink
         elif loh_type == "LOH_AMP":
-            color = "255,153,0"      # orange
+            color = "9,77,23"        # dark green
         elif loh_type == "PROB_LOH_DEL":
             color = "160,160,160"    # grey
         else:
             color = "0,0,0"          # black fallback (unknown LOH type)
         
-        bed_file.write(f"{chromosome}\t{start}\t{end}\t{loh_type}\t.\t.\t.\t.\trgb({color})\n")
+        bed_file.write(
+            f"{chromosome}\t{start}\t{end}\t"
+            f"{loh_type}\t.\t.\t.\t.\trgb({color})\n")
