@@ -2,6 +2,7 @@
 
 // might need to add a check to csv? //
 include { CSV_CHECK      } from '../../modules/local/check_input/main'
+include { GENES_ANALYZED } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
     take:
@@ -42,11 +43,16 @@ workflow CHECK_INPUT {
                 tuple( group, meta)
             }
 
+        tumor_meta = meta.filter { group, meta -> meta.type == "T" }
+        GENES_ANALYZED(tumor_meta)
+        genes_analyzed = GENES_ANALYZED.out.genes_of_interest
+
     emit:
         fastq
         bam
         vcf
         meta
+        genes_analyzed
 }
 
 
