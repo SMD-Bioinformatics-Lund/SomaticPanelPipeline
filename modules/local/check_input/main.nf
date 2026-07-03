@@ -43,9 +43,9 @@ process GENES_ANALYZED {
 		def panelsJson = groovy.json.JsonOutput.toJson(panels)
 		"""
 		jq -r --argjson panels '${panelsJson}' '
-		[x
+		[
 			.[]
-			| select(.name as \$p | $panels | index(\$p))
+			| select(.name as \$p | \$panels | index(\$p))
 			| .genes[]
 		]
 		| unique
