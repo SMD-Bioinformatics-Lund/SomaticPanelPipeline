@@ -46,6 +46,7 @@ workflow SPP_QC {
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
         ch_trim.fastq_trim,
+        CHECK_INPUT.out.bam,
         CHECK_INPUT.out.meta
     )
     .set { ch_mapped }
@@ -60,7 +61,7 @@ workflow SPP_QC {
     ch_versions = ch_versions.mix(ch_qc.versions)
 
     SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
         CHECK_INPUT.out.meta,
@@ -80,7 +81,12 @@ workflow SPP_QC {
 
     VCF_QC (
         ch_vcf_anno.vep_vcf,
+        ch_vcf_anno.germline_variants,
+        ch_vcf.normal_germline,
+        CHECK_INPUT.out.meta
     )
+    .set { ch_qc_vcf }
+    ch_versions = ch_versions.mix(ch_qc_vcf.versions)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml'),

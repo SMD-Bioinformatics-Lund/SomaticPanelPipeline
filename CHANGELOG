@@ -1,5 +1,32 @@
 ## Changelog ##
 
+## 3.2.3
+- QC: New entry separate from the main SPP entry point.
+  - Calls a minimized pipeline to only get QC from sample
+  - alignment + freebayes calling for QC parameters
+  - should be called from a bjorn workflow for tumors waiting for normals
+
+## 3.2.2
+- Hotfix for indentation for peddy version output
+
+## 3.2.1
+- fixed the missing versions output emitted from the CONTAMINATION process in vcf_qc
+
+## 3.2.0
+- Added sex check as vcf qc
+- bam start for dev work only
+- germline calling for normal bam
+
+## 3.1.17
+- Fixed CNVkit call step to skip optional Nexus OGT BAF/LogR export when the input VCF has no variant records.
+
+## 3.1.16
+- Filtered out variants arising from backbone probe regions and IDSNPS (e.g., CCDC51, HLA-A) in solid, hematology assay, but parp_inhib, myeloid and lymphoid profiles remains unchanged.
+
+
+## 3.1.15
+- Fixed issue created with GMShem keeps failing at check samplesheet.
+
 ## 3.1.14
 - Fixed Gens command where `!` is printed in the filename and ids in the command.
 
