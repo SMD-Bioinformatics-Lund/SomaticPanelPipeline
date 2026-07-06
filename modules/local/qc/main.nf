@@ -294,9 +294,9 @@ process CALCULATE_PANEL_COVERAGE {
 		"""
 		panel_coverage.py \\
 			-b ${bam} \\
-			-g ${params.mane_gene_regions} \\
+			-g ${params.mane_gtf} \\
 			-s ${meta.id} \\
-			-d ${params.intersect_bed} \\
+			-d ${params.regions_bed} \\
 			--summary_genes ${summary_genes} \\
 			--summary_output ${meta.id}.summary.json \\
 			-t ${params.cov_tresholds} \\
