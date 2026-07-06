@@ -62,7 +62,8 @@ workflow SPP_COMMON {
     BAM_QC (
         ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
-        ch_mapped.dedup_metrics
+        ch_mapped.dedup_metrics,
+        CHECK_INPUT.out.genes_analyzed
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)

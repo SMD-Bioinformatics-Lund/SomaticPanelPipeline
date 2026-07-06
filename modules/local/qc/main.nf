@@ -271,3 +271,53 @@ process PEDDY2CDM {
 	    """
 
 }
+
+// Calculate coverage for paneldepth
+process CALCULATE_PANEL_COVERAGE {
+	cpus 2
+	time '1h'
+	memory '10 GB'
+	container "${params.container_panel_cov}"
+	publishDir "${params.outdir}/${params.subdir}/cov", mode: 'copy', overwrite: true
+	tag "$meta.id"
+
+	input:
+		tuple val(group), val(meta), path(bam),  path(bai), path(bqsr), path(genes)
+
+	output:
+		path("${meta.id}.cov.json"), emit: cov_cdm
+		path("${meta.id}.summary.json"), emit: cov_summary
+
+	script:
+		def summary_genes = genes.size() > 0 ? genes : params.all_relevant_genes
+		def caveat_arg = params.caveat_genes ? "--caveat_genes ${params.caveat_genes}" : ""
+		"""
+		panel_coverage.py \\
+			-b ${bam} \\
+			-g ${params.mane_gene_regions} \\
+			-s ${meta.id} \\
+			-d ${params.intersect_bed} \\
+			--summary_genes ${summary_genes} \\
+			--summary_output ${meta.id}.summary.json \\
+			-t ${params.cov_tresholds} \\
+			--sex ${meta.sex} \\
+			${caveat_arg}
+		${calculate_panel_coverage_version(task)}
+		"""
+
+	stub:
+		"""
+		touch "${meta.id}.cov.json"
+		${calculate_panel_coverage_version(task)}
+		"""
+}
+def calculate_panel_coverage_version(task) {
+	"""
+	cat <<-END_VERSIONS > ${task.process}_versions.yml
+	${task.process}:
+		python: \$(python --version 2>&1 | sed -e 's/Python //g')
+	    bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
+	    mosdepth: \$(mosdepth --version | cut -f 2 )
+	END_VERSIONS
+	"""
+}
