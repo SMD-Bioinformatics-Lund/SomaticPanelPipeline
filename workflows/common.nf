@@ -206,7 +206,8 @@ workflow.onError {
 	errorMessage: ${workflow.errorMessage}
 	"""
 	def base = file(params.csv).getBaseName()
-	File logFile = new File("${params.crondir}/logs/${base}.complete")
+	//File logFile = new File("${params.crondir}/logs/${base}.complete")
+	File logFile = new File("${params.resultsdir}/cron/logs/" + base + ".complete")
 	if ( !logFile.exists() ) {
 		if (!logFile.getParentFile().exists()) {
 			logFile.getParentFile().mkdirs()
