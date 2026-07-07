@@ -1,5 +1,10 @@
 ## Changelog ##
 
+### 3.2.4
+- Clean up nextflow.hopper.config
+- Removed default profile, we never run without -profile anyway
+- input validation for references
+
 ## 3.2.3
 - QC: New entry separate from the main SPP entry point.
   - Calls a minimized pipeline to only get QC from sample
