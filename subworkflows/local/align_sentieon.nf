@@ -20,7 +20,7 @@ workflow ALIGN_SENTIEON {
         MARKDUP ( BWA_UMI.out.bam_umi_markdup )
         ch_versions = ch_versions.mix(MARKDUP.out.versions)
 
-        BQSR ( MARKDUP.out.bam_qc.mix(alt_bam_path) )
+        BQSR ( MARKDUP.out.bam_dedup.mix(alt_bam_path) )
         ch_versions = ch_versions.mix(BQSR.out.versions)
 
     emit:
