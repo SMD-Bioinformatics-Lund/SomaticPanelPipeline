@@ -424,3 +424,18 @@ process DNASCOPE {
         touch ${meta.id}.dnascope.vcf.gz.tbi
         """
 }
+
+process DUMMY_DEDUP_METRICS {
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bai)
+
+    output:
+        tuple val(group), val(meta), file("dedup_metrics.txt"), emit: dedup_metrics
+
+    script:
+        """
+        touch dedup_metrics.txt
+        """
+}
