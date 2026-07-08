@@ -52,7 +52,7 @@ process CNVKIT_BATCH {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
+        tuple val(group), val(meta), file(bam), file(bai)
         val(reference)
         val(part)
 

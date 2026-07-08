@@ -54,8 +54,6 @@ process BWA_UMI {
 
         rm noumi.sam
 
-        touch dedup_metrics.txt
-
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
@@ -97,7 +95,7 @@ process MARKDUP {
 
     output:
         tuple val(group), val(meta), file("*dedup_metrics.txt"),                                                emit: dedup_metrics
-        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),                                emit: bam_qc
+        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),                                emit: bam_dedup
         path "versions.yml",                                                                                    emit: versions
 
     when:
@@ -147,7 +145,7 @@ process MARKDUP {
         """
 }
 
-process BQSR_UMI {
+process BQSR {
     label 'process_high'
     label 'scratch'
     label 'stage'
@@ -157,7 +155,7 @@ process BQSR_UMI {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta), file(bam), file(bai), file("*.bqsr.table"),   emit: bam_varcall
+        tuple val(group), val(meta), file("*.bqsr.table"),                         emit: bqsr_table
         path "versions.yml",                                                       emit: versions
 
     when:

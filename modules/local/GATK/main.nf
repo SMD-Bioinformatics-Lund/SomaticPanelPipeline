@@ -5,7 +5,7 @@ process GATKCOV_BAF {
     label 'process_more_time'
 
     input:
-        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
+        tuple val(group), val(meta), file(bam), file(bai)
 
     output:
         tuple val(group), val(meta), file("*.allelicCounts.tsv"),  emit: gatk_baf
@@ -64,7 +64,7 @@ process GATKCOV_COUNT {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
+        tuple val(group), val(meta), file(bam), file(bai)
 
     output:
         tuple val(group), val(meta), file("*.standardizedCR.tsv"), file("*.denoisedCR.tsv"),    emit: gatk_count
@@ -229,7 +229,7 @@ process GATK_COUNT_GERMLINE {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
+        tuple val(group), val(meta), file(bam), file(bai)
 
     output:
         tuple val(group), val(meta), file("*.tsv"),   emit: count_germline

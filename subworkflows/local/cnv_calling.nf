@@ -27,10 +27,10 @@ include { FILTER_MANTA as FILTER_MANTA_NORMAL  } from '../../modules/local/filte
 
 workflow CNV_CALLING {
     take: 
-        bam_umi              // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr.table) ]
+        bam_umi              // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai) ]
         germline_variants    // channel: [mandatory] [ val(group), file(vcf), file(tbi) ]
         meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
-        bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(dedup_bam), file(dedup_bai)]  ]
+        bam_dedup            // channel: [mandatory] [ val(group), val(meta), file(dedup_bam), file(dedup_bai)]  ]
         gatk_ref             // channel: [mandatory] [ val(interger), val(part_of_genome) used for germline gatk-calling ]
 
     main:
@@ -38,7 +38,7 @@ workflow CNV_CALLING {
         ////////////////////////// CNVKIT /////////////////////////////////////////////////////
         // if backbone + exon pool differs in pool ratio do backbone and exons separatly
         if (!params.cnvkit_split) {
-            CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
+            CNVKIT_BATCH ( bam_dedup, params.cnvkit_reference, "full" )
             batch_plot_cns = CNVKIT_BATCH.out.cnvkit_cns
             batch_plot_cnr = CNVKIT_BATCH.out.cnvkit_cnr
             ch_versions = ch_versions.mix(CNVKIT_BATCH.out.versions)
@@ -63,13 +63,13 @@ workflow CNV_CALLING {
             CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
         else {
-            CNVKIT_BATCH ( bam_umi, params.cnvkit_reference, "full" )
+            CNVKIT_BATCH ( bam_dedup, params.cnvkit_reference, "full" )
             ch_versions = ch_versions.mix(CNVKIT_BATCH.out.versions)
 
-            CNVKIT_EXONS ( bam_umi, params.cnvkit_reference_exons, "exons" )
+            CNVKIT_EXONS ( bam_dedup, params.cnvkit_reference_exons, "exons" )
             ch_versions = ch_versions.mix(CNVKIT_EXONS.out.versions)
 
-            CNVKIT_BACKBONE ( bam_umi, params.cnvkit_reference_backbone, "backbone" )
+            CNVKIT_BACKBONE ( bam_dedup, params.cnvkit_reference_backbone, "backbone" )
             ch_versions = ch_versions.mix(CNVKIT_BACKBONE.out.versions)
 
             // call, plot and export segments ::: cnvkit
@@ -109,10 +109,10 @@ workflow CNV_CALLING {
         //////////////////////////// GATK SEGMENT CALLING /////////////////////////////////////
         // Do calling somatic CNV calling, use normal allelic counts for somatic as well     //
         ///////////////////////////////////////////////////////////////////////////////////////
-        GATKCOV_BAF ( bam_umi )
+        GATKCOV_BAF ( bam_dedup )
         ch_versions = ch_versions.mix(GATKCOV_BAF.out.versions)
 
-        GATKCOV_COUNT ( bam_umi )
+        GATKCOV_COUNT ( bam_dedup )
         ch_versions = ch_versions.mix(GATKCOV_COUNT.out.versions)
 
         GATKCOV_CALL { GATKCOV_BAF.out.gatk_baf.join(GATKCOV_COUNT.out.gatk_count,by:[0,1]).groupTuple() }
@@ -125,7 +125,7 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(MERGE_GATK_TUMOR.out.versions)
 
         // Do germline calling for normal
-        GATK_COUNT_GERMLINE ( bam_umi.filter { it -> it[1].type == "N" })
+        GATK_COUNT_GERMLINE ( bam_dedup.filter { it -> it[1].type == "N" })
         ch_versions = ch_versions.mix(GATK_COUNT_GERMLINE.out.versions)
 
         GATK_CALL_PLOIDY ( GATK_COUNT_GERMLINE.out.count_germline )
@@ -144,7 +144,7 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(FILTER_MERGE_GATK.out.versions)
 
         /////////////////////////// MANTA /////////////////////////////////////////////////////
-        MANTA ( bam_markdup.groupTuple(), params.bedgz, "CNV" )
+        MANTA ( bam_dedup.groupTuple(), params.bedgz, "CNV" )
         ch_versions = ch_versions.mix(MANTA.out.versions)
 
         // Join germline vcf

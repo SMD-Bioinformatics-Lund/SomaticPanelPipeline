@@ -12,7 +12,7 @@ include { LOWCOV_D4            } from '../../modules/local/qc/main'
 
 workflow BAM_QC {
     take:        
-        bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai"), file(bqsr) ]
+        bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
         bam_dedup       // channel: [ val(group), val(meta), file(bam), file(bai) ]
         dedup_metrics   // channel: [ val(group), val(meta), file(dedup_metrics) ]
 
