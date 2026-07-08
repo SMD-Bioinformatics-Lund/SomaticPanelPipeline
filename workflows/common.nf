@@ -17,6 +17,7 @@ include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
+include { VALIDATE_PARAMETERS           } from '../subworkflows/local/validate_params.nf'
 
 csv = file(params.csv)
 
@@ -45,6 +46,9 @@ workflow SPP_COMMON {
     // Checks input, creates meta-channel and decides whether data should be downsampled //
     CHECK_INPUT ( Channel.fromPath(csv), params.paired )
 
+	parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
+	VALIDATE_PARAMETERS(parameters_to_validate)
+    
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
     .set{ ch_trim }
@@ -190,4 +194,24 @@ workflow.onComplete {
     logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
     logFile.text = msg
     logFile.append(error)
+}
+
+workflow.onError {
+
+	def msg = """\
+	Success     : ${workflow.success}
+	scriptFile  : ${workflow.scriptFile}
+	workDir     : ${workflow.workDir}
+	csv         : ${params.csv}
+	errorMessage: ${workflow.errorMessage}
+	"""
+	def base = file(params.csv).getBaseName()
+	//File logFile = new File("${params.crondir}/logs/${base}.complete")
+	File logFile = new File("${params.resultsdir}/cron/logs/" + base + ".complete")
+	if ( !logFile.exists() ) {
+		if (!logFile.getParentFile().exists()) {
+			logFile.getParentFile().mkdirs()
+		}
+		logFile.text = msg
+	}
 }
