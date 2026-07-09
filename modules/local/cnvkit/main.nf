@@ -70,8 +70,8 @@ process CNVKIT_BATCH {
 
         """
         cnvkit.py batch $bam -r $reference -d results/
-        cp results/*sort.cnr ${prefix}.${part}.cnr
-        cp results/*sort.cns ${prefix}.${part}.cns
+        cp results/*.cnr ${prefix}.${part}.cnr
+        cp results/*.cns ${prefix}.${part}.cns
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
