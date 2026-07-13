@@ -133,6 +133,13 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
     statistics['variants_found_under_filters'] = variants_found
         
     return statistics
+
+def _truthy(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
     
 
 def max_gnomad(gnomad):
@@ -187,10 +194,10 @@ def _read_known_variants(filepath):
     with open(filepath) as f:
         variants_ = csv.DictReader(f)
         for row in variants_:
-            coordinates = row['Chr:Pos'].replace("'","").replace(":","_")
+            coordinates = _known_coordinates(row)
 
             # make Tier integers
-            tier = row.get('Tier')
+            tier = row.get('Tier') or row.get('tier')
             try:
                 tier = int(tier)
                 if tier <= TIER:
@@ -200,11 +207,12 @@ def _read_known_variants(filepath):
             row['Tier'] = tier
 
             # save germline counts
+            row['Flags'] = row.get('Flags') or row.get('flags') or ""
             if "GERM" in row.get('Flags'):
                 known_statistics['germline'] +=1
 
             # make HGVS nomeclature more code friendly
-            hgvs = row['HGVS']
+            hgvs = row.get('HGVS') or ""
             hgvs_p = None
             hgvs_c = None
             p_match = re.search(r"(p\.[^| ]+)", hgvs)
@@ -212,9 +220,19 @@ def _read_known_variants(filepath):
             if p_match:
                 hgvs_p = p_match.group(1)
                 row['hgvsp'] = hgvs_p
+            elif row.get('hgvsp'):
+                row['hgvsp'] = row['hgvsp'].strip()
             if c_match:
                 hgvs_c = c_match.group(1)
                 row['hgvsc'] = hgvs_c
+            elif row.get('hgvsc'):
+                row['hgvsc'] = row['hgvsc'].strip()
+
+            if _truthy(row.get("false_positive")):
+                row["fp"] = "False positive"
+            if _truthy(row.get("irrelevant")):
+                row["irr"] = "Irrelevant"
+
             if row.get("fp") == "False positive" or row.get("irr") == "Irrelevant":
                 known_statistics['false_positives'] +=1
             
@@ -222,6 +240,15 @@ def _read_known_variants(filepath):
 
     known_statistics["found"] = len(variants.keys())
     return variants,known_statistics
+
+def _known_coordinates(row):
+    if row.get('Chr:Pos'):
+        return row['Chr:Pos'].replace("'","").replace(":","_")
+    if row.get('chr_pos'):
+        return row['chr_pos'].replace("'","").replace(":","_")
+    if row.get('chrom') and row.get('pos'):
+        return f"{row.get('chrom')}_{row.get('pos')}"
+    raise ValueError("known variants CSV requires Chr:Pos, chr_pos, or chrom/pos columns")
 
 def _hard_filters_cli(config,filters,statistics,pop_af,reason_for_filter):
     """
