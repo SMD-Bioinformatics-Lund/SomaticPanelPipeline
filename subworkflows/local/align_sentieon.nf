@@ -27,7 +27,7 @@ workflow ALIGN_SENTIEON {
 
         dedup_metrics = MARKDUP.out.dedup_metrics.mix(DUMMY_DEDUP_METRICS.out.dedup_metrics)
         
-        BQSR ( MARKDUP.out.bam_dedup.mix(alt_bam_path) )
+        BQSR ( BWA_UMI.out.bam_umi.mix(alt_bam_path) )
 
         bam_dedup = MARKDUP.out.bam_dedup.mix(alt_bam_path)
         ch_versions = ch_versions.mix(BQSR.out.versions)
