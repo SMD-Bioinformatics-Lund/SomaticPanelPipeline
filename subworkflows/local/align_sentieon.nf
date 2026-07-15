@@ -29,12 +29,12 @@ workflow ALIGN_SENTIEON {
         
         BQSR ( BWA_UMI.out.bam_umi.mix(alt_bam_path) )
 
-        bam_dedup = MARKDUP.out.bam_dedup.mix(alt_bam_path)
+        bam_umi = BWA_UMI.out.bam_umi.mix(alt_bam_path)
         ch_versions = ch_versions.mix(BQSR.out.versions)
 
     emit:
-        bam_dedup               =   bam_dedup                               // channel: [ val(group), val(meta), file(bam), file(bai) ] 
-        bam_umi                 =   BWA_UMI.out.bam_umi                     // channel: [ val(group), val(meta), file(bam), file(bai) ]         
+        bam_dedup               =   MARKDUP.out.bam_dedup                   // channel: [ val(group), val(meta), file(bam), file(bai) ] 
+        bam_umi                 =   bam_umi                                 // channel: [ val(group), val(meta), file(bam), file(bai) ]         
         bqsr_table              =   BQSR.out.bqsr_table                     // channel: [ val(group), val(meta), file(bqsr_table) ]
         dedup_metrics           =   dedup_metrics                           // channel: [ val(group), val(meta), file(dedup_metrics) ]
         versions                =   ch_versions                             // channel: [ file(versions) ]
