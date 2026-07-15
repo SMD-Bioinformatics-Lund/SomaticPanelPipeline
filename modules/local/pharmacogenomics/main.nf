@@ -3,7 +3,7 @@ process PHARMACOGENOMICS {
     tag "$meta.group"
 
     input:
-        tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
+        tuple val(group), val(meta), file(bams), file(bais)
 
     output:
         tuple val(group), val(meta), file("*.pgx*.csv"), file("*.pgx*.sh"), emit: pgx_files

@@ -67,6 +67,7 @@ workflow SPP_QC {
     SNV_CALLING ( 
         ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
+        ch_mapped.bqsr_table,
         beds,
         CHECK_INPUT.out.meta,
         ch_qc.melt_qc,

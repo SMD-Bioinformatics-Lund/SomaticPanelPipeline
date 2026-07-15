@@ -29,7 +29,7 @@ workflow BIOMARKERS {
 
             // MSI //
             if (params.msi) {
-                MSISENSOR (bam_umi.groupTuple())
+                MSISENSOR (bam_dedup.groupTuple())
                 ch_versions = ch_versions.mix(MSISENSOR.out.versions)
             }
 

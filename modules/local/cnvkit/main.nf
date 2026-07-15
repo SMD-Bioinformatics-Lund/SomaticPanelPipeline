@@ -52,7 +52,7 @@ process CNVKIT_BATCH {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
+        tuple val(group), val(meta), file(bam), file(bai)
         val(reference)
         val(part)
 
@@ -70,8 +70,8 @@ process CNVKIT_BATCH {
 
         """
         cnvkit.py batch $bam -r $reference -d results/
-        cp results/*sort.cnr ${prefix}.${part}.cnr
-        cp results/*sort.cns ${prefix}.${part}.cns
+        cp results/*dedup.cnr ${prefix}.${part}.cnr
+        cp results/*dedup.cns ${prefix}.${part}.cns
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

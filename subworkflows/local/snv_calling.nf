@@ -17,8 +17,9 @@ include { FILTER_TNSCOPE           } from '../../modules/local/sentieon/main'
 
 workflow SNV_CALLING {
     take: 
-        bam_umi                 // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai"), file(bqsr) ]
-        bam_dedup               // channel: [mandatory] [ val(group), val(meta), file(bam), file(bai)]
+        bam_umi                 // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
+        bam_dedup               // channel: [mandatory] [ val(group), val(meta), file(bam), file(bai) ]
+        bqsr_table              // channel: [mandatory] [ val(group), val(meta), file(bqsr) ]
         beds                    // channel: [mandatory] [ file(bed) ]
         meta                    // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
         qc_values               // channel: [mandatory] [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
@@ -32,8 +33,9 @@ workflow SNV_CALLING {
         PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
-        paired_calling_ch = bam_umi.groupTuple()
-        normal_bam_umi = bam_umi.filter { it[1].type == "N" }
+        bam_varcall = bam_dedup.join(bqsr_table, by:[0,1])
+        paired_calling_ch = bam_varcall.groupTuple()
+        normal_bam_dedup = bam_varcall.filter { it[1].type == "N" }
 
         // Variantcallers //
         // split by bed-file to speed up calling //
@@ -47,7 +49,7 @@ workflow SNV_CALLING {
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 
-        DNASCOPE(normal_bam_umi)
+        DNASCOPE(normal_bam_dedup)
 
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
         ch_versions         = ch_versions.mix(MELT.out.versions.first())

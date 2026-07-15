@@ -4,7 +4,7 @@ process MSISENSOR {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
+        tuple val(group), val(meta), file(bams), file(bais)
         
     output:
         tuple val(group), file("*.msi_single"),                 emit: msi_score
