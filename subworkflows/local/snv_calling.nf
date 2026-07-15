@@ -33,9 +33,9 @@ workflow SNV_CALLING {
         PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
-        bam_varcall = bam_dedup.join(bqsr_table, by:[0,1])
+        bam_varcall = bam_umi.join(bqsr_table, by:[0,1])
         paired_calling_ch = bam_varcall.groupTuple()
-        normal_bam_dedup = bam_varcall.filter { it[1].type == "N" }
+        normal_bam = bam_varcall.filter { it[1].type == "N" }
 
         // Variantcallers //
         // split by bed-file to speed up calling //
@@ -49,9 +49,9 @@ workflow SNV_CALLING {
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 
-        DNASCOPE(normal_bam_dedup)
+        DNASCOPE(normal_bam)
 
-        MELT ( bam_dedup.join(qc_values, by:[0,1])  )
+        MELT ( bam_umi.join(qc_values, by:[0,1])  )
         ch_versions         = ch_versions.mix(MELT.out.versions.first())
         BEDTOOLS_INTERSECT ( 
             MELT.out.melt_vcf,
