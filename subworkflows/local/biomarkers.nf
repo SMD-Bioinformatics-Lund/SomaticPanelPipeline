@@ -11,8 +11,7 @@ workflow BIOMARKERS {
     take: 
         meta                   // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
         cnvkitsegments         // channel: [mandatory] [ val(group), val(meta), val(part(backbone)), file("${group}.${meta.id}.${part}.call*.cns") ]
-        bam_umi                // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr) ]
-        bam_dedup              // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(marked_bai), file(bqsr) ]
+        bam_umi                // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai) ]
 
     main:
         ch_versions = Channel.empty()
@@ -29,7 +28,7 @@ workflow BIOMARKERS {
 
             // MSI //
             if (params.msi) {
-                MSISENSOR (bam_dedup.groupTuple())
+                MSISENSOR (bam_umi.groupTuple())
                 ch_versions = ch_versions.mix(MSISENSOR.out.versions)
             }
 

@@ -18,7 +18,6 @@ include { FILTER_TNSCOPE           } from '../../modules/local/sentieon/main'
 workflow SNV_CALLING {
     take: 
         bam_umi                 // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
-        bam_dedup               // channel: [mandatory] [ val(group), val(meta), file(bam), file(bai) ]
         bqsr_table              // channel: [mandatory] [ val(group), val(meta), file(bqsr) ]
         beds                    // channel: [mandatory] [ file(bed) ]
         meta                    // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]

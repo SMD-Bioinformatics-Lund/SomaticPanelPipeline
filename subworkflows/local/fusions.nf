@@ -11,7 +11,7 @@ workflow FUSIONS {
 	take: 
         fastq                // channel: [mandatory] [ val(group), val(meta), file(r1), file(r2) ]
 		meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
-		bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(bai), file(bqsr), file(dedup_metrics.txt) ]
+		bam_umi              // channel: [mandatory] [ val(group), val(meta), file(marked_bam), file(bai) ]
 
     main:
         ch_versions = Channel.empty()
@@ -28,7 +28,7 @@ workflow FUSIONS {
             GENEFUSE_TUMOR = GENEFUSE_JSON_TO_VCF.out.genefuse_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
 
             // manta //
-            MANTA_FUSIONS(bam_markdup.filter { it -> it[1].type == "T" }.groupTuple(), params.mantafusions, "fusions")
+            MANTA_FUSIONS(bam_umi.filter { it -> it[1].type == "T" }.groupTuple(), params.mantafusions, "fusions")
             ch_versions         = ch_versions.mix(MANTA_FUSIONS.out.versions)
             MANTA_FUSION_TUMOR  = MANTA_FUSIONS.out.manta_vcf_tumor.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
 

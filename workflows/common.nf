@@ -65,7 +65,6 @@ workflow SPP_COMMON {
 
     BAM_QC (
         ch_mapped.bam_umi,
-        ch_mapped.bam_dedup,
         ch_mapped.dedup_metrics
     )
     .set { ch_qc }
@@ -73,13 +72,12 @@ workflow SPP_COMMON {
 
     // Create PGx CSV file
     PHARMACOGENOMICS (
-        ch_mapped.bam_dedup.groupTuple(),
+        ch_mapped.bam_umi.groupTuple(),
     )
     .set { pgx_files }
 
     SNV_CALLING ( 
         ch_mapped.bam_umi,
-        ch_mapped.bam_dedup,
         ch_mapped.bqsr_table,
         beds,
         CHECK_INPUT.out.meta,
@@ -117,7 +115,6 @@ workflow SPP_COMMON {
         ch_mapped.bam_umi, 
         ch_vcf_anno.germline_variants,
         CHECK_INPUT.out.meta,
-        ch_mapped.bam_dedup,
         gatk_ref
     )
     .set { ch_cnvcalled }
@@ -135,7 +132,7 @@ workflow SPP_COMMON {
     FUSIONS (
         ch_trim.fastq_trim,
         CHECK_INPUT.out.meta,
-        ch_mapped.bam_dedup
+        ch_mapped.bam_umi
     )
     .set { ch_fusion }
     ch_versions = ch_versions.mix(ch_fusion.versions)
@@ -143,8 +140,7 @@ workflow SPP_COMMON {
     BIOMARKERS (
         CHECK_INPUT.out.meta,
         ch_cnvcalled.cnvkit_hrd,
-        ch_mapped.bam_umi, 
-        ch_mapped.bam_dedup
+        ch_mapped.bam_umi,
     )
     .set { ch_bio }
     ch_versions = ch_versions.mix(ch_bio.versions)

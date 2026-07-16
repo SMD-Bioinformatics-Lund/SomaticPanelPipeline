@@ -9,7 +9,6 @@ process BWA_UMI {
 
     output:
         tuple val(group), val(meta), file("${out_umi}"), file("${out_umi}.bai"),    emit: bam_umi
-        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),    emit: bam_umi_markdup
         path "versions.yml",                                                        emit: versions
 
     when:
@@ -18,9 +17,6 @@ process BWA_UMI {
     script:
         def args    = task.ext.args     ?: ''                       
         def args2   = task.ext.args2    ?: ''
-        def args3   = task.ext.args3    ?: ''
-        def args4   = task.ext.args4    ?: ''
-        def args5   = task.ext.args5    ?: ''
 
         out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
         out_umi = meta.id+"."+meta.type+".bwa.umi.sort.bam"
@@ -39,20 +35,8 @@ process BWA_UMI {
         | sentieon bwa mem \\
             -t ${task.cpus} \\
             $args2 - \\
-        | tee -a noumi.sam \\
-        | sentieon umi consensus $args3 -o consensus.fastq.gz
-
-        sentieon bwa mem \\
-            -t ${task.cpus} \\
-            $args4 \\
-            consensus.fastq.gz \\
         | sentieon util sort -i - \\
-            -o ${out_umi} \\
-            $args5
-
-        sentieon util sort -i noumi.sam -o ${out_bam} --sam2bam
-
-        rm noumi.sam
+            -o ${out_umi} --sam2bam
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -124,8 +108,6 @@ process MARKDUP {
         """
 
     stub:
-        def args    = task.ext.args     ?: ""                       
-        def args2   = task.ext.args2    ?: ""
         def prefix  = task.ext.prefix   ?: ""
 
         out_bam = meta.id+"."+meta.type+".dedup.bam"

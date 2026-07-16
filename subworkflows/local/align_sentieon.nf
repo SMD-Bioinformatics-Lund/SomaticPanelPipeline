@@ -15,25 +15,23 @@ workflow ALIGN_SENTIEON {
         meta                // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
 
     main:
-        ch_versions = Channel.empty()
+        ch_versions = channel.empty()
 
         BWA_UMI ( fastq_input )
         ch_versions = ch_versions.mix(BWA_UMI.out.versions)
 
-        MARKDUP ( BWA_UMI.out.bam_umi_markdup )
+        MARKDUP ( BWA_UMI.out.bam_umi )
         ch_versions = ch_versions.mix(MARKDUP.out.versions)
 
         DUMMY_DEDUP_METRICS( alt_bam_path )
-
         dedup_metrics = MARKDUP.out.dedup_metrics.mix(DUMMY_DEDUP_METRICS.out.dedup_metrics)
         
         BQSR ( BWA_UMI.out.bam_umi.mix(alt_bam_path) )
-
-        bam_umi = BWA_UMI.out.bam_umi.mix(alt_bam_path)
         ch_versions = ch_versions.mix(BQSR.out.versions)
 
+        bam_umi = MARKDUP.out.bam_dedup.mix(alt_bam_path)
+        
     emit:
-        bam_dedup               =   MARKDUP.out.bam_dedup                   // channel: [ val(group), val(meta), file(bam), file(bai) ] 
         bam_umi                 =   bam_umi                                 // channel: [ val(group), val(meta), file(bam), file(bai) ]         
         bqsr_table              =   BQSR.out.bqsr_table                     // channel: [ val(group), val(meta), file(bqsr_table) ]
         dedup_metrics           =   dedup_metrics                           // channel: [ val(group), val(meta), file(dedup_metrics) ]

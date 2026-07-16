@@ -30,7 +30,6 @@ workflow CNV_CALLING {
         bam_umi              // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai) ]
         germline_variants    // channel: [mandatory] [ val(group), file(vcf), file(tbi) ]
         meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
-        bam_dedup            // channel: [mandatory] [ val(group), val(meta), file(dedup_bam), file(dedup_bai)]  ]
         gatk_ref             // channel: [mandatory] [ val(interger), val(part_of_genome) used for germline gatk-calling ]
 
     main:
