@@ -88,6 +88,7 @@ process MARKDUP {
     script:
         def args    = task.ext.args     ?: ""                       
         def args2   = task.ext.args2    ?: ""
+        def args3   = task.ext.args3    ?: ""
         def prefix  = task.ext.prefix   ?: ""
 
         out_bam = meta.id+"."+meta.type+".dedup.bam"
@@ -99,7 +100,7 @@ process MARKDUP {
         }
         """
         sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector $args
-        sentieon driver -t ${task.cpus} -i $bam --algo Dedup $args2 --metrics ${prefix}dedup_metrics.txt $out_bam
+        sentieon driver -t ${task.cpus} $args3 -i $bam --algo Dedup $args2 --metrics ${prefix}dedup_metrics.txt $out_bam
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
