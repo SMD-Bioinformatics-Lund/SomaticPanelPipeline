@@ -742,7 +742,7 @@ process POST_ANNOTATION_FILTERS {
 }
 
 process CAP_PHRED_UMI_BAM {
-    label "process_medium"
+    label 'process_medium'
     tag "${meta.id}"
 
     input:
@@ -752,17 +752,29 @@ process CAP_PHRED_UMI_BAM {
         tuple val(group), val(meta), path("${out_bam}"), path("${out_bam}.bai"), emit: umi_capped
 
     script:
-        out_bam = meta.id+"."+meta.type+".umi_capped.bam"
-        def args    = task.ext.args     ?: ''
-        """
-        cap_phred_for_umi_bam.py $bam $out_bam $args
-        samtools index -@ ${task.cpus} $out_bam
-        """
+        out_bam = "${meta.id}.${meta.type}.umi_capped.bam"
 
+        """
+        set -euo pipefail
+
+        samtools view -@ ${task.cpus} -h "${bam}" |
+            perl -F'\\t' -lane '
+                if (!/^@/ && \$F[10] ne "*") {
+                    \$F[10] =~ tr/h-\\x7e/g/;
+                }
+                print join("\\t", @F);
+            ' |
+            samtools view -@ ${task.cpus} -b -o "${out_bam}" -
+
+        samtools quickcheck -v "${out_bam}"
+        samtools index -@ ${task.cpus} "${out_bam}"
+        """
 
     stub:
-        out_bam = meta.id+"."+meta.type+".umi_capped.bam"
+        out_bam = "${meta.id}.${meta.type}.umi_capped.bam"
+
         """
-        touch $out_bam ${out_bam}.bai
+        touch "${out_bam}"
+        touch "${out_bam}.bai"
         """
 }
