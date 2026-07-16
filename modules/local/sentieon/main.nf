@@ -91,7 +91,7 @@ process MARKDUP {
         def args3   = task.ext.args3    ?: ""
         def prefix  = task.ext.prefix   ?: ""
 
-        out_bam = meta.id+"."+meta.type+".dedup.bam"
+        out_bam = meta.id+"."+meta.type+".bwa.umi.sort.bam"
 
         if (meta.sub) {
             submbp = params.sample_val / 1000000
@@ -111,7 +111,7 @@ process MARKDUP {
     stub:
         def prefix  = task.ext.prefix   ?: ""
 
-        out_bam = meta.id+"."+meta.type+".dedup.bam"
+        out_bam = meta.id+"."+meta.type+".bwa.umi.sort.bam"
 
         if (meta.sub) {
             submbp = params.sample_val / 1000000
