@@ -28,6 +28,7 @@ include { FILTER_MANTA as FILTER_MANTA_NORMAL  } from '../../modules/local/filte
 workflow CNV_CALLING {
     take: 
         bam_umi              // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai) ]
+        bam_umi_capped       // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai) ]
         germline_variants    // channel: [mandatory] [ val(group), file(vcf), file(tbi) ]
         meta                 // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
         gatk_ref             // channel: [mandatory] [ val(interger), val(part_of_genome) used for germline gatk-calling ]
@@ -143,7 +144,7 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(FILTER_MERGE_GATK.out.versions)
 
         /////////////////////////// MANTA /////////////////////////////////////////////////////
-        MANTA ( bam_umi.groupTuple(), params.bedgz, "CNV" )
+        MANTA ( bam_umi_capped.groupTuple(), params.bedgz, "CNV" )
         ch_versions = ch_versions.mix(MANTA.out.versions)
 
         // Join germline vcf

@@ -740,3 +740,29 @@ process POST_ANNOTATION_FILTERS {
         """
         
 }
+
+process CAP_PHRED_UMI_BAM {
+    label "process_medium"
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), path(bam), path(bai)
+
+    output:
+        tuple val(group), val(meta), path("${out_bam}"), path("${out_bam}.bai"), emit: umi_capped
+
+    script:
+        out_bam = meta.id+"."+meta.type+".umi_capped.bam"
+        def args    = task.ext.args     ?: ''
+        """
+        cap_phred_for_umi_bam.py $bam $out_bam $args
+        samtools index -@ ${task.cpus} $out_bam
+        """
+
+
+    stub:
+        out_bam = meta.id+"."+meta.type+".umi_capped.bam"
+        """
+        touch $out_bam ${out_bam}.bai
+        """
+}

@@ -112,7 +112,8 @@ workflow SPP_COMMON {
     ch_versions = ch_versions.mix(ch_qc_vcf.versions)
 
     CNV_CALLING ( 
-        ch_mapped.bam_umi, 
+        ch_mapped.bam_umi,
+        ch_mapped.bam_umi_capped,
         ch_vcf_anno.germline_variants,
         CHECK_INPUT.out.meta,
         gatk_ref
