@@ -91,12 +91,12 @@ process MARKDUP {
         def args3   = task.ext.args3    ?: ""
         def prefix  = task.ext.prefix   ?: ""
 
-        out_bam = meta.id+"."+meta.type+".bwa.umi.sort.bam"
+        out_bam = meta.id+"."+meta.type+".dedup.bwa.umi.sort.bam"
 
         if (meta.sub) {
             submbp = params.sample_val / 1000000
             submbp = submbp + "M"
-            out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
+            out_bam = meta.id+"."+meta.type+"."+submbp+".dedup.bwa.umi.sort.bam"
         }
         """
         sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector $args
@@ -111,12 +111,12 @@ process MARKDUP {
     stub:
         def prefix  = task.ext.prefix   ?: ""
 
-        out_bam = meta.id+"."+meta.type+".bwa.umi.sort.bam"
+        out_bam = meta.id+"."+meta.type+".dedup.bwa.umi.sort.bam"
 
         if (meta.sub) {
             submbp = params.sample_val / 1000000
             submbp = submbp + "M"
-            out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
+            out_bam = meta.id+"."+meta.type+"."+submbp+".dedup.bwa.umi.sort.bam"
         }
         """
         touch ${out_bam} ${out_bam}.bai ${prefix}dedup_metrics.txt
