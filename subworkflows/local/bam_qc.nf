@@ -13,13 +13,12 @@ include { LOWCOV_D4            } from '../../modules/local/qc/main'
 workflow BAM_QC {
     take:        
         bam_umi         // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
-        bam_dedup       // channel: [ val(group), val(meta), file(bam), file(bai) ]
         dedup_metrics   // channel: [ val(group), val(meta), file(dedup_metrics) ]
 
     main:
         ch_versions = Channel.empty()
         
-        SENTIEON_QC ( bam_dedup.join(dedup_metrics, by:[0,1]) )
+        SENTIEON_QC ( bam_umi.join(dedup_metrics, by:[0,1]) )
         ch_versions = ch_versions.mix(SENTIEON_QC.out.versions)
         SENTIEON_QC_TO_CDM( SENTIEON_QC.out.qc_files.join(dedup_metrics, by:[0,1]) )
         
@@ -27,14 +26,14 @@ workflow BAM_QC {
 
         QC_TO_CDM ( SENTIEON_QC_TO_CDM.out.qc_cdm )
 
-        LOWCOV_D4 ( bam_dedup )
+        LOWCOV_D4 ( bam_umi )
         ch_versions = ch_versions.mix(LOWCOV_D4.out.versions)
         
-        LOWCOV ( bam_dedup )
+        LOWCOV ( bam_umi )
         ch_versions = ch_versions.mix(LOWCOV.out.versions)
 
         // Check genotypes of ID-SNPs
-        ALLELE_CALL (bam_dedup)
+        ALLELE_CALL (bam_umi)
         ch_versions = ch_versions.mix(ALLELE_CALL.out.versions)
 
         SNP_CHECK(ALLELE_CALL.out.sample_id_genotypes.groupTuple())
