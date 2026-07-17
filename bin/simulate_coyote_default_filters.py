@@ -55,7 +55,8 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known,nomatch_vcf=None):
     vcf_object = VariantFile(vcf_path)
     nomatch_vcf_object = None
     if nomatch_vcf:
-        nomatch_vcf_object = VariantFile(nomatch_vcf, "w", header=vcf_object.header)
+        nomatch_vcf_object = open(nomatch_vcf, "w")
+        nomatch_vcf_object.write(str(vcf_object.header))
 
     variants_found = 0
     variants_missed = 0
@@ -118,7 +119,7 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known,nomatch_vcf=None):
         if var_is_kept and var_is_shown:
             variants_found +=1
             if nomatch_vcf_object and not is_match:
-                nomatch_vcf_object.write(var)
+                _write_vcf_record(nomatch_vcf_object, var)
                 variants_not_matching_known +=1
         # any variants missed from known due to filters
         else:
@@ -148,6 +149,12 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known,nomatch_vcf=None):
     vcf_object.close()
         
     return statistics
+
+def _write_vcf_record(vcf_out, variant):
+    variant_string = str(variant)
+    vcf_out.write(variant_string)
+    if not variant_string.endswith("\n"):
+        vcf_out.write("\n")
 
 def _truthy(value):
     if isinstance(value, bool):
