@@ -23,7 +23,8 @@ def main(args):
     else:
         known = {}
 
-    statistics = _read_and_filter_vcf(args.vcf, config, args.tumor_id, known)
+    nomatch_vcf = args.nomatch_vcf or f"{args.tumor_id}_nomatch.vcf"
+    statistics = _read_and_filter_vcf(args.vcf, config, args.tumor_id, known, nomatch_vcf)
 
     if args.known:
         _print_summary(statistics, known_statistics)
@@ -38,6 +39,7 @@ def cli():
     parser.add_argument("--vcf", type=str, help="Path to vep-annotated vcf")
     parser.add_argument("--known", type=str, help="Path to known variants")
     parser.add_argument("--tumor_id", type=str, help="sample id of tumor")
+    parser.add_argument("--nomatch-vcf", type=str, help="Path to output VCF for filtered variants not matching known variants")
     args = parser.parse_args()
     if not args.config:
         exit("no config provided")
@@ -49,12 +51,17 @@ def _read_config_json(json_path):
         configs = json.load(jf)
     return configs
 
-def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
+def _read_and_filter_vcf(vcf_path,config,tumor_id,known,nomatch_vcf=None):
     vcf_object = VariantFile(vcf_path)
+    nomatch_vcf_object = None
+    if nomatch_vcf:
+        nomatch_vcf_object = VariantFile(nomatch_vcf, "w", header=vcf_object.header)
+
     variants_found = 0
     variants_missed = 0
     false_postives_found = 0
     tiered_found = 0
+    variants_not_matching_known = 0
 
     known_summary = {}
 
@@ -110,6 +117,9 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
 
         if var_is_kept and var_is_shown:
             variants_found +=1
+            if nomatch_vcf_object and not is_match:
+                nomatch_vcf_object.write(var)
+                variants_not_matching_known +=1
         # any variants missed from known due to filters
         else:
             if is_match and not is_false:
@@ -131,6 +141,11 @@ def _read_and_filter_vcf(vcf_path,config,tumor_id,known):
     
     pprint(known_summary)
     statistics['variants_found_under_filters'] = variants_found
+    statistics['variants_not_matching_known'] = variants_not_matching_known
+
+    if nomatch_vcf_object:
+        nomatch_vcf_object.close()
+    vcf_object.close()
         
     return statistics
 
@@ -348,6 +363,7 @@ def _print_summary(statistics, known_statistics=None):
 
     print("\nFinal counts:")
     print(f"  Variants passing all filters: {statistics['variants_found_under_filters']}")
+    print(f"  Passing variants not matching known: {statistics['variants_not_matching_known']}")
 
     if known_statistics:
         print("\n" + "="*60)
