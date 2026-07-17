@@ -3,7 +3,7 @@ process VARDICT {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
+        tuple val(group), val(meta), file(bams), file(bais)
         each file(bed)
 
     output:

@@ -18,7 +18,6 @@ include { FILTER_TNSCOPE           } from '../../modules/local/sentieon/main'
 workflow SNV_CALLING {
     take: 
         bam_umi                 // channel: [mandatory] [ val(group), val(meta), file("umi.bam"), file("umi.bam.bai") ]
-        bqsr_table              // channel: [mandatory] [ val(group), val(meta), file(bqsr) ]
         beds                    // channel: [mandatory] [ file(bed) ]
         meta                    // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
         qc_values               // channel: [mandatory] [ val(group), val(meta), val(INS_SIZE), val(MEAN_DEPTH), val(COV_DEV) ]
@@ -32,7 +31,7 @@ workflow SNV_CALLING {
         PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
-        bam_varcall = bam_umi.join(bqsr_table, by:[0,1])
+        bam_varcall = bam_umi
         paired_calling_ch = bam_varcall.groupTuple()
         normal_bam = bam_varcall.filter { it[1].type == "N" }
 

@@ -260,7 +260,7 @@ process TNSCOPE {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(bams), file(bais), file(bqsr)
+        tuple val(group), val(meta), file(bams), file(bais)
         each file(bed)
 
     output:
@@ -279,8 +279,8 @@ process TNSCOPE {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
             sentieon driver -t ${task.cpus} $args \\
-                -i ${bams[tumor_idx]} -q ${bqsr[tumor_idx]} \\
-                -i ${bams[normal_idx]} -q ${bqsr[normal_idx]} \\
+                -i ${bams[tumor_idx]}  \\
+                -i ${bams[normal_idx]}  \\
                 --interval $bed --algo TNscope \\
                 --tumor_sample ${meta.id[tumor_idx]} --normal_sample ${meta.id[normal_idx]} \\
                 $args2 \\
@@ -298,7 +298,7 @@ process TNSCOPE {
         else if( meta.id.size() == 1 ) {
             """
             sentieon driver -t ${task.cpus} $args \\
-                -i ${bams} -q ${bqsr} \\
+                -i ${bams} \\
                 --interval $bed --algo TNscope \\
                 --tumor_sample ${meta.id[0]} \\
                 $args2 \\
