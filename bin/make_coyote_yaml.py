@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""
+Description: this script generates a YAML document for Coyote3 data import, combining meta info, optional file locations and other
+parameters. This script was created to replace the currently used processes "COYOTE" and "COYOTE_YAML".
+"""
 
 import argparse
 import json

@@ -395,8 +395,8 @@ process COYOTE_YAML {
 process OUTPUT_FILES {
     label "process_single"  
     tag "$group" 
-    // this process is to create the json file with names of the optional files to be loaded into coyote, which
-    // are associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
+    // this process creates a json file with names of the optional files to be loaded into coyote3. Those optional files are
+    // associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
     input:
         tuple val(group), val(labels), path(files, stageAs: "?/*") // if files have the same name, they are staged 
 
@@ -408,7 +408,7 @@ process OUTPUT_FILES {
 
     script:
         def json_map = [labels, files.collect {it.toString().replaceAll('.+/', '')}] // remove path, keep file name only.
-            .transpose() // pair each <label> with corresponding file names.
+            .transpose() // pair each <yaml_label> with corresponding file names.
             .collectEntries { label, fname -> [(label): fname]  } 
 
         def json_str = groovy.json.JsonOutput.toJson(json_map) // Converts the Groovy map into a valid JSON string      
@@ -425,7 +425,7 @@ process OUTPUT_FILES {
 process  OUTPUTS_YAML_COYOTE {
     label "process_single"
     tag "$group"
-    // this process creates the yaml file for loading into coyote.
+    // this process creates the yaml file for loading into coyote3.
 
     input:
         tuple val(group), val(meta), path(vcf), path(json_INFO)
@@ -439,9 +439,10 @@ process  OUTPUTS_YAML_COYOTE {
     script:
         environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         def meta_json    = groovy.json.JsonOutput.toJson(meta) // groovy.json.JsonOutput built-in Groovy class.
-        // meta written as a json instead of passed as a shell argument below 
+        // meta written as a json instead of passed as a shell argument as done previously in old COYOYE_YAML process.
         // avoid shell issues if meta fields contain special characters and
         // for easier passing of metadata to python
+        // the single quotation marks below are included here to be consistent with the previous yaml format, but they are not strictly necessary
         """
         cat << 'META_EOF' > meta.json
         ${meta_json}

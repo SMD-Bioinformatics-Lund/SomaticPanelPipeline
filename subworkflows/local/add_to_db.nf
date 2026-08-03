@@ -2,8 +2,8 @@
 
 include { COYOTE_YAML          } from '../../modules/local/coyote/main'
 include { COYOTE               } from '../../modules/local/coyote/main'
-include { OUTPUT_FILES         } from '../../modules/local/coyote/main'
-include { OUTPUTS_YAML_COYOTE  } from '../../modules/local/coyote/main'
+include { OUTPUT_FILES         } from '../../modules/local/coyote/main' // newly added process to ease data import into Coyote3
+include { OUTPUTS_YAML_COYOTE  } from '../../modules/local/coyote/main' // newly added process to ease data import into Coyote3
 
 workflow ADD_TO_DB {
 
@@ -20,7 +20,7 @@ workflow ADD_TO_DB {
         cnvkit_plot     // channel: [optional] [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
 
     main:
-        ch_coyote_info = Channel.empty() // Gather data for json_INFO listinf output files for export into Coyote
+        ch_coyote_info = Channel.empty() // Gather data for json_INFO listing output files for export into Coyote3
         lc = lowcov.map{ val-> tuple(val[0], val[2] ) }
         lc_d4 = lowcov_d4.map{ val-> tuple(val[0], val[2] ) }
         cnvkit_plot.groupTuple().set { cnvkit_plot_ch }
@@ -54,12 +54,12 @@ workflow ADD_TO_DB {
         COYOTE { vcf.join(optional) }
         // COYOTE_YAML { vcf.join(optional_json) }
         ch_coyote_info_grouped = ch_coyote_info.groupTuple()
-        OUTPUT_FILES ( ch_coyote_info_grouped )
+        OUTPUT_FILES ( ch_coyote_info_grouped ) // creates a json_INFO from the channel ch_coyote_info_grouped
         OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) ) 
 
     emit:
         coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
-        //coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ]
+        //coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ], old way to make the YAML for Coyote3
         coyoteyaml = OUTPUTS_YAML_COYOTE.out.yaml_coyote3 // channel: [ val(group), file(coyote) ]
 }
 
