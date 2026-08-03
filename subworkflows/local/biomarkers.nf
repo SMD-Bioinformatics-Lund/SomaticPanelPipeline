@@ -47,14 +47,19 @@ workflow BIOMARKERS {
 
 
         // Loss of Heterozygosity (LOH) calculation and type evaluation
-        // input for CALL_LOH is an output from the CNV_CALLING subworkflow and is cnvkitsegments from CNVKIT_CALL using "full" .cns (gmshem & solid) 
+        // input (cnvkitsegments) for CALL_LOH comes from CNVKIT_CALL process of the CNV_CALLING subworkflow.
+        // cnvkitsegments "full" .cns (gmshem) or "backbone" .cns (solid) 
         // params.loh in the process config in biomarkers.config
-        cnvkitsegments_tumor = cnvkitsegment_for_loh.filter { group, meta, part, cns -> meta.type == "T" } 
+
+        // cnvkitsegment_for_loh is already filtered (in cnv_calling subworkflow) for "backbone" if solid profile, 
+        // otherwise "full" by default for GMSHem
+        cnvkitsegments_tumor = cnvkitsegment_for_loh.filter { group, meta, part, cns -> meta.type == "T" }
+
         CALL_LOH ( cnvkitsegments_tumor )
         ch_versions = ch_versions.mix(CALL_LOH.out.versions)
  
-        loh_bed_ch = Channel.empty().mix(CALL_LOH.out.loh_bed) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
-        loh_tsv_ch = Channel.empty().mix(CALL_LOH.out.loh_cat) // ensure channel is emitted even if params.loh is false and CALL_LOH not executed
+        loh_bed_ch = Channel.empty().mix(CALL_LOH.out.loh_bed) // ensure channel is emitted even if params.loh is false and CALL_LOH 
+        loh_tsv_ch = Channel.empty().mix(CALL_LOH.out.loh_cat) // not executed. Usefull for PARP_Inhib profile
 
     emit:
         biomarkers  =   output         // channel: [ val(group), file(bio.json) ]

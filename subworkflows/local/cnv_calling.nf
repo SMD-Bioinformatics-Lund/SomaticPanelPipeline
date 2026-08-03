@@ -101,7 +101,7 @@ workflow CNV_CALLING {
             // assign correct part full,exon,backbone to relevant upcoming analysis //
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
             cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment
-            cnvkitsegment_for_loh = CNVKIT_CALL_TC.out.cnvkitsegment.filter { group, meta, part, cns -> part == "backbone" }.view()
+            cnvkitsegment_for_loh = CNVKIT_CALL_TC.out.cnvkitsegment.filter { group, meta, part, cns -> part == "backbone" }
             cnvkit_vcf = CNVKIT_CALL.out.cnvkit_vcf.filter { it -> it[2] == "full" && it[1].type == "T" }.map { val -> tuple(val[0], val[2], val[3]  )}
             CNVKIT_VCF_TUMOR = cnvkit_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[3], val[2] ) }
         }
