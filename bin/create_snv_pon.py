@@ -1,6 +1,5 @@
+#!/usr/bin/env python3
 """Create SNV panel-of-normals summaries from caller VCF files."""
-
-from __future__ import annotations
 
 from argparse import ArgumentParser
 from glob import glob
@@ -18,10 +17,11 @@ def average(values):
 
 def std_dev(values):
     """Return the population standard deviation using the legacy argument order."""
-    if not values:
+    if len(values) <= 1:
         return 0
     avg = values[0]
-    return sqrt(sum((value - avg) ** 2 for value in values[1:]) / len(values))
+    rest = values[1:]
+    return sqrt(sum((value - avg) ** 2 for value in rest) / len(rest))
 
 
 def count_germline(values):
@@ -105,3 +105,7 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     create_pon(args.vcf_mask, args.out)
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

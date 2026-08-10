@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Generate compressed CNVkit coverage and BAF BED tracks."""
+"""Generate CNVkit coverage and BAF BED tracks."""
 
-import subprocess
 from argparse import ArgumentParser
 
 import vcf2 as vcf
 from vcf_pipeline_utils import leading_float
 
 
-def generate_gens_data(cnr_file, vcf_file, sample_id, out_prefix):
+def generate_gens_data(cnr_file, vcf_file, sample_id, out_prefix=None, baf_out=None, cov_out=None):
     """Generate CNVkit coverage and BAF tracks.
 
     Args:
@@ -44,15 +43,13 @@ def generate_gens_data(cnr_file, vcf_file, sample_id, out_prefix):
                 )
 
     prefix = out_prefix or sample_id
-    cov_bed = f"{prefix}.cov.bed"
-    baf_bed = f"{prefix}.baf.bed"
+    cov_bed = cov_out or f"{prefix}.cov.bed"
+    baf_bed = baf_out or f"{prefix}.baf.bed"
     for path, data in ((cov_bed, log2_data), (baf_bed, baf_data)):
         with open(path, "w") as out_fh:
             for resolution in "oabcd":
                 for row in data:
                     out_fh.write(f"{resolution}_{row}\n")
-        subprocess.run(["bgzip", "-f", path], check=True)
-        subprocess.run(["tabix", f"{path}.gz"], check=True)
 
 
 def build_parser():
@@ -62,13 +59,15 @@ def build_parser():
     parser.add_argument("--vcf", required=True, help="Input VCF.")
     parser.add_argument("--sample-id", required=True, help="Sample ID.")
     parser.add_argument("--out-prefix", help="Output prefix. Defaults to sample ID.")
+    parser.add_argument("--baf-out", help="Output BAF BED file.")
+    parser.add_argument("--cov-out", help="Output coverage BED file.")
     return parser
 
 
 def main(argv=None):
     """Run the command-line interface."""
     args = build_parser().parse_args(argv)
-    generate_gens_data(args.cnr, args.vcf, args.sample_id, args.out_prefix)
+    generate_gens_data(args.cnr, args.vcf, args.sample_id, args.out_prefix, args.baf_out, args.cov_out)
     return 0
 
 

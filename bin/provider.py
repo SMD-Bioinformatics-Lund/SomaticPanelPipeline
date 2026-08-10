@@ -1,9 +1,7 @@
+#!/usr/bin/env python3
 """Sample fingerprinting from BAM pileups."""
 
-from __future__ import annotations
-
 import glob
-import subprocess
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -87,19 +85,11 @@ def merge_files(files, out_path):
                 out_fh.writelines(in_fh)
 
 
-def get_base_freqs_from_bams(file_data, snp_bed, xy_bed, out_prefix, overwrite=False):
-    """Run samtools mpileup and collect base counts by locus and sample."""
-    pile_out = f"{out_prefix}.pile.tmp"
-    tmp_bed = f"{out_prefix}.tmp.bed"
-    merge_files([snp_bed, xy_bed], tmp_bed)
+def get_base_freqs_from_bams(file_data, pileup_file):
+    """Collect base counts by locus and sample from a precomputed mpileup file."""
     bams = sorted(file_data)
-    if overwrite or not Path(pile_out).is_file() or Path(pile_out).stat().st_size == 0:
-        cmd = ["samtools", "mpileup", "-l", tmp_bed, *bams]
-        with open(pile_out, "w") as out_fh, open(f"{out_prefix}.mpileup.log", "w") as err_fh:
-            subprocess.run(cmd, stdout=out_fh, stderr=err_fh, check=True)
-
     freqs = {}
-    with open(pile_out) as fh:
+    with open(pileup_file) as fh:
         for line in fh:
             cols = line.rstrip("\n").split("\t")
             loc = f"{cols[0]}:{cols[1]}"
@@ -253,22 +243,23 @@ def print_genotype_table(data, sample_data, out_prefix, annotation, variants, lo
 def fingerprint_bams(
     bam,
     out_prefix,
+    pileup_file=None,
     bed=str(DEFAULT_SNPBED),
     bedxy=str(DEFAULT_XYBED),
     nocheck=False,
-    overwrite=False,
     long=False,
     position=False,
     obsaf=False,
 ):
-    """Create sample fingerprint output files from BAM files."""
+    """Create sample fingerprint output files from a precomputed mpileup."""
     meta_data = get_bampaths(bam, nocheck=nocheck)
     variants, chromosomes, allele_freq = read_bed(bed)
     sex_loci = {}
     if bedxy and bedxy != "none":
         sex_loci, xy_chromosomes, _xy_af = read_bed(bedxy)
         chromosomes.update(xy_chromosomes)
-    data = get_base_freqs_from_bams(meta_data, bed, "" if bedxy == "none" else bedxy, out_prefix, overwrite=overwrite)
+    pileup_file = pileup_file or f"{out_prefix}.pile.tmp"
+    data = get_base_freqs_from_bams(meta_data, pileup_file)
     sample_data = determine_sex(data, sex_loci)
     do_genotyping(data, variants, allele_freq, observed_af=obsaf)
     print_genotype_table(data, sample_data, out_prefix, meta_data, variants, long=long, position=position)
@@ -279,10 +270,10 @@ def build_parser():
     parser = ArgumentParser(description="Create sample fingerprints from BAM pileups.")
     parser.add_argument("--bam", required=True, help="BAM file, metadata table, or glob mask.")
     parser.add_argument("--out", required=True, help="Output prefix.")
+    parser.add_argument("--pileup", help="Precomputed samtools mpileup output. Defaults to <out>.pile.tmp.")
     parser.add_argument("--bed", default=str(DEFAULT_SNPBED), help="SNP marker BED.")
     parser.add_argument("--bedxy", default=str(DEFAULT_XYBED), help="Sex marker BED, or 'none'.")
     parser.add_argument("--nocheck", action="store_true", help="Skip file/chromosome checks.")
-    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing pileup/output files.")
     parser.add_argument("--long", action="store_true", help="Write long-format genotype table.")
     parser.add_argument("--position", action="store_true", help="Use genomic positions as marker IDs.")
     parser.add_argument("--obsaf", action="store_true", help="Use observed allele frequencies.")
@@ -293,6 +284,6 @@ def main(argv=None):
     """Run sample fingerprinting."""
     args = build_parser().parse_args(argv)
     fingerprint_bams(
-        args.bam, args.out, args.bed, args.bedxy, args.nocheck, args.overwrite, args.long, args.position, args.obsaf
+        args.bam, args.out, args.pileup, args.bed, args.bedxy, args.nocheck, args.long, args.position, args.obsaf
     )
     return 0

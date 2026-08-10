@@ -1,6 +1,5 @@
+#!/usr/bin/env python3
 """ID-SNP concordance utilities."""
-
-from __future__ import annotations
 
 import json
 from argparse import ArgumentParser
@@ -55,7 +54,7 @@ def _merge_marker_data(target, source):
         target.setdefault(key, {}).update(value)
 
 
-def compare_idsnps(vcf_sample, vcf_control, sample, control, rs_bed, out_prefix=None):
+def compare_idsnps(vcf_sample, vcf_control, sample, control, rs_bed, out_prefix=None, csv_out=None, json_out=None):
     """Compare sample and control ID-SNP genotypes."""
     if not Path(vcf_sample).exists():
         raise FileNotFoundError("SAMPLE VCF file not found")
@@ -68,8 +67,8 @@ def compare_idsnps(vcf_sample, vcf_control, sample, control, rs_bed, out_prefix=
     _merge_marker_data(data, _read_idsnp_vcf(vcf_control, control))
 
     prefix = out_prefix or f"s{sample}_c{control}"
-    csv_path = f"{prefix}.csv"
-    json_path = f"{prefix}.json"
+    csv_path = csv_out or f"{prefix}.csv"
+    json_path = json_out or f"{prefix}.json"
 
     total = match = mismatch = 0
     with open(csv_path, "w") as out_fh:
@@ -133,16 +132,28 @@ def build_parser():
     parser.add_argument("--vcf-control", required=True, help="Control VCF.")
     parser.add_argument("--sample", required=True, help="Sample ID.")
     parser.add_argument("--control", required=True, help="Control ID.")
-    parser.add_argument("--rs-bed", required=True, help="BED file of ID-SNP markers.")
+    parser.add_argument("--rs-bed", "--rs_bed", dest="rs_bed", required=True, help="BED file of ID-SNP markers.")
     parser.add_argument("--out-prefix", help="Output prefix. Defaults to s<SAMPLE>_c<CONTROL>.")
+    parser.add_argument("--csv-out", help="Output concordance table.")
+    parser.add_argument("--json-out", help="Output concordance JSON.")
     return parser
 
 
 def main(argv=None):
     """Run the ID-SNP command."""
     args = build_parser().parse_args(argv)
-    _csv, json_path = compare_idsnps(
-        args.vcf_sample, args.vcf_control, args.sample, args.control, args.rs_bed, args.out_prefix
+    compare_idsnps(
+        args.vcf_sample,
+        args.vcf_control,
+        args.sample,
+        args.control,
+        args.rs_bed,
+        args.out_prefix,
+        args.csv_out,
+        args.json_out,
     )
-    print(f"Data has been written to {json_path}")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

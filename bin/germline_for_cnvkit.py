@@ -1,6 +1,5 @@
+#!/usr/bin/env python3
 """Germline-related VCF utilities."""
-
-from __future__ import annotations
 
 import json
 from argparse import ArgumentParser

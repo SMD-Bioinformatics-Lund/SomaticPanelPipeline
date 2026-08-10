@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Estimate sample contamination from common gnomAD SNV VAF distributions."""
 
-import os
 import sys
+import struct
+import zlib
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -52,6 +53,95 @@ def write_placeholder_png(path):
     """
     with open(path, "wb") as fh:
         fh.write(EMPTY_PNG)
+
+
+def _png_chunk(chunk_type, data):
+    """Return a PNG chunk."""
+    return (
+        struct.pack(">I", len(data))
+        + chunk_type
+        + data
+        + struct.pack(">I", zlib.crc32(chunk_type + data) & 0xFFFFFFFF)
+    )
+
+
+def write_line_plot_png(path, x_values, y_values, width=1500, height=1000):
+    """Write a simple PNG line plot using only the standard library."""
+    if not x_values or not y_values:
+        write_placeholder_png(path)
+        return
+
+    margin_left = 90
+    margin_right = 40
+    margin_top = 40
+    margin_bottom = 80
+    plot_width = width - margin_left - margin_right
+    plot_height = height - margin_top - margin_bottom
+    max_y = max(y_values) or 1
+
+    # RGB white canvas.
+    pixels = bytearray([255] * width * height * 3)
+
+    def set_pixel(x, y, color):
+        if 0 <= x < width and 0 <= y < height:
+            idx = (y * width + x) * 3
+            pixels[idx : idx + 3] = bytes(color)
+
+    def draw_line(x0, y0, x1, y1, color):
+        dx = abs(x1 - x0)
+        dy = -abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        err = dx + dy
+        while True:
+            set_pixel(x0, y0, color)
+            if x0 == x1 and y0 == y1:
+                break
+            e2 = 2 * err
+            if e2 >= dy:
+                err += dy
+                x0 += sx
+            if e2 <= dx:
+                err += dx
+                y0 += sy
+
+    axis_color = (0, 0, 0)
+    line_color = (0, 70, 180)
+
+    x_axis_y = height - margin_bottom
+    y_axis_x = margin_left
+    draw_line(y_axis_x, margin_top, y_axis_x, x_axis_y, axis_color)
+    draw_line(y_axis_x, x_axis_y, width - margin_right, x_axis_y, axis_color)
+
+    points = []
+    denominator = max(len(y_values) - 1, 1)
+    for idx, count in enumerate(y_values):
+        x = margin_left + round((idx / denominator) * plot_width)
+        y = x_axis_y - round((count / max_y) * plot_height)
+        points.append((x, y))
+
+    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+        draw_line(x0, y0, x1, y1, line_color)
+    for x, y in points:
+        for px in range(x - 2, x + 3):
+            for py in range(y - 2, y + 3):
+                set_pixel(px, py, line_color)
+
+    raw_rows = bytearray()
+    row_bytes = width * 3
+    for row_start in range(0, len(pixels), row_bytes):
+        raw_rows.append(0)
+        raw_rows.extend(pixels[row_start : row_start + row_bytes])
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + _png_chunk(b"IHDR", ihdr)
+        + _png_chunk(b"IDAT", zlib.compress(bytes(raw_rows), level=9))
+        + _png_chunk(b"IEND", b"")
+    )
+    with open(path, "wb") as out_fh:
+        out_fh.write(png)
 
 
 class ContaminationEstimator:
@@ -143,15 +233,19 @@ class ContaminationEstimator:
         highpoint = 0
         af_at_highpoint = 0
         bin_at_highpoint = 0
+        xdata = []
+        ydata = []
         with open(dist_file, "w") as out_fh:
             for af_count in sorted(distri):
                 count = distri[af_count]["COUNT"]
+                xdata.append(distri[af_count]["MEAN"])
+                ydata.append(count)
                 if count / mean_bincount >= 3.5 and count > highpoint and count > self.binsize_cutoff:
                     highpoint = count
                     af_at_highpoint = distri[af_count]["MEAN"]
                     bin_at_highpoint = af_count
                 out_fh.write(f"{af_count}\t{count}\t{distri[af_count]['MEAN']}\n")
-        write_placeholder_png(f"{output_id}.png")
+        write_line_plot_png(f"{output_id}.png", xdata, ydata)
         return af_at_highpoint, bin_at_highpoint
 
     @staticmethod
@@ -269,6 +363,7 @@ def estimate_contamination(vcf_file, case_id, check_normal, detect_level, ad_fie
             out_fh.write(message)
         if num_bins == 0:
             out_fh.write("0.0\n")
+            Path(f"{output_id}.dist.txt").touch()
             Path(f"{output_id}.png").touch()
             return
 
