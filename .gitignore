@@ -33,3 +33,4 @@ container/containers.yml
 bin/__pycache__/
 __pycache__
 .internal/
+configs/nextflow.test.config

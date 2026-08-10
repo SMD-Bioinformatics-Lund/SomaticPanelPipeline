@@ -9,8 +9,10 @@ include { BQSR_UMI               } from '../../modules/local/sentieon/main'
 
 
 workflow ALIGN_SENTIEON {
-    take: 
+    take:
         fastq_input         // channel: [mandatory] [ val(group), val(meta), [ reads ] ]
+        alt_bam_path        // channel: [optional]  [ val(group), val(meta), file(bam), file(bai) ]
+        meta                // channel: [mandatory] [ val(group), val(meta) ]
 
     main:
         ch_versions = Channel.empty()
@@ -30,7 +32,7 @@ workflow ALIGN_SENTIEON {
         MARKDUP ( LOCUS_COLLECTOR.out.score )
         ch_versions = ch_versions.mix(MARKDUP.out.versions)
 
-        BQSR_UMI ( BWA_UMI.out.bam_umi )
+        BQSR_UMI ( BWA_UMI.out.bam_umi.mix(alt_bam_path) )
         ch_versions = ch_versions.mix(BQSR_UMI.out.versions)
 
     emit:

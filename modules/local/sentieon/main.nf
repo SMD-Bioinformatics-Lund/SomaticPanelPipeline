@@ -429,3 +429,45 @@ process TNSCOPE {
         END_VERSIONS
         """
 }
+
+process DNASCOPE {
+    label "process_medium"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bai), file(bqsr)
+
+    output:
+        tuple val(group), val(meta), file("*.vcf.gz"), file("*.vcf.gz.tbi"), emit: normal_germline
+        path "versions.yml",                                                emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ''
+        """
+        sentieon driver $args \\
+            -i $bam \\
+            --interval ${params.regions_bed} \\
+            -q $bqsr \\
+            --algo DNAscope \\
+            ${meta.id}.dnascope.vcf.gz
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+
+    stub:
+        """
+        touch ${meta.id}.dnascope.vcf.gz
+        touch ${meta.id}.dnascope.vcf.gz.tbi
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+}

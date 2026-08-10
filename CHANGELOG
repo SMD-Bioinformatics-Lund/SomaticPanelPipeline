@@ -1,6 +1,8 @@
 ## Changelog ##
 
 ## v3.3.0
+- Massive `SomaticPanelPipeline_2021-06-24.sif` container has been split into its respective individual containers which is easy to update and maintain.
+- Merged main-branch 3.2.0-3.2.4 updates into the split-module branch, including reference validation, QC-only workflow entry updates, normal germline DNAscope calling, and Peddy sex-check/CDM outputs.
 - Modernized the pipeline module structure so major command chains are split into smaller, easier-to-maintain DSL2 processes with dedicated containers and clearer process names.
 - Refactored SNV calling and annotation steps for FreeBayes, VarDict, Pindel, VEP post-processing, germline marking, CNVkit germline preparation, and VCF normalization while preserving the established published output names.
 - Restored the full FreeBayes post-call chain as separate processes: LowCov filtering, LowFrq filtering, genotype cleanup, somatic/unpaired filtering, and FORMAT/AD removal.
@@ -12,8 +14,27 @@
 - Removed unused local process definitions and retired unused nf-core module copies that are no longer part of the active workflow graph.
 - Preserved existing result folders and published file names where outputs are user-facing, while keeping newly introduced intermediate split outputs unpublished.
 
+### 3.2.4
+- Clean up nextflow.hopper.config
+- Removed default profile, we never run without -profile anyway
+- input validation for references
+
+## 3.2.3
+- QC: New entry separate from the main SPP entry point.
+  - Calls a minimized pipeline to only get QC from sample
+  - alignment + freebayes calling for QC parameters
+  - should be called from a bjorn workflow for tumors waiting for normals
+
+## 3.2.2
+- Hotfix for indentation for peddy version output
+
+## 3.2.1
+- fixed the missing versions output emitted from the CONTAMINATION process in vcf_qc
+
 ## v3.2.0
-- Massive `SomaticPanelPipeline_2021-06-24.sif` container has been split into its respective individual containers which is easy to update and maintain.
+- Added sex check as vcf qc
+- bam start for dev work only
+- germline calling for normal bam
 
 ## v3.1.17
 - Fixed CNVkit call step to skip optional Nexus OGT BAF/LogR export when the input VCF has no variant records.

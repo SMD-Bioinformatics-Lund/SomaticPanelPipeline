@@ -8,6 +8,7 @@ include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sent
 include { PHARMACOGENOMICS              } from '../modules/local/pharmacogenomics/main'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
 include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
+include { SNV_ANNOTATE_GERMLINE         } from '../subworkflows/local/snv_annotate_germline'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { BAM_QC                        } from '../subworkflows/local/bam_qc'
@@ -16,6 +17,7 @@ include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
 include { FUSIONS                       } from '../subworkflows/local/fusions'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
+include { VALIDATE_PARAMETERS           } from '../subworkflows/local/validate_params.nf'
 
 csv = file(params.csv)
 
@@ -44,14 +46,19 @@ workflow SPP_COMMON {
     // Checks input, creates meta-channel and decides whether data should be downsampled //
     CHECK_INPUT ( Channel.fromPath(csv), params.paired )
 
+    parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
+    VALIDATE_PARAMETERS(parameters_to_validate)
+
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
     .set{ ch_trim }
     ch_versions = ch_versions.mix(ch_trim.versions)
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
-    ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim
+    ALIGN_SENTIEON (
+        ch_trim.fastq_trim,
+        CHECK_INPUT.out.bam,
+        CHECK_INPUT.out.meta
     )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
@@ -70,11 +77,10 @@ workflow SPP_COMMON {
     )
     .set { pgx_files }
 
-    SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+    SNV_CALLING (
+        ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
-        // CHECK_INPUT.out.meta,
         ch_qc.melt_qc,
         ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
@@ -88,9 +94,21 @@ workflow SPP_COMMON {
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
 
+    SNV_ANNOTATE_GERMLINE (
+        ch_vcf.normal_germline,
+        CHECK_INPUT.out.meta
+    )
+    .set { ch_vcf_germline_anno }
+    ch_versions = ch_versions.mix(ch_vcf_germline_anno.versions)
+
     VCF_QC (
         ch_vcf_anno.vep_vcf,
+        ch_vcf_anno.germline_variants,
+        ch_vcf.normal_germline,
+        CHECK_INPUT.out.meta
     )
+    .set { ch_qc_vcf }
+    ch_versions = ch_versions.mix(ch_qc_vcf.versions)
 
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
@@ -174,4 +192,23 @@ workflow.onComplete {
     logFile = file("${params.resultsdir}/cron/logs/" + base + ".complete")
     logFile.text = msg
     logFile.append(error)
+}
+
+workflow.onError {
+
+    def msg = """\
+    Success     : ${workflow.success}
+    scriptFile  : ${workflow.scriptFile}
+    workDir     : ${workflow.workDir}
+    csv         : ${params.csv}
+    errorMessage: ${workflow.errorMessage}
+    """
+    def base = file(params.csv).getBaseName()
+    File logFile = new File("${params.resultsdir}/cron/logs/" + base + ".complete")
+    if ( !logFile.exists() ) {
+        if (!logFile.getParentFile().exists()) {
+            logFile.getParentFile().mkdirs()
+        }
+        logFile.text = msg
+    }
 }

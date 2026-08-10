@@ -9,6 +9,7 @@ include { ANNOTATE as FREEBAYES_REMOVE_AD      } from '../../modules/local/bcfto
 include { VARDICT                               } from '../../modules/local/vardict/main'
 include { FILTER_VARDICT                        } from '../../modules/local/filters/main'
 include { TNSCOPE                               } from '../../modules/local/sentieon/main'
+include { DNASCOPE                              } from '../../modules/local/sentieon/main'
 include { PINDEL_CONFIG                         } from '../../modules/local/pindel/main'
 include { PINDEL_CALL                           } from '../../modules/local/pindel/main'
 include { PINDEL_TO_VCF                         } from '../../modules/local/pindel/main'
@@ -39,6 +40,10 @@ workflow SNV_CALLING {
 
     main:
         ch_versions = Channel.empty()
+        paired_calling_ch = bam_umi.groupTuple()
+        normal_bam_umi = bam_umi.filter { group, meta, bam, bai, bqsr ->
+            meta.type == 'N' || meta.type == 'normal'
+        }
 
         // Pindel
         PINDEL_CONFIG ( dedup_bam_is_metrics )
@@ -53,7 +58,7 @@ workflow SNV_CALLING {
 
         // Variantcallers //
         // split by bed-file to speed up calling //
-        FREEBAYES ( bam_umi, beds)
+        FREEBAYES ( paired_calling_ch, beds)
         FREEBAYES_FILTER_LOWCOV ( FREEBAYES.out.vcfparts_freebayes )
         FREEBAYES_FILTER_LOWFRQ ( FREEBAYES_FILTER_LOWCOV.out.filtered_vcf )
         FREEBAYES_VCFGLXGT ( FREEBAYES_FILTER_LOWFRQ.out.filtered_vcf )
@@ -66,15 +71,17 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(FILTER_FREEBAYES.out.versions.first())
         ch_versions         = ch_versions.mix(FREEBAYES_REMOVE_AD.out.versions.first())
 
-        VARDICT ( bam_umi, beds)
+        VARDICT ( paired_calling_ch, beds)
         FILTER_VARDICT ( VARDICT.out.raw_vcfparts_vardict )
         ch_versions         = ch_versions.mix(VARDICT.out.versions.first())
         ch_versions         = ch_versions.mix(FILTER_VARDICT.out.versions.first())
 
-        TNSCOPE ( bam_umi, beds)
+        TNSCOPE ( paired_calling_ch, beds)
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 
+        DNASCOPE ( normal_bam_umi )
+        ch_versions         = ch_versions.mix(DNASCOPE.out.versions)
 
         //TODO: THis is not run by any profile, should we remove this?
         MELT ( bam_dedup.join(qc_values, by:[0,1])  )
@@ -245,8 +252,9 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(BT_AGG.out.versions.first())
 
     emit:
-        concat_vcfs =   BCFTOOLS_NORM_EXACT.out.normalized_vcfs             // channel: [ val(group), val(meta), val(vc), file(vcf.gz), file(vcf.gz.tbi) ]
-        agg_vcf     =   ch_agg_vcf_sorted_meta                              // channel: [ val(group), val(meta), file(agg.vcf) ]
-        versions    =   ch_versions                                         // channel: [ file(versions) ]
+        concat_vcfs      =   BCFTOOLS_NORM_EXACT.out.normalized_vcfs             // channel: [ val(group), val(meta), val(vc), file(vcf.gz), file(vcf.gz.tbi) ]
+        agg_vcf          =   ch_agg_vcf_sorted_meta                              // channel: [ val(group), val(meta), file(agg.vcf) ]
+        normal_germline  =   DNASCOPE.out.normal_germline                        // channel: [ val(group), val(meta), file(vcf.gz), file(vcf.gz.tbi) ]
+        versions         =   ch_versions                                         // channel: [ file(versions) ]
 
 }
