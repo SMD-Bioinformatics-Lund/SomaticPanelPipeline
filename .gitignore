@@ -32,3 +32,4 @@ container/sif/*sif
 container/containers.yml
 bin/__pycache__/
 __pycache__
+.internal/

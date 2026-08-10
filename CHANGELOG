@@ -1,7 +1,16 @@
 ## Changelog ##
 
 ## v3.3.0
-- Converted perl scripts to python scripts. Perl scipts are not removed from the bin folder yet
+- Modernized the pipeline module structure so major command chains are split into smaller, easier-to-maintain DSL2 processes with dedicated containers and clearer process names.
+- Refactored SNV calling and annotation steps for FreeBayes, VarDict, Pindel, VEP post-processing, germline marking, CNVkit germline preparation, and VCF normalization while preserving the established published output names.
+- Restored the full FreeBayes post-call chain as separate processes: LowCov filtering, LowFrq filtering, genotype cleanup, somatic/unpaired filtering, and FORMAT/AD removal.
+- Moved reusable command steps into their tool modules, including `vcffilter`/`vcfglxgt` in the vcflib module and `bcftools annotate` in the bcftools module.
+- Refactored CNV calling into dedicated CNVkit and GATK subworkflows, with command-specific processes for calling, plotting, exporting, filtering, merging, and GENS/CDM preparation.
+- Refactored BAM/VCF QC steps for panel depth, low-coverage reporting, ID-SNP genotyping, contamination reporting, and CDM handoff so intermediate files remain internal unless they were previously published deliverables.
+- Converted several legacy Perl utilities to Python equivalents with explicit output files, while keeping the Perl scripts in `bin/` for traceability during the transition.
+- Simplified Coyote, SVDB, GATK merge/filter, CNVkit GENS merge, and annotation helper steps to reduce inline shell logic in Nextflow process blocks.
+- Removed unused local process definitions and retired unused nf-core module copies that are no longer part of the active workflow graph.
+- Preserved existing result folders and published file names where outputs are user-facing, while keeping newly introduced intermediate split outputs unpublished.
 
 ## v3.2.0
 - Massive `SomaticPanelPipeline_2021-06-24.sif` container has been split into its respective individual containers which is easy to update and maintain.
