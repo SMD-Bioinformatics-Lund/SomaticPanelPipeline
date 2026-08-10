@@ -35,8 +35,7 @@ workflow SPP_CREATE_SNVPON {
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta
+        ch_trim.fastq_trim
     )
     .set { ch_mapped } 
     ch_versions = ch_versions.mix(ch_mapped.versions)
@@ -45,9 +44,9 @@ workflow SPP_CREATE_SNVPON {
         ch_mapped.bam_umi.groupTuple(),
         ch_mapped.bam_dedup,
         beds,
-        CHECK_INPUT.out.meta,
-        Channel.of(tuple(1,2)),
-        Channel.of(tuple(1,2))
+        // CHECK_INPUT.out.meta,
+        Channel.of(tuple(1,5)),
+        Channel.of(tuple(1,5))
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)

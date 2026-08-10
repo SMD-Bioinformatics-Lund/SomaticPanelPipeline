@@ -22,7 +22,7 @@ process CNVKITREF {
             --targets ${bedfile} \\
             $args \\
             --output-reference ${prefix}_cnvkit_${part}.cnn \\
-            --output-dir results/ 
+            --output-dir results/
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -60,7 +60,7 @@ process CNVKIT_BATCH {
         tuple val(group), val(meta), file("*.${part}.cns"), val(part),  emit: cnvkit_cns
         tuple val(group), val(meta), file("*.${part}.cnr"), val(part),  emit: cnvkit_cnr
         path "versions.yml",                                            emit: versions
-        
+
     when:
         task.ext.when == null || task.ext.when
 
@@ -83,7 +83,7 @@ process CNVKIT_BATCH {
     stub:
         def prefix  = task.ext.prefix ?: "${group}.${meta.id}"
         """
-        touch ${prefix}.${part}.cns 
+        touch ${prefix}.${part}.cns
         touch ${prefix}.${part}.cnr
 
         echo $reference
@@ -102,7 +102,7 @@ process CNVKIT_PLOT {
     label "stage"
     label "scratch"
     tag "${meta.id}"
-    
+
     input:
         tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
 
@@ -148,19 +148,18 @@ process CNVKIT_GENS {
         tuple val(group), val(meta), file(cnr), val(part), file(vcf), file(tbi)
 
     output:
-        tuple val(group), val(meta), file("*.${part}.baf.bed.gz"), file("*.${part}.cov.bed.gz"),    emit: cnvkit_gens
-        path "versions.yml",                                                                        emit: versions
-        
+        tuple val(group), val(meta), val(part), file("*.${part}.baf.bed"), file("*.${part}.cov.bed"), emit: cnvkit_gens
+        path "versions.yml",                                                                         emit: versions
+
     when:
         task.ext.when == null || task.ext.when
 
     script:
         def args    = task.ext.args   ?: ''
         def prefix  = task.ext.prefix ?: "${meta.id}"
+        def out_prefix = part ? "${prefix}.${part}" : "${prefix}"
         """
-        generate_gens_data_from_cnvkit.py --cnr $cnr --vcf $vcf --sample-id ${meta.id} --out-prefix ${prefix}
-        mv ${meta.id}.baf.bed.gz ${prefix}.${part}.baf.bed.gz
-        mv ${meta.id}.cov.bed.gz ${prefix}.${part}.cov.bed.gz
+        generate_gens_data_from_cnvkit.py --cnr $cnr --vcf $vcf --sample-id ${meta.id} --baf-out ${out_prefix}.baf.bed --cov-out ${out_prefix}.cov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -171,10 +170,10 @@ process CNVKIT_GENS {
 
     stub:
         def prefix  = task.ext.prefix ?: "${meta.id}"
+        def out_prefix = part ? "${prefix}.${part}" : "${prefix}"
         """
-        touch ${prefix}.${part}.baf.bed.gz 
-        touch ${prefix}.${part}.cov.bed.gz 
-        touch ${prefix}.gens
+        touch ${out_prefix}.baf.bed
+        touch ${out_prefix}.cov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -189,13 +188,115 @@ process CNVKIT_CALL {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), val(part), file(cns), file(cnr), file(vcf), file(tbi)
+        tuple val(group), val(meta), val(part), file(cns), file(vcf), file(tbi)
         val (tc)
 
     output:
-        tuple val(group), val(meta), val(part), file("*.${part}.call*.cns"),            emit: cnvkitsegment
+        tuple val(group), val(meta), val(part), file("*.${part}.call*.cns"),    emit: cnvkitsegment
+        path "versions.yml",                                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args     = task.ext.args ?: ""
+        def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
+
+        call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns"
+        if (meta.purity && tc == "true") {
+            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns"
+        }
+
+        """
+        export MPLCONFIGDIR="\$PWD/.matplotlib"
+        mkdir -p "\$MPLCONFIGDIR"
+
+        $call
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
+
+        call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns"
+        if (meta.purity && tc == "true") {
+            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns"
+        }
+
+        """
+        echo $call
+        touch ${prefix}.${part}.call.purity.cns
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+        END_VERSIONS
+        """
+}
+
+process CNVKIT_EXPORT_VCF {
+    label 'process_single'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), val(part), file(cns)
+
+    output:
+        tuple val(group), val(meta), val(part), file("*.${part}.cnvkit.vcf"),   emit: cnvkit_vcf
+        path "versions.yml",                                                    emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args        = task.ext.args     ?: ""
+        def prefix      = task.ext.prefix   ?: "${meta.id}.${meta.type}"
+
+        """
+        export MPLCONFIGDIR="\$PWD/.matplotlib"
+        mkdir -p "\$MPLCONFIGDIR"
+
+        cnvkit.py export vcf ${cns} -i '${meta.id}' ${args} > ${prefix}.${part}.cnvkit.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+        END_VERSIONS
+        """
+
+    stub:
+        def args        = task.ext.args     ?: ""
+        def prefix      = task.ext.prefix   ?: "${meta.id}.${meta.type}"
+
+        """
+        echo "cnvkit.py export vcf ${cns} -i '${meta.id}' ${args} > ${prefix}.${part}.cnvkit.vcf"
+        touch ${prefix}.${part}.cnvkit.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+        END_VERSIONS
+        """
+}
+
+
+process CNVKIT_EXPORT_NEXUS_OGT {
+    label 'process_single'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), val(part), file(cnr), file(vcf), file(tbi)
+
+    output:
         tuple val(group), val(meta), val(part), file("*.${part}_logr_ballele.cnvkit"),  emit: cnvkit_baflogr, optional: true
-        tuple val(group), val(meta), val(part), file("*.${part}.cnvkit.vcf"),           emit: cnvkit_vcf
         path "versions.yml",                                                            emit: versions
 
     when:
@@ -204,21 +305,10 @@ process CNVKIT_CALL {
     script:
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
-        def prefix2  = task.ext.prefix2 ?: "${meta.id}.${meta.type}"
-
-        call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns"
-        callvcf = "cnvkit.py export vcf ${prefix}.${part}.call.cns -i '${meta.id}' > ${prefix2}.${part}.cnvkit.vcf"
-        if (meta.purity && tc == "true") {
-            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns"
-            callvcf = "cnvkit.py export vcf ${prefix}.${part}.call.purity.cns -i '${meta.id}' > ${prefix2}.${part}.cnvkit.vcf"
-        }
 
         """
         export MPLCONFIGDIR="\$PWD/.matplotlib"
         mkdir -p "\$MPLCONFIGDIR"
-        
-        $call
-        $callvcf
 
         if zcat -f ${vcf} | grep -qv '^#'; then
             cnvkit.py export nexus-ogt \
@@ -238,18 +328,9 @@ process CNVKIT_CALL {
 
     stub:
         def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
-        def prefix2  = task.ext.prefix2 ?: "${meta.id}.${meta.type}"
-
-        call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns \\ cnvkit.py export vcf ${prefix}.${part}.call.cns -i '${meta.id}' > ${prefix2}.${part}.vcf"
-        if (meta.purity && tc == "true") {
-            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns \\ cnvkit.py export vcf ${prefix}.${part}.call.purity.cns -i '${meta.id}' > ${prefix2}.${part}.vcf"
-        }
 
         """
-        echo $call
-        touch ${prefix}.${part}.call.purity.cns
-        touch ${prefix}.${part}_logr_ballele.cnvkit 
-        touch ${prefix2}.${part}.cnvkit.vcf
+        touch ${prefix}.${part}_logr_ballele.cnvkit
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -261,7 +342,6 @@ process CNVKIT_CALL {
 
 process MERGE_GENS {
     label 'process_single'
-    // THIS PROCESS SUCKS, please fix.
     input:
         tuple val(group), val(meta), file(baf), file(cov)
 
@@ -274,77 +354,47 @@ process MERGE_GENS {
 
     when:
         task.ext.when == null || task.ext.when
-    
+
     script:
         process_group = group
         if ( meta.paired ) {
             process_group = group + 'p'
         }
-        def args     = task.ext.args ?: ""
+        def args     = task.ext.args ?: ''
         def prefix   = task.ext.prefix ?: "${meta.id}"
 
-    shell:
-        '''
-        if !{params.cnvkit_split} == true
-        then
-        for i in $( ls *.cov.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.cov.bed ; done
-            bedtools sort -i !{meta.id}.base.cov.bed > !{meta.id}.base.cov.bed.sort
-            sed 's/^/o_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-            sed 's/^/a_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-            sed 's/^/b_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-            sed 's/^/c_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-            sed 's/^/d_/' !{meta.id}.base.cov.bed.sort >> !{meta.id}.merged.cov.bed
-            bedtools sort -i !{meta.id}.merged.cov.bed > !{meta.id}.merged.sorted.cov.bed
-            bgzip !{meta.id}.merged.sorted.cov.bed
-            tabix !{meta.id}.merged.sorted.cov.bed.gz
-            for i in $( ls *.baf.bed.gz ); do zgrep "^o_" $i | sed 's/o_//' >> !{meta.id}.base.baf.bed ; done
-            bedtools sort -i !{meta.id}.base.baf.bed > !{meta.id}.base.baf.bed.sort
-            sed 's/^/o_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-            sed 's/^/a_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-            sed 's/^/b_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-            sed 's/^/c_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-            sed 's/^/d_/' !{meta.id}.base.baf.bed.sort >> !{meta.id}.merged.baf.bed
-            bedtools sort -i !{meta.id}.merged.baf.bed > !{meta.id}.merged.sorted.baf.bed
-            bgzip !{meta.id}.merged.sorted.baf.bed
-            tabix !{meta.id}.merged.sorted.baf.bed.gz
-            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens
-
-            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type !{meta.type} --baf !{params.gens_accessdir}/!{meta.id}.merged.sorted.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.merged.sorted.cov.bed.gz" > !{meta.id}.gens_v4_somatic
-        else
-            tabix !{meta.id}.full.baf.bed.gz
-            tabix !{meta.id}.full.cov.bed.gz
-            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens
-
-            echo "gens load sample --sample-id !{meta.id} --case-id !{process_group} --genome-build 38 --sample-type !{meta.type} --baf !{params.gens_accessdir}/!{meta.id}.full.baf.bed.gz --coverage !{params.gens_accessdir}/!{meta.id}.full.cov.bed.gz" > !{meta.id}.gens_v4_somatic
-        fi
+        """
+        merge_gens.sh \\
+            --sample-id ${meta.id} \\
+            --case-id ${process_group} \\
+            --sample-type ${meta.type} \\
+            --gens-accessdir ${params.gens_accessdir} \\
+            --prefix ${prefix} \\
+            ${args}
 
         cat <<-END_VERSIONS > versions.yml
-        "!{task.process}":
-            bedtools: $(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: $(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: $(echo $(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*$//')
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
+            bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
+            tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
         END_VERSIONS
-        '''
+        """
 
     stub:
         process_group = group
         if ( meta.paired ) {
             process_group = group + 'p'
         }
-        if ( params.cnvkit_split ) {
-            filename_mod = "merged.sorted"
-        } else {
-            filename_mod = "full"
-        }
-        def args     = task.ext.args ?: ""
+        def args     = task.ext.args ?: ''
+        def filename_mod = args.contains('--split') ? "merged.sorted" : "full"
         def prefix   = task.ext.prefix ?: "${meta.id}"
         """
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --baf ${params.gens_accessdir}/${meta.id}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.${filename_mod}.cov.bed.gz" > ${meta.id}.gens
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --baf ${params.gens_accessdir}/${prefix}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${prefix}.${filename_mod}.cov.bed.gz" > ${prefix}.gens
 
-        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${meta.id}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${meta.id}.${filename_mod}.cov.bed.gz" > ${meta.id}.gens_v4_somatic
-        
-        touch ${meta.id}.${filename_mod}.cov.bed.gz 
-        touch ${meta.id}.${filename_mod}.baf.bed.gz 
+        echo "gens load sample --sample-id ${meta.id} --case-id ${process_group} --genome-build 38 --sample-type ${meta.type} --baf ${params.gens_accessdir}/${prefix}.${filename_mod}.baf.bed.gz --coverage ${params.gens_accessdir}/${prefix}.${filename_mod}.cov.bed.gz" > ${prefix}.gens_v4_somatic
+
+        touch ${prefix}.${filename_mod}.cov.bed.gz
+        touch ${prefix}.${filename_mod}.baf.bed.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

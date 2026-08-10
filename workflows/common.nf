@@ -51,8 +51,7 @@ workflow SPP_COMMON {
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta
+        ch_trim.fastq_trim
     )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
@@ -75,7 +74,7 @@ workflow SPP_COMMON {
         ch_mapped.bam_umi.groupTuple(),
         ch_mapped.bam_dedup,
         beds,
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_qc.melt_qc,
         ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
@@ -85,7 +84,6 @@ workflow SPP_COMMON {
     SNV_ANNOTATE (
         ch_vcf.agg_vcf,
         ch_vcf.concat_vcfs,
-        CHECK_INPUT.out.meta
     )
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
@@ -97,7 +95,7 @@ workflow SPP_COMMON {
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
         ch_vcf_anno.germline_variants,
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup,
         gatk_ref
     )
@@ -107,7 +105,7 @@ workflow SPP_COMMON {
     CNV_ANNOTATE (
         ch_cnvcalled.tumor_vcf,
         ch_cnvcalled.normal_vcf,
-        CHECK_INPUT.out.meta
+        // CHECK_INPUT.out.meta
     )
     .set { ch_cnv }
     ch_versions = ch_versions.mix(ch_cnv.versions)
@@ -115,14 +113,14 @@ workflow SPP_COMMON {
 
     FUSIONS (
         ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup
     )
     .set { ch_fusion }
     ch_versions = ch_versions.mix(ch_fusion.versions)
 
     BIOMARKERS (
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_cnvcalled.cnvkit_hrd,
         ch_mapped.bam_umi, 
         ch_mapped.bam_dedup
@@ -133,8 +131,8 @@ workflow SPP_COMMON {
 
     ADD_TO_DB (
         ch_vcf_anno.finished_vcf,
-        ch_qc.lowcov.filter { item -> item[1] == 'T' },
-        ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
+        ch_qc.lowcov.filter { item -> item[2] == 'T' },
+        ch_qc.lowcov_d4.filter { item -> item[2] == 'T' },
         ch_cnv.segments,
         ch_cnv.s_json,
         ch_cnvcalled.gens,

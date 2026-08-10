@@ -1,6 +1,7 @@
 #!/usr/bin/env nextflow
 
 include { CONTAMINATION            } from '../../modules/local/qc/main'
+include { CONTAMINATION_CDM        } from '../../modules/local/qc/main'
 
 workflow VCF_QC {
     take:        
@@ -11,9 +12,11 @@ workflow VCF_QC {
 
         CONTAMINATION { vep_vcf }
         ch_versions = ch_versions.mix(CONTAMINATION.out.versions)
+
+        CONTAMINATION_CDM { CONTAMINATION.out.contamination_values }
         
     emit:
-        qcdone                  =   CONTAMINATION.out.contamination_cdm                  // channel: [ tuple val(group), file("dist.txt"), file("sampleid.png") ]
+        qcdone                  =   CONTAMINATION_CDM.out.contamination_cdm              // channel: [ tuple val(group), file("dist.txt"), file("sampleid.png") ]
         results                 =   CONTAMINATION.out.contamination_result_files         // channel: [ val(group), val(meta), file(cdm) ]
 
 }

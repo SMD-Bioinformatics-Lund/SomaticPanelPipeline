@@ -50,8 +50,7 @@ workflow LYMPH_GMS {
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta
+        ch_trim.fastq_trim
     )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
@@ -66,7 +65,7 @@ workflow LYMPH_GMS {
     SNV_CALLING ( 
         ch_mapped.bam_umi.groupTuple(),
         beds,
-        CHECK_INPUT.out.meta
+        // CHECK_INPUT.out.meta
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
@@ -74,7 +73,6 @@ workflow LYMPH_GMS {
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
         ch_vcf.germline_variants,
-        CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup,
         gatk_ref
     )

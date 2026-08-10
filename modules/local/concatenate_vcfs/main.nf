@@ -94,12 +94,11 @@ process AGGREGATE_VCFS {
     tag "$group"
 
     input:
-        tuple val(group), val(vc), file(vcfs), val(meta)
-        val(norm_sw)
+        tuple val(group), val(meta), file(vcfs)
 
     output:
-        tuple val(group), val(meta), file("*${norm_sw}.agg.vcf"), emit: vcf_concat
-        path "versions.yml",                                      emit: versions
+        tuple val(group), val(meta), file("*.agg.unsorted.vcf"),    emit: vcf_agg
+        path "versions.yml",                                        emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -115,12 +114,11 @@ process AGGREGATE_VCFS {
         }
 
         """
-        aggregate_vcf.py --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} --out ${prefix}.${norm_sw}.agg.vcf1
-        vcf-sort -c ${prefix}.${norm_sw}.agg.vcf1 > ${prefix}.${norm_sw}.agg.vcf
+        aggregate_vcf.py --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} --out ${prefix}.agg.unsorted.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
         END_VERSIONS
         """
 
@@ -137,7 +135,7 @@ process AGGREGATE_VCFS {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+                python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
         }
@@ -147,7 +145,7 @@ process AGGREGATE_VCFS {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+                python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
         }

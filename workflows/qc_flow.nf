@@ -45,8 +45,7 @@ workflow SPP_QC {
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta
+        ch_trim.fastq_trim
     )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
@@ -63,7 +62,7 @@ workflow SPP_QC {
         ch_mapped.bam_umi.groupTuple(),
         ch_mapped.bam_dedup,
         beds,
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_qc.melt_qc,
         ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
@@ -73,7 +72,7 @@ workflow SPP_QC {
     SNV_ANNOTATE (
         ch_vcf.agg_vcf,
         ch_vcf.concat_vcfs,
-        CHECK_INPUT.out.meta
+        // CHECK_INPUT.out.meta
     )
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)

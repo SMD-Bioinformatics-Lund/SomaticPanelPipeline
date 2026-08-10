@@ -12,7 +12,7 @@ process PINDEL_CONFIG {
         (task.ext.when == null || task.ext.when) && !meta.ffpe.contains(true)
 
     script:
-        def prefix	= task.ext.prefix	?:  "${group}" 
+        def prefix	= task.ext.prefix	?:  "${group}"
 
         if( meta.id.size() >= 2 ) {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
@@ -59,20 +59,16 @@ process PINDEL_CALL {
         tuple val(group), val(meta), file(pindel_config)
 
     output:
-        tuple val(group), val("pindel"), file("*_pindel.vcf"),  emit: pindel_vcf
-        path "versions.yml",                                    emit: versions
+        tuple val(group), val(meta), file("tmpout*"),    emit: pindel_raw
+        path "versions.yml",                            emit: versions
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
-        def args    = task.ext.args     ?: ''
-        def args2   = task.ext.args2	?: ''
-        def prefix	= task.ext.prefix	?:  "${group}" 
+        def args = task.ext.args ?: ''
         """
         pindel $args -i $pindel_config -o tmpout -T ${task.cpus}
-        pindel2vcf $args2 -P tmpout -v ${prefix}_pindel_unfilt.vcf
-        filter_pindel_somatic.py --vcf ${prefix}_pindel_unfilt.vcf --out ${prefix}_pindel.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -81,9 +77,8 @@ process PINDEL_CALL {
         """
 
     stub:
-        def prefix	= task.ext.prefix	?:  "${group}" 
         """
-        touch ${prefix}_pindel.vcf
+        touch tmpout_D
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -92,3 +87,40 @@ process PINDEL_CALL {
         """
 }
 
+process PINDEL_TO_VCF {
+    label "process_medium"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), file(pindel_raw)
+
+    output:
+        tuple val(group), val(meta), val("pindel"), file("*_pindel_unfilt.vcf"),    emit: pindel_vcf_unfiltered
+        path "versions.yml",                                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args    = task.ext.args     ?: ''
+        def prefix  = task.ext.prefix   ?: "${group}"
+        """
+        pindel2vcf $args -P tmpout -v ${prefix}_pindel_unfilt.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            pindel: \$(echo \$(pindel --version 2>&1)  | grep 'Pindel version' | sed 's/.*Pindel version //' | sed 's/, .*//g')
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix  = task.ext.prefix   ?: "${group}"
+        """
+        touch ${prefix}_pindel_unfilt.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            pindel: \$(echo \$(pindel --version 2>&1)  | grep 'Pindel version' | sed 's/.*Pindel version //' | sed 's/, .*//g')
+        END_VERSIONS
+        """
+}

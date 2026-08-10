@@ -1,4 +1,4 @@
-process BWA_UMI {
+process UMI_CONSENSUS {
     label 'process_alot'
     label 'scratch'
     label 'stage'
@@ -8,9 +8,9 @@ process BWA_UMI {
         tuple val(group), val(meta), file(r1), file(r2)
 
     output:
-        tuple val(group), val(meta), file("${out_umi}"), file("${out_umi}.bai"),    emit: bam_umi
-        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),    emit: bam_umi_markdup
-        path "versions.yml",                                                        emit: versions
+        tuple val(group), val(meta), file("consensus.fastq.gz"),    emit: consensus_fastq
+        tuple val(group), val(meta), file("noumi.sam"),             emit: noumi_sam
+        path "versions.yml",                                        emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -19,42 +19,15 @@ process BWA_UMI {
         def args    = task.ext.args     ?: ''                       
         def args2   = task.ext.args2    ?: ''
         def args3   = task.ext.args3    ?: ''
-        def args4   = task.ext.args4    ?: ''
-        def args5   = task.ext.args5    ?: ''
-
-        out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
-        out_umi = meta.id+"."+meta.type+".bwa.umi.sort.bam"
-
-        if (meta.sub) {
-            submbp = params.sample_val / 1000000
-            submbp = submbp + "M"
-            out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.sort.bam"
-            out_umi = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
-        }
-
         """
         export skip_coord_end=true
-        
+
         sentieon umi extract $args $r1 $r2 \\
         | sentieon bwa mem \\
             -t ${task.cpus} \\
             $args2 - \\
         | tee -a noumi.sam \\
         | sentieon umi consensus $args3 -o consensus.fastq.gz
-
-        sentieon bwa mem \\
-            -t ${task.cpus} \\
-            $args4 \\
-            consensus.fastq.gz \\
-        | sentieon util sort -i - \\
-            -o ${out_umi} \\
-            $args5
-
-        sentieon util sort -i noumi.sam -o ${out_bam} --sam2bam
-
-        rm noumi.sam
-
-        touch dedup_metrics.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -64,18 +37,71 @@ process BWA_UMI {
         """
 
     stub:
-        out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
+        """
+        touch consensus.fastq.gz noumi.sam
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+            bwa: \$(echo \$(sentieon bwa 2>&1) | sed 's/^.*Version: //; s/Contact:.*\$//')
+        END_VERSIONS
+        """
+}
+
+process BWA_UMI {
+    label 'process_alot'
+    label 'scratch'
+    label 'stage'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(consensus_fastq)
+
+    output:
+        tuple val(group), val(meta), file("${out_umi}"), file("${out_umi}.bai"),    emit: bam_umi
+        path "versions.yml",                                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args    = task.ext.args     ?: ''
+        def args2   = task.ext.args2    ?: ''
+
         out_umi = meta.id+"."+meta.type+".bwa.umi.sort.bam"
 
         if (meta.sub) {
-            submbp  = params.sample_val / 1000000
-            submbp  = submbp + "M"
-            out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.sort.bam"
+            submbp = params.sample_val / 1000000
+            submbp = submbp + "M"
             out_umi = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
         }
 
         """
-        touch ${out_bam} ${out_bam}.bai
+        sentieon bwa mem \\
+            -t ${task.cpus} \\
+            $args \\
+            ${consensus_fastq} \\
+        | sentieon util sort -i - \\
+            -o ${out_umi} \\
+            $args2
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+            bwa: \$(echo \$(sentieon bwa 2>&1) | sed 's/^.*Version: //; s/Contact:.*\$//')
+        END_VERSIONS
+        """
+
+    stub:
+        out_umi = meta.id+"."+meta.type+".bwa.umi.sort.bam"
+
+        if (meta.sub) {
+            submbp = params.sample_val / 1000000
+            submbp = submbp + "M"
+            out_umi = meta.id+"."+meta.type+"."+submbp+".bwa.umi.sort.bam"
+        }
+
+        """
         touch ${out_umi} ${out_umi}.bai
 
         cat <<-END_VERSIONS > versions.yml
@@ -86,26 +112,120 @@ process BWA_UMI {
         """
 }
 
-process MARKDUP {
-    label 'process_very_high'
+process BWA_SORT {
+    label 'process_alot'
     label 'scratch'
     label 'stage'
     tag "${meta.id}"
-    
+
     input:
-        tuple val(group), val(meta), file(bam), file(bai)
+        tuple val(group), val(meta), file(sam)
 
     output:
-        tuple val(group), val(meta), file("*dedup_metrics.txt"),                                                emit: dedup_metrics
-        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),                                emit: bam_qc
-        path "versions.yml",                                                                                    emit: versions
+        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"),    emit: sorted_bam
+        path "versions.yml",                                                        emit: versions
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
-        def args    = task.ext.args     ?: ""                       
-        def args2   = task.ext.args2    ?: ""
+        def args = task.ext.args ?: ''
+
+        out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
+
+        if (meta.sub) {
+            submbp = params.sample_val / 1000000
+            submbp = submbp + "M"
+            out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.sort.bam"
+        }
+
+        """
+        sentieon util sort -i ${sam} -o ${out_bam} $args
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+
+    stub:
+        out_bam = meta.id+"."+meta.type+".bwa.sort.bam"
+
+        if (meta.sub) {
+            submbp = params.sample_val / 1000000
+            submbp = submbp + "M"
+            out_bam = meta.id+"."+meta.type+"."+submbp+".bwa.sort.bam"
+        }
+
+        """
+        touch ${out_bam} ${out_bam}.bai
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+}
+
+process LOCUS_COLLECTOR {
+    label 'process_very_high'
+    label 'scratch'
+    label 'stage'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bai)
+
+    output:
+        tuple val(group), val(meta),
+              file(bam), file(bai),
+              file("score.gz"), file("score.gz.tbi"), emit: score
+        path "versions.yml", emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ""
+        """
+        sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector $args
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+
+    stub:
+        """
+        touch score.gz score.gz.tbi
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
+        END_VERSIONS
+        """
+}
+
+process MARKDUP {
+    label 'process_very_high'
+    label 'scratch'
+    label 'stage'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), file(bam), file(bai), file(score), file(score_tbi)
+
+    output:
+        tuple val(group), val(meta), file("*dedup_metrics.txt"),                 emit: metrics
+        tuple val(group), val(meta), file("${out_bam}"), file("${out_bam}.bai"), emit: dedup_bam
+        path "versions.yml",                                                     emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args    = task.ext.args     ?: ""
         def prefix  = task.ext.prefix   ?: ""
 
         out_bam = meta.id+"."+meta.type+".dedup.bam"
@@ -116,8 +236,7 @@ process MARKDUP {
             out_bam = meta.id+"."+meta.type+"."+submbp+".dedup.bam"
         }
         """
-        sentieon driver -t ${task.cpus} -i $bam --algo LocusCollector $args
-        sentieon driver -t ${task.cpus} -i $bam --algo Dedup $args2 --metrics ${prefix}dedup_metrics.txt $out_bam
+        sentieon driver -t ${task.cpus} -i $bam --algo Dedup $args --metrics ${prefix}dedup_metrics.txt $out_bam
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -126,8 +245,6 @@ process MARKDUP {
         """
 
     stub:
-        def args    = task.ext.args     ?: ""                       
-        def args2   = task.ext.args2    ?: ""
         def prefix  = task.ext.prefix   ?: ""
 
         out_bam = meta.id+"."+meta.type+".dedup.bam"
@@ -157,7 +274,7 @@ process BQSR_UMI {
         tuple val(group), val(meta), file(bam), file(bai)
 
     output:
-        tuple val(group), val(meta), file(bam), file(bai), file("*.bqsr.table"),   emit: bam_varcall
+        tuple val(group), val(meta), file(bam), file(bai), file("*.bqsr.table"),   emit: bam_bqsr
         path "versions.yml",                                                       emit: versions
 
     when:
@@ -247,33 +364,6 @@ process SENTIEON_QC {
         """
 }
 
-process SENTIEON_QC_TO_CDM {
-    label 'process_low'
-
-    tag "${meta.id}"
-
-    input:
-        tuple val(group), val(meta), file(qc_files), file(cov_sample_summary), file(dedup)
-
-    output:
-        tuple val(group), val(meta), file("*_${meta.type}.QC"),                        emit: qc_cdm
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def prefix  = task.ext.prefix   ?: "${meta.id}"
-        """
-        qc_sentieon.pl ${meta.id}_${meta.type} panel > ${prefix}_${meta.type}.QC
-        """
-
-    stub:
-        def prefix  = task.ext.prefix   ?: "${meta.id}"
-        """
-        touch ${prefix}_${meta.type}.QC
-        """
-}
-
 process TNSCOPE {
     label "process_medium"
     tag "$group"
@@ -283,8 +373,8 @@ process TNSCOPE {
         each file(bed)
 
     output:
-        tuple val(group), val(meta), file("tnscope_${bed}.vcf.raw"),        emit: vcfparts_tnscope
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta), val("tnscope"), file("tnscope_${bed}.vcf.raw"),    emit: vcfparts_tnscope
+        path "versions.yml",                                                            emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -326,64 +416,12 @@ process TNSCOPE {
             "${task.process}":
                 sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
             END_VERSIONS
-            """ 
+            """
         }
 
     stub:
         """
         touch tnscope_${bed}.vcf.raw
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
-        END_VERSIONS
-        """
-}
-
-process FILTER_TNSCOPE {
-    label "process_medium"
-    tag "$group"
-
-    input:
-        tuple val(group), val(meta), file(vcf)
-
-    output:
-        tuple val("tnscope"), val(group), file("*.vcf"),                emit: vcfparts_tnscope_filtered
-        path "versions.yml",                                            emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args    = task.ext.args     ?: ''
-        def args2   = task.ext.args2    ?: ''
-
-        if( meta.id.size() >= 2 ) {
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            """
-            filter_tnscope_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out ${vcf}.vcf
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
-            END_VERSIONS
-            """
-        }
-        else if( meta.id.size() == 1 ) {
-            """
-            filter_tnscope_unpaired.py --vcf $vcf --out ${vcf}.vcf
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                sentieon: \$(echo \$(sentieon driver --version 2>&1) | sed -e "s/sentieon-genomics-//g")
-            END_VERSIONS
-            """ 
-        }
-
-    stub:
-        """
-        touch ${vcf}.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

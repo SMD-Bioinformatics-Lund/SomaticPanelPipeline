@@ -1,39 +1,44 @@
-process INTERSECT {
-    label "process_low"
-    label "stage"
-    label "scratch"
+process BEDTOOLS_INTERSECT {
+    label "process_single"
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(vcf)
-        val(intersect)
-        
+        tuple val(group), val(meta), val(vc), file(input_file)
+        path(intersect)
+
     output:
-        tuple val(group), val(meta), file("${prefix}.intersected.${suffix}"), emit: intersected
-        path "versions.yml",                                      emit: versions
+        tuple val(group), val(meta), file("${out_file}"),          emit: intersected
+        tuple val(group), val(meta), val(vc), file("${out_file}"), emit: vcf_intersected
+        path "versions.yml",                                       emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
-        def args = task.ext.args ?: ''
-        prefix = task.ext.prefix ?: "${meta.id}.${meta.type}"
-        suffix = task.ext.suffix ?: 'bed'
+        def args        = task.ext.args ?: ''
+        def prefix      = task.ext.prefix ?: "${meta.id}"
+        def suffix      = task.ext.suffix ?: 'bed'
+        out_file        = "${prefix}.${suffix}"
         """
-        bedtools intersect $args -a $vcf -b $intersect > ${prefix}.intersected.${suffix}
+        bedtools intersect -a $input_file -b $intersect $args > ${out_file}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
         END_VERSIONS
         """
+
     stub:
-        def args = task.ext.args ?: ''
-        prefix = task.ext.prefix ?: "${meta.id}.${meta.type}"
-        suffix = task.ext.suffix ?: 'bed'
+        def prefix      = task.ext.prefix ?: "${meta.id}"
+        def suffix      = task.ext.suffix ?: 'bed'
+        out_file        = "${prefix}.${suffix}"
         """
-        echo $intersect $args > ${prefix}.intersected.${suffix}
+        echo $input_file
+        touch ${out_file}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bedtools: \$(bedtools | grep Version | sed -r "s/Version:\s+//")
+            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
         END_VERSIONS
         """
-}   
+}

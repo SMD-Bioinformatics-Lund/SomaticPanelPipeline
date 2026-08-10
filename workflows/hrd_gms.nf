@@ -57,15 +57,15 @@ workflow SOLID_GMS {
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds, meta )
+    SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds) //, meta )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
 
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
         ch_vcf.germline_variants,
-        meta_purity,
-        ch_vcf.concat_vcfs
+        ch_mapped.bam_dedup,
+        gatk_ref
     )
     .set { ch_cnvcalled }
     ch_versions = ch_versions.mix(ch_cnvcalled.versions)
