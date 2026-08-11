@@ -1,7 +1,8 @@
 #!/usr/bin/env nextflow
 
 // might need to add a check to csv? //
-include { CSV_CHECK; UNSPRING } from '../../modules/local/check_input/main'
+include { CSV_CHECK } from '../../modules/local/check_input/main'
+include { UNSPRING  } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
     take:
