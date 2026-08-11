@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 // might need to add a check to csv? //
-include { CSV_CHECK      } from '../../modules/local/check_input/main'
+include { CSV_CHECK; UNSPRING } from '../../modules/local/check_input/main'
 
 workflow CHECK_INPUT {
     take:
@@ -15,17 +15,35 @@ workflow CHECK_INPUT {
         reads     = csvmap.map { row -> create_fastq_channel(row, paired) }
 
         // FASTQ
-        fastq = reads.filter { group, meta, r1, r2 ->
+        fastq_input = reads.filter { group, meta, r1, r2 ->
             def read1 = r1.toString()
             def read2 = r2.toString()
+            if (!read1 || !read2) return false
             (read1.endsWith("fastq.gz") || read1.endsWith("fq.gz")) &&
             (read2.endsWith("fastq.gz") || read2.endsWith("fq.gz"))
         }
+
+        // SPRING archive
+        spring = reads
+            .filter { group, meta, r1, r2 ->
+                def read1 = r1.toString()
+                def read2 = r2.toString()
+                read1.endsWith(".spring") || read2.endsWith(".spring")
+            }
+            .map { group, meta, r1, r2 ->
+                def spring = r1.toString().endsWith(".spring") ? r1 : r2
+                tuple( group, meta, spring )
+            }
+
+        UNSPRING ( spring )
+
+        fastq = fastq_input.mix( UNSPRING.out.fastq )
 
         // BAM + BAI
         bam = reads.filter { group, meta, r1, r2 ->
             def read1 = r1.toString()
             def read2 = r2.toString()
+            if (!read1 || !read2) return false
             read1.endsWith("bam") && (read2.endsWith("bai") || read2.endsWith("bam.bai"))
         }
 
@@ -33,6 +51,7 @@ workflow CHECK_INPUT {
         vcf = reads.filter { group, meta, r1, r2 ->
             def read1 = r1.toString()
             def read2 = r2.toString()
+            if (!read1 || !read2) return false
             read1.endsWith("vcf") &&
                 (read2.endsWith("tbi") || read2.endsWith("csi") || read2.endsWith("vcf.gz.tbi"))
         }
@@ -76,7 +95,12 @@ def create_fastq_channel(LinkedHashMap row, paired) {
     meta.sub = sub
 	// add path(s) of the fastq file(s) to the meta map
 	def fastq_meta = []
-	fastq_meta = [row.group, meta, file(row.read1), file(row.read2) ]
+	fastq_meta = [row.group, meta, create_input_file(row.read1), create_input_file(row.read2) ]
 
 	return fastq_meta
+}
+
+def create_input_file(value) {
+    def path = value?.toString()?.trim()
+    return path ? file(path) : ''
 }
