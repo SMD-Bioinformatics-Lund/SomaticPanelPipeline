@@ -25,6 +25,8 @@ process CSV_CHECK {
 
 process UNSPRING {
     label 'process_alot'
+    label 'scratch'
+    label 'stage'
     tag "${meta.id}"
 
     input:
