@@ -43,8 +43,7 @@ workflow SPP_CREATE_SNVPON {
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
     SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
-        ch_mapped.bam_dedup,
+        ch_mapped.bam_umi,
         beds,
         CHECK_INPUT.out.meta,
         Channel.of(tuple(1,2)),
