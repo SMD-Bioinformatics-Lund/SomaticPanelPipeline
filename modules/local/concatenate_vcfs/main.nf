@@ -1,94 +1,3 @@
-process CONCATENATE_VCFS {
-    label "process_single"
-    tag "$group"
-
-    input:
-        tuple val(vc), val(group), file(vcfs)
-
-    output:
-        tuple val(group), val(vc), file("*_${vc}.vcf.gz"),    emit: concatenated_vcfs
-        path "versions.yml",                                  emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args = task.ext.args ?: ''
-        def prefix = task.ext.prefix ?: "${group}"
-        """
-        vcf-concat $vcfs | vcf-sort -c | gzip -c > ${vc}.concat.vcf.gz
-        vt decompose ${vc}.concat.vcf.gz -o ${vc}.decomposed.vcf.gz
-        vt normalize ${vc}.decomposed.vcf.gz $args | vt uniq - -o ${prefix}_${vc}.vcf.gz
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vcftools: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
-            vt-decompose: \$(echo \$(vt decompose 2>&1) | sed 's/.*decompose v//; s/ .*//')
-            vt-normalize: \$(echo \$(vt normalize 2>&1) | sed 's/.*normalize v//; s/ .*//')
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix = task.ext.prefix ?: "${group}"
-        """
-        touch ${prefix}_${vc}.vcf.gz
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vcftools: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
-            vt-decompose: \$(echo \$(vt decompose 2>&1) | sed 's/.*decompose v//; s/ .*//')
-            vt-normalize: \$(echo \$(vt normalize 2>&1) | sed 's/.*normalize v//; s/ .*//')
-        END_VERSIONS
-        """
-}
-
-process CONCATENATE_VCFS_BCFTOOLS {
-    label "process_single"
-    tag "$group"
-
-    input:
-        tuple val(vc), val(group), file(vcfs)
-
-    output:
-        tuple val(group), val(vc), file("*_${vc}_bcftools.vcf.gz"),    emit: concatenated_vcfs
-        path "versions.yml",                                           emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args = task.ext.args ?: ''
-        def prefix = task.ext.prefix ?: "${group}"
-        """
-        vcf-concat $vcfs | vcf-sort -c > ${vc}.concat.vcf
-        bgzip ${vc}.concat.vcf
-        tabix ${vc}.concat.vcf.gz
-        bcftools norm -m-both -c w -O v -f $params.genome_file ${vc}.concat.vcf.gz \\
-        | bcftools norm -d exact -Oz -o ${prefix}_${vc}_bcftools.vcf.gz
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vcftools: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
-            vt-decompose: \$(echo \$(vt decompose 2>&1) | sed 's/.*decompose v//; s/ .*//')
-            vt-normalize: \$(echo \$(vt normalize 2>&1) | sed 's/.*normalize v//; s/ .*//')
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix = task.ext.prefix ?: "${group}"
-        """
-        touch ${prefix}_${vc}_bcftools.vcf.gz
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vcftools: \$(echo \$(vcftools --version 2>&1) | sed 's/^.*VCFtools (//;s/).*//')
-            vt-decompose: \$(echo \$(vt decompose 2>&1) | sed 's/.*decompose v//; s/ .*//')
-            vt-normalize: \$(echo \$(vt normalize 2>&1) | sed 's/.*normalize v//; s/ .*//')
-        END_VERSIONS
-        """
-}
-
-
 process AGGREGATE_VCFS {
     label "process_single"
     tag "$group"
@@ -114,11 +23,11 @@ process AGGREGATE_VCFS {
         }
 
         """
-        aggregate_vcf.py --vcf ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} --out ${prefix}.agg.unsorted.vcf
+        aggregate_vcf.pl --vcfs ${vcfs.sort(false) { a, b -> a.getBaseName() <=> b.getBaseName() }.join(",")} --sample-order ${sample_order} > ${prefix}.agg.unsorted.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -131,21 +40,21 @@ process AGGREGATE_VCFS {
             sample_order = meta.id[tumor_idx]+","+meta.id[normal_idx]
             """
             echo tumor:${meta.id[tumor_idx]} normal:${meta.id[normal_idx]}
-            touch ${prefix}.${norm_sw}.agg.vcf
+            touch ${prefix}.agg.unsorted.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else {
             """
-            touch ${prefix}.${norm_sw}.agg.vcf
+            touch ${prefix}.agg.unsorted.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }

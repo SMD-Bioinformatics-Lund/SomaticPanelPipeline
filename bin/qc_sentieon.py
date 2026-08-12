@@ -4,7 +4,7 @@
 import json
 from argparse import ArgumentParser
 
-from vcf_pipeline_utils import leading_float, open_output
+from vcf_pipeline_utils import format_compact_number, leading_float, open_output
 
 
 def qc_sentieon(sample_id, assay_type, out_file):
@@ -13,14 +13,14 @@ def qc_sentieon(sample_id, assay_type, out_file):
     pct_above = {}
     if assay_type == "panel":
         pct_above, median = panel_coverage_calc()
-        results["median_cov"] = median
-        for row in metric_value_rows("hs_metrics.txt"):
-            results["pct_on_target"] = row[18]
-            results["fold_enrichment"] = row[25]
-            results["mean_coverage"] = row[22]
-            results["fold_80"] = row[32]
-            results["at_drop"] = row[48]
-            results["gc_drop"] = row[49]
+        results["median_cov"] = compact_json_number(median)
+        for row, row_by_name in metric_value_rows_with_header("hs_metrics.txt"):
+            results["pct_on_target"] = metric_value(row, row_by_name, "PCT_SELECTED_BASES", 18)
+            results["fold_enrichment"] = metric_value(row, row_by_name, "FOLD_ENRICHMENT", 25)
+            results["mean_coverage"] = metric_value(row, row_by_name, "MEAN_TARGET_COVERAGE", 22)
+            results["fold_80"] = metric_value(row, row_by_name, "FOLD_80_BASE_PENALTY", 32)
+            results["at_drop"] = metric_value(row, row_by_name, "AT_DROPOUT", 47)
+            results["gc_drop"] = metric_value(row, row_by_name, "GC_DROPOUT", 48)
     elif assay_type == "wgs":
         pct_above = parse_wgs_metrics(results)
         parse_gc_summary(results)
@@ -34,7 +34,7 @@ def qc_sentieon(sample_id, assay_type, out_file):
         results["dup_reads"] = row[6]
         results["num_reads"] = row[2]
         results["dup_pct"] = row[8]
-        results["mapped_reads"] = leading_float(row[2]) - leading_float(row[4])
+        results["mapped_reads"] = compact_json_number(leading_float(row[2]) - leading_float(row[4]))
     for row in metric_value_rows("aln_metrics.txt"):
         results["pf_mismatch_rate"] = row[12]
         results["pf_error_rate"] = row[13]
@@ -55,6 +55,25 @@ def metric_value_rows(path):
                 yield next(fh).rstrip("\n").split("\t")
 
 
+def metric_value_rows_with_header(path):
+    """Yield Sentieon metric rows with a header-name lookup."""
+    with open(path) as fh:
+        for line in fh:
+            if line.startswith("#SentieonCommandLine"):
+                header = next(fh, "").rstrip("\n").split("\t")
+                row = next(fh).rstrip("\n").split("\t")
+                yield row, dict(zip(header, row))
+
+
+def metric_value(row, row_by_name, key, fallback_index):
+    """Return a metric by column name, with an index fallback for legacy files."""
+    if key in row_by_name and row_by_name[key] != "":
+        return row_by_name[key]
+    if fallback_index < len(row):
+        return row[fallback_index]
+    return ""
+
+
 def panel_coverage_calc():
     """Calculate panel coverage summary values."""
     cov = []
@@ -63,11 +82,15 @@ def panel_coverage_calc():
             if not line.startswith("Locus"):
                 vals = next(fh, "").split("\t")
                 if len(vals) > 1:
-                    cov.append(leading_float(vals[1]))
+                    cov.append(vals[1])
 
     sorted_cov = sorted(cov)
     mid = len(sorted_cov) // 2
-    median = sorted_cov[mid] if len(sorted_cov) % 2 else sorted_cov[mid - 1]
+    if len(sorted_cov) % 2:
+        median = leading_float(sorted_cov[mid])
+    else:
+        # Match the original panel median calculation.
+        median = leading_float(sorted_cov[mid - 1])
 
     pct = {}
     with open("cov_metrics.txt.sample_summary") as fh:
@@ -77,6 +100,14 @@ def panel_coverage_calc():
                 for key, idx in (("1", 6), ("10", 7), ("30", 8), ("100", 9), ("250", 10), ("500", 11)):
                     pct[key] = vals[idx]
     return pct, median
+
+
+def compact_json_number(value):
+    """Return ints as ints and non-integer floats with compact precision."""
+    text = format_compact_number(value)
+    if "." not in text and "e" not in text.lower():
+        return int(text)
+    return float(text)
 
 
 def parse_wgs_metrics(results):
@@ -109,7 +140,7 @@ def parse_wgs_metrics(results):
                 for key, obs in pct_obs.items():
                     if total >= obs and key not in quartiles:
                         quartiles[key] = leading_float(depth)
-    results["iqr"] = quartiles.get("R_75", 0) - quartiles.get("R_25", 0)
+    results["iqr"] = compact_json_number(quartiles.get("R_75", 0) - quartiles.get("R_25", 0))
     return pct
 
 

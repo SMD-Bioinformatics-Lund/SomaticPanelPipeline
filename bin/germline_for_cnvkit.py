@@ -92,29 +92,77 @@ def mark_germlines(
 def germline_for_cnvkit(vcf_file, out_file, min_gnomad_af=0.05, min_variant_depth=50):
     """Keep common germline variants suitable for CNVkit BAF input."""
     with vcf.VCFReader(vcf_file) as reader, open_output(out_file) as out_fh:
+        af_header_written = False
         for line in reader.meta_header_lines:
-            if line.startswith("##INFO") and "AF,Number=A" not in line:
+            if line.startswith("##INFO") and "AF,Number=A" in line:
+                af_header_written = True
                 print(line, file=out_fh)
-                print(
-                    '##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated allele frequency in the range (0,1]">',
-                    file=out_fh,
-                )
+            elif line.startswith("##INFO"):
+                print(line, file=out_fh)
+                if not af_header_written:
+                    print(
+                        '##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated allele frequency in the range (0,1]">',
+                        file=out_fh,
+                    )
+                    af_header_written = True
             elif "ID=VAF" not in line:
                 print(line, file=out_fh)
         print(reader.column_header_line, file=out_fh)
+        csq_fields = csq_field_order(reader)
         for var in reader:
             vaf_value = ""
             vd = 0
             for gt in var["GT"]:
                 vaf_value = gt.get("VAF", "")
                 vd = leading_float(gt.get("VD"))
-            gnomad = 0
-            if var["INFO"].get("CSQ") and var["INFO"]["CSQ"][0].get("gnomADg_AF"):
-                gnomad = leading_float(var["INFO"]["CSQ"][0].get("gnomADg_AF"))
+            gnomad = first_csq_float(var, "gnomADg_AF", csq_fields)
             if not (gnomad >= min_gnomad_af and vd >= min_variant_depth):
                 continue
             add_info(var, "AF", vaf_value)
             write_variant(var, out_fh, use_original_csq=True)
+
+
+def first_csq_float(var, field_name, csq_fields):
+    """Return a numeric CSQ field from the first transcript.
+
+    The Perl helper reads ``INFO/CSQ[0]`` after vcf2 has parsed the VEP CSQ
+    string. Keep the same behavior, but fall back to the original CSQ string
+    when the lightweight Python parser cannot expose the field cleanly.
+    """
+    csq = var["INFO"].get("CSQ") or []
+    if csq and isinstance(csq[0], dict):
+        value = csq[0].get(field_name, "")
+        if isinstance(value, list):
+            value = value[0] if value else ""
+        parsed = max_ampersand_float(value)
+        if parsed:
+            return parsed
+
+    csq_text = var["INFO"].get("_CSQ_str", "")
+    if not csq_text or field_name not in csq_fields:
+        return 0.0
+    field_idx = csq_fields.index(field_name)
+    first_transcript = csq_text.split(",", 1)[0].split("|")
+    if field_idx >= len(first_transcript):
+        return 0.0
+    return max_ampersand_float(first_transcript[field_idx])
+
+
+def csq_field_order(reader):
+    """Return CSQ field order from the VCF header."""
+    description = reader.meta.get("INFO", {}).get("CSQ", {}).get("Description", "")
+    marker = "Consequence annotations from Ensembl VEP. Format: "
+    if marker in description:
+        description = description.split(marker, 1)[1]
+    return description.split("|") if description else []
+
+
+def max_ampersand_float(value):
+    """Return the largest leading float in an ampersand-delimited CSQ value."""
+    best = 0.0
+    for item in str(value or "").split("&"):
+        best = max(best, leading_float(item))
+    return best
 
 
 def build_mark_parser():

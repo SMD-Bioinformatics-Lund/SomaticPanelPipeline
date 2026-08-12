@@ -21,11 +21,11 @@ process PON_FILTER {
         def pons_str = pons.join(",")
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_pon.py --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} --out ${prefix}.agg.pon.vcf
+        filter_with_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${prefix}.agg.pon.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -38,7 +38,7 @@ process PON_FILTER {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -67,11 +67,11 @@ process FFPE_PON_FILTER {
         def pons_str = pons.join(",")
         tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         """
-        filter_with_ffpe_pon.py --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} --out ${prefix}.agg.pon.ponffpe.vcf
+        filter_with_ffpe_pon.pl --vcf $vcf --pons $pons_str --tumor-id ${meta.id[tumor_idx]} > ${prefix}.agg.pon.ponffpe.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -84,7 +84,7 @@ process FFPE_PON_FILTER {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """ 
 }
@@ -107,11 +107,11 @@ process FIX_VEP_GNOMAD {
     script:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        fix_vep_gnomad.py --vcf $vcf --out ${prefix}.agg.pon.vep.fix.vcf
+        fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -122,7 +122,7 @@ process FIX_VEP_GNOMAD {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -149,21 +149,21 @@ process MARK_GERMLINES {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            mark_germlines.py --vcf $vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args --out ${prefix}p.agg.pon.vep.markgerm.vcf
+            mark_germlines.pl --vcf $vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}p.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else if( meta.id.size() == 1 ) {
             """
-            mark_germlines.py --vcf $vcf --tumor-id ${meta.id[0]} $args --out ${prefix}.agg.pon.vep.markgerm.vcf
+            mark_germlines.pl --vcf $vcf --tumor-id ${meta.id[0]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -179,7 +179,7 @@ process MARK_GERMLINES {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -190,7 +190,7 @@ process MARK_GERMLINES {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -214,11 +214,11 @@ process GERMLINE_FOR_CNVKIT {
     script:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        germline_for_cnvkit.py --vcf $vcf --out ${prefix}.agg.pon.vep.germline.vcf
+        germline_for_cnvkit.pl $vcf > ${prefix}.agg.pon.vep.germline.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -229,7 +229,7 @@ process GERMLINE_FOR_CNVKIT {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -242,21 +242,21 @@ process FILTER_FREEBAYES {
         tuple val(group), val(meta), val(vc), file(vcf)
 
     output:
-        tuple val(group), val(meta), val(vc), file("filtered_freebayes_*.vcf"), emit: filtered_vcf
-        path "versions.yml",                                                   emit: versions
+        tuple val(group), val(meta), val(vc), file("filtered_*.vcf"), emit: filtered_vcf
+        path "versions.yml",                                          emit: versions
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
-        def part = vcf.name.replaceFirst(/^freebayes_/, '').replaceFirst(/\.filt1\.vcf$/, '')
+        def part = vcf.name.replaceFirst(/\.filt1\.vcf$/, '')
 
         if( meta.id.size() >= 2 ) {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
             """
-            filter_freebayes_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out filtered_freebayes_${part}.vcf
+            filter_freebayes_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out filtered_${part}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -266,7 +266,7 @@ process FILTER_FREEBAYES {
         }
         else if( meta.id.size() == 1 ) {
             """
-            filter_freebayes_unpaired.py --vcf $vcf --out filtered_freebayes_${part}.vcf
+            filter_freebayes_unpaired.py --vcf $vcf --out filtered_${part}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -276,9 +276,9 @@ process FILTER_FREEBAYES {
         }
 
     stub:
-        def part = vcf.name.replaceFirst(/^freebayes_/, '').replaceFirst(/\.filt1\.vcf$/, '')
+        def part = vcf.name.replaceFirst(/\.filt1\.vcf$/, '')
         """
-        touch filtered_freebayes_${part}.vcf
+        touch filtered_${part}.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -309,21 +309,21 @@ process FILTER_VARDICT {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
             """
-            filter_vardict_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out ${output_vcf}
+            filter_vardict_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > ${output_vcf}
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else if( meta.id.size() == 1 ) {
             """
-            filter_vardict_unpaired.py --vcf $vcf --out ${output_vcf}
+            filter_vardict_unpaired.pl $vcf > ${output_vcf}
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }

@@ -97,14 +97,13 @@ def write_filter_header(reader, out_fh, extra_header_lines):
         print(reader.column_header_line, file=out_fh)
 
 
-def serialize_variant(var, use_original_csq=False, trailing_sample_tab=True):
+def serialize_variant(var, use_original_csq=False, trailing_sample_tab=False):
     """Serialize a parsed variant dictionary to one VCF line.
 
     Args:
         var: Parsed variant dictionary.
         use_original_csq: If true, serialize CSQ from ``_CSQ_str`` when present.
-        trailing_sample_tab: Whether to keep the historical trailing tab after
-            sample fields.
+        trailing_sample_tab: Whether to keep a trailing tab after sample fields.
 
     Returns:
         Serialized VCF line without the final newline unless requested by the
@@ -133,7 +132,7 @@ def serialize_variant(var, use_original_csq=False, trailing_sample_tab=True):
     return line
 
 
-def write_variant(var, out_fh, use_original_csq=False, trailing_sample_tab=True):
+def write_variant(var, out_fh, use_original_csq=False, trailing_sample_tab=False):
     """Write a parsed variant dictionary to a VCF file handle.
 
     Args:

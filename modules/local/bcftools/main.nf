@@ -6,8 +6,8 @@ process BCFTOOLS_NORM {
         tuple val(group), val(meta), val(vc), path(vcf), path(tbi)
 
     output:
-        tuple val(group), val(meta), val(vc), path("*_norm.vcf.gz"), path("*_norm.vcf.gz.tbi"), emit: normalized_vcfs
-        path "versions.yml",                                                                    emit: versions
+        tuple val(group), val(meta), val(vc), path("out/*.vcf.gz"), path("out/*.vcf.gz.tbi"), emit: normalized_vcfs
+        path "versions.yml",                                                                  emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -15,27 +15,31 @@ process BCFTOOLS_NORM {
     script:
         def args = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${group}"
-        def output_vcf = vc ? "${vc}_${prefix}" : "${prefix}"
+        def suffix = task.ext.suffix ?: "norm.vcf.gz"
+        def output_vcf = "${prefix}.${suffix}"
 
         """
-        bcftools norm ${vcf} ${args} -o ${output_vcf}_norm.vcf.gz
+        mkdir -p out
+        bcftools norm ${vcf} ${args} -o out/${output_vcf}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | grep 'bcftools' | sed 's/.*\\s//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${group}"
-        def output_vcf = vc ? "${vc}_${prefix}" : "${prefix}"
+        def suffix = task.ext.suffix ?: "norm.vcf.gz"
+        def output_vcf = "${prefix}.${suffix}"
         """
-        touch ${output_vcf}_norm.vcf.gz
-        touch ${output_vcf}_norm.vcf.gz.tbi
+        mkdir -p out
+        touch out/${output_vcf}
+        touch out/${output_vcf}.tbi
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | grep 'bcftools' | sed 's/.*\\s//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 }
@@ -63,7 +67,7 @@ process BCFTOOLS_MPILEUP_CALL {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 
@@ -74,7 +78,7 @@ process BCFTOOLS_MPILEUP_CALL {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 }
@@ -100,7 +104,7 @@ process BCFTOOLS_QUERY_IDSNP {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 
@@ -111,7 +115,7 @@ process BCFTOOLS_QUERY_IDSNP {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | sed 's/bcftools //; s/ .*//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 }
@@ -141,7 +145,7 @@ process ANNOTATE {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | grep 'bcftools' | sed 's/.*\\s//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 
@@ -154,7 +158,7 @@ process ANNOTATE {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bcftools: \$(echo \$(bcftools --version 2>&1) | grep 'bcftools' | sed 's/.*\\s//')
+            bcftools: \$(bcftools --version 2>&1 | sed -n '1{ s/^bcftools //; s/ .*//; p }')
         END_VERSIONS
         """
 }

@@ -234,7 +234,7 @@ def parse_variant(var_str, head, meta):
     var["FORMAT"] = fmt.split(":")
 
     var["GT"] = []
-    for idx in range(9, len(var_data)):
+    for idx in range(9, min(len(var_data), len(head))):
         sample_id = head[idx] if idx < len(head) else ""
         var["GT"].append(parse_sample_genotype(fmt, var_data[idx], sample_id))
 

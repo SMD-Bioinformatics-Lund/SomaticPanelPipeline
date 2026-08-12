@@ -4,7 +4,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from vcf_pipeline_utils import leading_float, open_output
+from vcf_pipeline_utils import format_compact_number, leading_float, open_output
 
 
 def panel_depth(depth_file, out_file, cutoff=500):
@@ -41,9 +41,10 @@ def panel_depth(depth_file, out_file, cutoff=500):
                     low_cov_sum += depth
                 else:
                     if start_pos is not None and start_chr is not None:
+                        mean_depth = low_cov_sum / (last_low_pos - start_pos + 1)
                         out_fh.write(
                             f"{start_chr}\t{start_pos}\t{last_low_pos}\t"
-                            f"{low_cov_sum / (last_low_pos - start_pos + 1)}\n"
+                            f"{format_compact_number(mean_depth)}\n"
                         )
                     start_chr = chrom
                     start_pos = pos
@@ -53,9 +54,10 @@ def panel_depth(depth_file, out_file, cutoff=500):
                 last_low_pos = pos
 
             elif start_chr is not None and start_pos is not None:
+                mean_depth = low_cov_sum / (last_low_pos - start_pos + 1)
                 out_fh.write(
                     f"{start_chr}\t{start_pos}\t{last_low_pos}\t"
-                    f"{low_cov_sum / (last_low_pos - start_pos + 1)}\n"
+                    f"{format_compact_number(mean_depth)}\n"
                 )
                 start_chr = None
                 start_pos = None
@@ -64,9 +66,10 @@ def panel_depth(depth_file, out_file, cutoff=500):
                 low_cov_sum = 0.0
 
         if start_chr is not None and start_pos is not None:
+            mean_depth = low_cov_sum / (last_low_pos - start_pos + 1)
             out_fh.write(
                 f"{start_chr}\t{start_pos}\t{last_low_pos}\t"
-                f"{low_cov_sum / (last_low_pos - start_pos + 1)}\n"
+                f"{format_compact_number(mean_depth)}\n"
             )
 
 

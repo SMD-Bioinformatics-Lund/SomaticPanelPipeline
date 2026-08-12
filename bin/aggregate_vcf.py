@@ -64,7 +64,9 @@ def which_variantcaller(meta):
 
 def is_weird_freebayes(var):
     """Return whether a freeBayes record lacks AO in the first sample."""
-    return not var["GT"] or "AO" not in var["GT"][0]
+    if not var["GT"]:
+        return True
+    return "AO" not in var["GT"][0] and "AO" not in var["INFO"]
 
 
 def summarize_filters(filters):
@@ -112,6 +114,56 @@ def split_ad(value):
     return ref_depth, alt_depth
 
 
+def split_info_list(value):
+    """Split a comma-delimited INFO value into scalar values."""
+    if value is None:
+        return []
+    return [item for item in str(value).split(",") if item != ""]
+
+
+def freebayes_old_variant_index(var):
+    """Return the allele index for VT-decomposed FreeBayes INFO arrays.
+
+    VT keeps the original multiallelic allele strings in ``OLD_MULTIALLELIC``
+    and the selected original allele in ``OLD_VARIANT``. FreeBayes stores
+    allele-specific depths such as AO as INFO arrays after decomposition, so
+    using the first value is wrong for non-first ALT alleles.
+    """
+    old_variant = var["INFO"].get("OLD_VARIANT")
+    old_multiallelic = var["INFO"].get("OLD_MULTIALLELIC")
+    if not old_variant or not old_multiallelic:
+        return 0
+
+    selected_parts = str(old_variant).split(":", 2)
+    multi_parts = str(old_multiallelic).split(":", 2)
+    if len(selected_parts) != 3 or len(multi_parts) != 3:
+        return 0
+
+    selected_alleles = selected_parts[2].split("/")
+    multi_alleles = multi_parts[2].split("/")
+    if len(selected_alleles) < 2 or len(multi_alleles) < 2:
+        return 0
+
+    selected_alt = selected_alleles[-1]
+    for idx, allele in enumerate(multi_alleles[1:]):
+        if allele == selected_alt:
+            return idx
+    return 0
+
+
+def select_freebayes_allele_value(var, gt, key):
+    """Return the allele-specific FreeBayes FORMAT/INFO value for a decomposed ALT."""
+    values = split_info_list(gt.get(key))
+    if not values:
+        values = split_info_list(var["INFO"].get(key))
+    if not values:
+        return None
+    idx = freebayes_old_variant_index(var)
+    if idx < len(values):
+        return values[idx]
+    return values[0]
+
+
 def perl_truthy(value):
     """Return truthiness matching Perl scalar checks for simple strings."""
     return value not in (None, "", "0")
@@ -141,13 +193,17 @@ def fix_gt(var, caller):
         for gt in var["GT"]:
             vaf = 0
             alt_depth = 0
-            if perl_truthy(gt.get("AO")) and gt.get("AO") != ".":
-                vaf = f"{leading_float(gt.get('AO')) / leading_float(gt.get('DP')):.4f}"
-                alt_depth = gt.get("AO")
+            ao = select_freebayes_allele_value(var, gt, "AO")
+            dp = gt.get("DP")
+            if not perl_truthy(dp) and perl_truthy(var["INFO"].get("DP")):
+                dp = var["INFO"].get("DP")
+            if perl_truthy(ao) and ao != ".":
+                vaf = f"{leading_float(ao) / leading_float(dp):.4f}"
+                alt_depth = ao
             add_gt(var, gt["_sample_id"], "GT", gt.get("GT", ""))
             add_gt(var, gt["_sample_id"], "VAF", vaf)
             add_gt(var, gt["_sample_id"], "VD", alt_depth)
-            add_gt(var, gt["_sample_id"], "DP", gt.get("DP", ""))
+            add_gt(var, gt["_sample_id"], "DP", dp or "")
     elif caller == "MELT":
         for gt in var["GT"]:
             add_gt(var, gt["_sample_id"], "GT", gt.get("GT", ""))
@@ -179,8 +235,6 @@ def aggregate_vcfs(vcf_files):
             for var in reader:
                 simple_id = variant_id(var)
                 melt_info_keep = var["INFO"].get("SCOUT_CUSTOM", 0)
-                var["INFO"] = {}
-                var["INFO_order"] = []
 
                 if var.get("FILTER"):
                     for item in var["FILTER"].split(";"):
@@ -193,10 +247,12 @@ def aggregate_vcfs(vcf_files):
                 if simple_id in aggregated:
                     aggregated[simple_id]["INFO"]["variant_callers"] += f"|{caller}"
                 else:
+                    fix_gt(var, caller)
+                    var["INFO"] = {}
+                    var["INFO_order"] = []
                     add_info(var, "variant_callers", caller)
                     if caller == "MELT":
                         add_info(var, "custom", melt_info_keep)
-                    fix_gt(var, caller)
                     aggregated[simple_id] = var
 
     for simple_id, var in aggregated.items():
@@ -249,7 +305,7 @@ def serialize_aggregate_variant(var, sample_order):
         order = {gt["_sample_id"]: idx for idx, gt in enumerate(var["GT"])}
     for gt in sorted(var["GT"], key=lambda item: order[item["_sample_id"]]):
         fields.append(":".join(gt.get(key, "") for key in var["FORMAT"]))
-    return "\t".join(fields) + "\t"
+    return "\t".join(fields)
 
 
 def aggregate(vcf_arg, sample_order_arg, out_file):

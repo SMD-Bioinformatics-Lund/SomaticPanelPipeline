@@ -22,8 +22,8 @@ process TABIX_BGZIPTABIX {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bgzip: \$(echo \$(bgzip --version) | sed '1!d;s/.* //')
-            tabix: \$(echo \$(tabix -h 2>&1) | grep -oP 'Version:\\s*\\K[^\\s]+')
+            bgzip: \$(bgzip --version 2>&1 | sed -n '1{ s/^bgzip (htslib) //; s/ .*//; p }')
+            tabix: \$(tabix --version 2>&1 | sed -n '1{ s/^tabix (htslib) //; s/ .*//; p }')
         END_VERSIONS
 
         """
@@ -38,8 +38,52 @@ process TABIX_BGZIPTABIX {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bgzip: \$(echo \$(bgzip --version) | sed '1!d;s/.* //')
-            tabix: \$(echo \$(tabix -h 2>&1) | grep -oP 'Version:\\s*\\K[^\\s]+')
+            bgzip: \$(bgzip --version 2>&1 | sed -n '1{ s/^bgzip (htslib) //; s/ .*//; p }')
+            tabix: \$(tabix --version 2>&1 | sed -n '1{ s/^tabix (htslib) //; s/ .*//; p }')
         END_VERSIONS
     """
+}
+
+process TABIX_INDEX {
+    tag "$group"
+    label 'process_single'
+
+    input:
+        tuple val(group), val(meta), val(vc), path(vcf)
+
+    output:
+        tuple val(group), val(meta), val(vc), path("out/*.vcf.gz"), path("out/*.{tbi,csi}"), emit: indexed_vcf
+        path "versions.yml",                                                              emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ''
+        def index = args.contains("-C ") || args.contains("--csi") ? "csi" : "tbi"
+        """
+        mkdir -p out
+        tabix $args $vcf
+        ln -sf ../$vcf out/${vcf.name}
+        ln -sf ../${vcf}.${index} out/${vcf.name}.${index}
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            tabix: \$(tabix --version 2>&1 | sed -n '1{ s/^tabix (htslib) //; s/ .*//; p }')
+        END_VERSIONS
+        """
+
+    stub:
+        def args = task.ext.args ?: ''
+        def index = args.contains("-C ") || args.contains("--csi") ? "csi" : "tbi"
+        """
+        mkdir -p out
+        touch out/${vcf.name}
+        touch out/${vcf.name}.${index}
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            tabix: \$(tabix --version 2>&1 | sed -n '1{ s/^tabix (htslib) //; s/ .*//; p }')
+        END_VERSIONS
+        """
 }

@@ -17,11 +17,12 @@ include { FILTER_PINDEL                         } from '../../modules/local/filt
 include { VCF_CONCAT                            } from '../../modules/local/vcftools/main'
 include { VCF_SORT as VCF_CONCATENATED_SORT     } from '../../modules/local/vcftools/main'
 include { TABIX_BGZIPTABIX                      } from '../../modules/local/tabix/main'
+include { TABIX_INDEX as VT_TABIX_INDEX         } from '../../modules/local/tabix/main'
 include { BCFTOOLS_NORM                         } from '../../modules/local/bcftools/main'
 include { BCFTOOLS_NORM as BCFTOOLS_NORM_EXACT  } from '../../modules/local/bcftools/main'
-include { CONCATENATE_VCFS                      } from '../../modules/local/concatenate_vcfs/main'
-// include { CONCATENATE_VCFS_BCFTOOLS             } from '../../modules/local/concatenate_vcfs/main'
-// include { AGGREGATE_VCFS as VT_AGG              } from '../../modules/local/concatenate_vcfs/main'
+include { VT_DECOMPOSE                          } from '../../modules/local/vt/main'
+include { VT_NORMALIZE                          } from '../../modules/local/vt/main'
+include { VT_UNIQ                               } from '../../modules/local/vt/main'
 include { AGGREGATE_VCFS as BT_AGG              } from '../../modules/local/concatenate_vcfs/main'
 include { VCF_SORT as VCF_AGGREGATE_SORT        } from '../../modules/local/vcftools/main'
 include { MELT                                  } from '../../modules/local/melt/main'
@@ -192,19 +193,24 @@ workflow SNV_CALLING {
 
         BCFTOOLS_NORM ( TABIX_BGZIPTABIX.out.gz_index )
         BCFTOOLS_NORM_EXACT ( BCFTOOLS_NORM.out.normalized_vcfs )
+        ch_versions         = ch_versions.mix(BCFTOOLS_NORM.out.versions.first())
+        ch_versions         = ch_versions.mix(BCFTOOLS_NORM_EXACT.out.versions.first())
+
+        VT_DECOMPOSE ( TABIX_BGZIPTABIX.out.gz_index )
+        VT_NORMALIZE ( VT_DECOMPOSE.out.decomposed_vcf )
+        VT_UNIQ ( VT_NORMALIZE.out.normalized_vcf )
+        VT_TABIX_INDEX ( VT_UNIQ.out.unique_vcf )
+        ch_versions         = ch_versions.mix(VT_DECOMPOSE.out.versions.first())
+        ch_versions         = ch_versions.mix(VT_NORMALIZE.out.versions.first())
+        ch_versions         = ch_versions.mix(VT_UNIQ.out.versions.first())
+        ch_versions         = ch_versions.mix(VT_TABIX_INDEX.out.versions.first())
 
 
-        // Join vcfs split by bedparts //
-        // CONCATENATE_VCFS { vcfs_to_concat }
-        // ch_versions         = ch_versions.mix(CONCATENATE_VCFS.out.versions.first())
-
-        // CONCATENATE_VCFS_BCFTOOLS { vcfs_to_concat }
-
-        // Aggregate all callers to one VCF
-        // VT_AGG ( CONCATENATE_VCFS.out.concatenated_vcfs.mix(PINDEL_CALL.out.pindel_vcf,MELT_MERGED).groupTuple().join(meta.groupTuple()), "vt" )
+        ch_vt_normalized_vcfs = VT_TABIX_INDEX.out.indexed_vcf
+        ch_bcftools_normalized_vcfs = BCFTOOLS_NORM_EXACT.out.normalized_vcfs
 
         BT_AGG (
-            BCFTOOLS_NORM_EXACT.out.normalized_vcfs.map {
+            ch_bcftools_normalized_vcfs.map {
                 group, meta, vc, vcf, tbi ->
                 [
                     group,
@@ -224,8 +230,6 @@ workflow SNV_CALLING {
                 ]
             }
         )
-
-        // BT_AGG ( BCFTOOLS_NORM_EXACT.out.normalized_vcfs.mix(PINDEL_GZ.out.gz_index,MELT_MERGED).groupTuple().join(meta.groupTuple()) )
 
         VCF_AGGREGATE_SORT (
             BT_AGG.out.vcf_agg.map {
@@ -252,7 +256,7 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(BT_AGG.out.versions.first())
 
     emit:
-        concat_vcfs      =   BCFTOOLS_NORM_EXACT.out.normalized_vcfs             // channel: [ val(group), val(meta), val(vc), file(vcf.gz), file(vcf.gz.tbi) ]
+        concat_vcfs      =   ch_bcftools_normalized_vcfs                         // channel: [ val(group), val(meta), val(vc), file(vcf.gz), file(vcf.gz.tbi) ]
         agg_vcf          =   ch_agg_vcf_sorted_meta                              // channel: [ val(group), val(meta), file(agg.vcf) ]
         normal_germline  =   DNASCOPE.out.normal_germline                        // channel: [ val(group), val(meta), file(vcf.gz), file(vcf.gz.tbi) ]
         versions         =   ch_versions                                         // channel: [ file(versions) ]

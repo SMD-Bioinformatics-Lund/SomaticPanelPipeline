@@ -21,7 +21,8 @@ workflow VCF_QC {
 
         ped_ch_tumor = meta_filtered
             .filter { group, meta -> meta.type == 'T' || meta.type == 'tumor' }
-            .join(tumor_germline, by:[0,1])
+            .join(tumor_germline.map { group, germline_meta, vcf, tbi -> tuple(group, vcf, tbi) })
+            .map { group, meta, vcf, tbi -> tuple(group, meta, vcf, tbi) }
 
         ped_ch_normal = meta_filtered
             .filter { group, meta -> meta.type == 'N' || meta.type == 'normal' }

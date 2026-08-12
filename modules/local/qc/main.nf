@@ -147,14 +147,14 @@ process QC_VALUES {
         def coverage
         def ins_size
         qc.readLines().each{
-            if (it =~ /\"(ins_size_dev)\": \"(\S+)\"/) {
-                ins_dev = it =~ /\"(ins_size_dev)\": \"(\S+)\"/
+            if (it =~ /\"(ins_size_dev)\"\s*:\s*\"(\S+)\"/) {
+                ins_dev = it =~ /\"(ins_size_dev)\"\s*:\s*\"(\S+)\"/
             }
-            if (it =~ /\"(mean_coverage)\": \"(\S+)\"/) {
-                coverage = it =~ /\"(mean_coverage)\": \"(\S+)\"/
+            if (it =~ /\"(mean_coverage)\"\s*:\s*\"(\S+)\"/) {
+                coverage = it =~ /\"(mean_coverage)\"\s*:\s*\"(\S+)\"/
             }
-            if (it =~ /\"(ins_size)\": \"(\S+)\"/) {
-                ins_size = it =~ /\"(ins_size)\": \"(\S+)\"/
+            if (it =~ /\"(ins_size)\"\s*:\s*\"(\S+)\"/) {
+                ins_size = it =~ /\"(ins_size)\"\s*:\s*\"(\S+)\"/
             }
         }
         INS_SIZE = ins_size[0][2]
@@ -201,22 +201,22 @@ process CONTAMINATION {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
             """
-            find_contaminant.py --vcf $vcf --case-id ${meta.id[tumor_idx]} $args --out ${meta.id[tumor_idx]}.value
-            find_contaminant.py --vcf $vcf --case-id ${meta.id[tumor_idx]} $args2 --out ${meta.id[normal_idx]}.value
+            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args > ${meta.id[tumor_idx]}.value
+            find_contaminant.pl --vcf $vcf --case-id ${meta.id[tumor_idx]} $args2 > ${meta.id[normal_idx]}.value
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else {
             """
-            find_contaminant.py --vcf $vcf --case-id ${meta.id[0]} $args --out ${meta.id[0]}.value
+            find_contaminant.pl --vcf $vcf --case-id ${meta.id[0]} $args > ${meta.id[0]}.value
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -233,7 +233,7 @@ process CONTAMINATION {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -245,7 +245,7 @@ process CONTAMINATION {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }

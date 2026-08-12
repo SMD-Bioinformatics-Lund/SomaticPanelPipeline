@@ -44,17 +44,19 @@ process VCF_SORT {
         tuple val(group), val(meta), val(vc), file(vcf)
 
     output:
-        tuple val(group), val(meta), val(vc), file("*.sorted.vcf"), emit: sorted_vcf
-        path "versions.yml",                                        emit: versions
+        tuple val(group), val(meta), val(vc), path("out/*.vcf"), emit: sorted_vcf
+        path "versions.yml",                                     emit: versions
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
         def args = task.ext.args ?: ''
-        def prefix = task.ext.prefix ?: vc ? "${vc}" : "${group}"
+        def prefix = task.ext.prefix ?: (vc ? "${vc}" : "${group}")
+        def suffix = task.ext.suffix ?: "sorted.vcf"
         """
-        vcf-sort -c $vcf > ${prefix}.sorted.vcf
+        mkdir -p out
+        vcf-sort -c $vcf > out/${prefix}.${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -63,9 +65,11 @@ process VCF_SORT {
         """
 
     stub:
-        def prefix = task.ext.prefix ?: "${vc}"
+        def prefix = task.ext.prefix ?: (vc ? "${vc}" : "${group}")
+        def suffix = task.ext.suffix ?: "sorted.vcf"
         """
-        touch ${prefix}_sorted.vcf.gz
+        mkdir -p out
+        touch out/${prefix}.${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

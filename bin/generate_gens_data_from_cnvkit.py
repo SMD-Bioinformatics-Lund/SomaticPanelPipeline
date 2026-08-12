@@ -4,7 +4,51 @@
 from argparse import ArgumentParser
 
 import vcf2 as vcf
-from vcf_pipeline_utils import leading_float
+from vcf_pipeline_utils import format_compact_number, leading_float
+
+
+def split_info_list(value):
+    """Split a comma-delimited VCF scalar into values."""
+    if value is None:
+        return []
+    return [item for item in str(value).split(",") if item != ""]
+
+
+def old_variant_index(var):
+    """Return the VT-decomposed allele index in original multiallelic arrays."""
+    old_variant = var["INFO"].get("OLD_VARIANT")
+    old_multiallelic = var["INFO"].get("OLD_MULTIALLELIC")
+    if not old_variant or not old_multiallelic:
+        return 0
+
+    selected_parts = str(old_variant).split(":", 2)
+    multi_parts = str(old_multiallelic).split(":", 2)
+    if len(selected_parts) != 3 or len(multi_parts) != 3:
+        return 0
+
+    selected_alleles = selected_parts[2].split("/")
+    multi_alleles = multi_parts[2].split("/")
+    if len(selected_alleles) < 2 or len(multi_alleles) < 2:
+        return 0
+
+    selected_alt = selected_alleles[-1]
+    for idx, allele in enumerate(multi_alleles[1:]):
+        if allele == selected_alt:
+            return idx
+    return 0
+
+
+def select_allele_value(var, gt, key):
+    """Return the allele-specific value from FORMAT first, then INFO."""
+    values = split_info_list(gt.get(key))
+    if not values:
+        values = split_info_list(var["INFO"].get(key))
+    if not values:
+        return None
+    idx = old_variant_index(var)
+    if idx < len(values):
+        return values[idx]
+    return values[0]
 
 
 def generate_gens_data(cnr_file, vcf_file, sample_id, out_prefix=None, baf_out=None, cov_out=None):
@@ -34,12 +78,15 @@ def generate_gens_data(cnr_file, vcf_file, sample_id, out_prefix=None, baf_out=N
             for gt in var["GT"]:
                 if gt["_sample_id"] != sample_id:
                     continue
-                depth = leading_float(gt.get("DP"))
-                if depth < 100 or not gt.get("AO"):
+                depth_text = gt.get("DP") or "0"
+                depth = leading_float(depth_text)
+                allele_depth = select_allele_value(var, gt, "AO")
+                if depth < 100 or not allele_depth:
                     break
-                vaf_value = leading_float(gt.get("AO")) / depth
+                vaf_value = leading_float(allele_depth) / depth
                 baf_data.append(
-                    f"{var['CHROM']}\t{int(var['POS']) - 1}\t{var['POS']}\t{vaf_value}"
+                    f"{var['CHROM']}\t{int(var['POS']) - 1}\t{var['POS']}\t"
+                    f"{format_compact_number(vaf_value)}"
                 )
 
     prefix = out_prefix or sample_id

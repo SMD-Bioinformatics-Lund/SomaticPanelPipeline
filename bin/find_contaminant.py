@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import vcf2  # noqa: E402
-from vcf_pipeline_utils import leading_float, open_output  # noqa: E402
+from vcf_pipeline_utils import format_compact_number, leading_float, open_output  # noqa: E402
 
 
 EMPTY_PNG = (
@@ -244,7 +244,8 @@ class ContaminationEstimator:
                     highpoint = count
                     af_at_highpoint = distri[af_count]["MEAN"]
                     bin_at_highpoint = af_count
-                out_fh.write(f"{af_count}\t{count}\t{distri[af_count]['MEAN']}\n")
+                mean_text = format_compact_number(distri[af_count]["MEAN"])
+                out_fh.write(f"{af_count}\t{count}\t{mean_text}\n")
         write_line_plot_png(f"{output_id}.png", xdata, ydata)
         return af_at_highpoint, bin_at_highpoint
 
@@ -371,7 +372,7 @@ def estimate_contamination(vcf_file, case_id, check_normal, detect_level, ad_fie
             distri, num_bins, num_vars_bin, output_id
         )
         if af_at_highpoint:
-            out_fh.write(f"{af_at_highpoint}\n")
+            out_fh.write(f"{format_compact_number(af_at_highpoint)}\n")
             bin_at_homo, _homo_highpoint, _af_at_homo = estimator.homozygous_peak(
                 distri, bin_at_highpoint, af_at_highpoint, num_bins
             )

@@ -27,9 +27,11 @@ process COYOTE {
             cnvprofile: 'plots',
             lowcov    : 'QC'
         ]
+        def import_order = ['cnv', 'transloc', 'biomarkers', 'cnvprofile', 'lowcov']
         def seen_import_types = [] as Set
         def import_records = [import_types, import_files].transpose()
             .findAll { record -> record[0] != 'cnvprofile' || seen_import_types.add(record[0]) }
+            .sort { a, b -> import_order.indexOf(a[0]) <=> import_order.indexOf(b[0]) }
         def import_args = import_records
             .findAll { record -> access_dir.containsKey(record[0]) }
             .collect { record -> "--${record[0]} /access/${params.subdir}/${access_dir[record[0]]}/${record[1]}" }
@@ -117,6 +119,7 @@ process COYOTE_YAML {
             lowcov    : 'QC',
             cov       : 'QC'
         ]
+        def import_order = ['cnv', 'transloc', 'biomarkers', 'cnvprofile', 'lowcov', 'cov']
         def yaml_lines = [
             "---",
             "subpanel: '${tumor.diagnosis}'",
@@ -151,6 +154,7 @@ process COYOTE_YAML {
         def seen_import_types = [] as Set
         def import_records = [import_types, import_files].transpose()
             .findAll { record -> record[0] != 'cnvprofile' || seen_import_types.add(record[0]) }
+            .sort { a, b -> import_order.indexOf(a[0]) <=> import_order.indexOf(b[0]) }
 
         yaml_lines += import_records
             .findAll { record -> access_dir.containsKey(record[0]) }

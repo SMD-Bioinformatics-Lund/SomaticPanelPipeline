@@ -64,9 +64,9 @@ workflow SNV_ANNOTATE {
             ch_cnv_backbone_input = MARK_GERMLINES.out.vcf_germline.map { group, meta, vcf ->
                 tuple(group, meta, 'cnv_backbone', vcf)
             }
-            // ch_regions_backbone_idsnps = Channel.value(file(params.regions_backbone_idsnps))
+            ch_regions_backbone_idsnps = Channel.value(file(params.regions_backbone_idsnps))
 
-            CNV_BACKBONE_FILTER ( ch_cnv_backbone_input, params.regions_backbone_idsnps )
+            CNV_BACKBONE_FILTER ( ch_cnv_backbone_input, ch_regions_backbone_idsnps )
             ch_versions = ch_versions.mix( CNV_BACKBONE_FILTER.out.versions )
             POST_ANNOTATION_FILTERS ( CNV_BACKBONE_FILTER.out.intersected )
         } else {

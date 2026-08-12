@@ -159,12 +159,11 @@ process CNVKIT_GENS {
         def prefix  = task.ext.prefix ?: "${meta.id}"
         def out_prefix = part ? "${prefix}.${part}" : "${prefix}"
         """
-        generate_gens_data_from_cnvkit.py --cnr $cnr --vcf $vcf --sample-id ${meta.id} --baf-out ${out_prefix}.baf.bed --cov-out ${out_prefix}.cov.bed
+        generate_gens_data_from_cnvkit_bed.pl --cnr $cnr --vcf $vcf --sample-id ${meta.id} --baf-out ${out_prefix}.baf.bed --cov-out ${out_prefix}.cov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -177,8 +176,7 @@ process CNVKIT_GENS {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            cnvkit: \$(cnvkit.py version | sed -e 's/cnvkit v//g')
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -248,8 +246,8 @@ process CNVKIT_EXPORT_VCF {
         tuple val(group), val(meta), val(part), file(cns)
 
     output:
-        tuple val(group), val(meta), val(part), file("*.${part}.cnvkit.vcf"),   emit: cnvkit_vcf
-        path "versions.yml",                                                    emit: versions
+        tuple val(group), val(meta), val(part), file("*.cnvkit*.vcf"),  emit: cnvkit_vcf
+        path "versions.yml",                                            emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -257,12 +255,13 @@ process CNVKIT_EXPORT_VCF {
     script:
         def args        = task.ext.args     ?: ""
         def prefix      = task.ext.prefix   ?: "${meta.id}.${meta.type}"
+        def suffix      = task.ext.suffix   ?: "${part}.cnvkit.vcf"
 
         """
         export MPLCONFIGDIR="\$PWD/.matplotlib"
         mkdir -p "\$MPLCONFIGDIR"
 
-        cnvkit.py export vcf ${cns} -i '${meta.id}' ${args} > ${prefix}.${part}.cnvkit.vcf
+        cnvkit.py export vcf ${cns} -i '${meta.id}' ${args} > ${prefix}.${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -274,10 +273,11 @@ process CNVKIT_EXPORT_VCF {
     stub:
         def args        = task.ext.args     ?: ""
         def prefix      = task.ext.prefix   ?: "${meta.id}.${meta.type}"
+        def suffix      = task.ext.suffix   ?: "${part}.cnvkit.vcf"
 
         """
-        echo "cnvkit.py export vcf ${cns} -i '${meta.id}' ${args} > ${prefix}.${part}.cnvkit.vcf"
-        touch ${prefix}.${part}.cnvkit.vcf
+        echo "cnvkit.py export vcf ${cns} -i '${meta.id}' ${args} > ${prefix}.${suffix}"
+        touch ${prefix}.${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -375,8 +375,8 @@ process MERGE_GENS {
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
+            bgzip: \$(bgzip --version 2>&1 | sed -n '1{ s/^bgzip (htslib) //; s/ .*//; p }')
+            tabix: \$(tabix --version 2>&1 | sed -n '1{ s/^tabix (htslib) //; s/ .*//; p }')
         END_VERSIONS
         """
 
@@ -399,8 +399,8 @@ process MERGE_GENS {
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
+            bgzip: \$(bgzip --version 2>&1 | sed -n '1{ s/^bgzip (htslib) //; s/ .*//; p }')
+            tabix: \$(tabix --version 2>&1 | sed -n '1{ s/^tabix (htslib) //; s/ .*//; p }')
         END_VERSIONS
         """
 }
