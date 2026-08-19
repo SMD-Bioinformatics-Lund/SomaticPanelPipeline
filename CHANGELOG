@@ -1,5 +1,8 @@
 ## Changelog ##
 
+## 3.2.5
+- process COYOTE_YAML in add_to_db.nf replaced by processes OUTPUT_FILES and OUTPUTS_YAML_COYOTE to create a YAML for Coyote3 without echoing info and without the use of FindIndexOf for optional files.
+
 ### 3.2.4
 - Clean up nextflow.hopper.config
 - Removed default profile, we never run without -profile anyway

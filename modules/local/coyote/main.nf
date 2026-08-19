@@ -391,3 +391,91 @@ process COYOTE_YAML {
         printf "$import_command" >> ${process_group}.coyote3.yaml
         """
 }
+
+process OUTPUT_FILES {
+    label "process_single"  
+    tag "$group" 
+    // this process creates a json file with names of the optional files to be loaded into coyote3. Those optional files are
+    // associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
+    input:
+        tuple val(group), val(labels), path(files, stageAs: "?/*") // if files have the same name, they are staged 
+
+    output:
+        tuple val(group), path("${group}_coyote.json_INFO"), emit:json_INFO
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def json_map = [labels, files.collect {it.toString().replaceAll('.+/', '')}] // remove path, keep file name only.
+            .transpose() // pair each <yaml_label> with corresponding file names.
+            .collectEntries { label, fname -> [(label): fname]  } 
+
+        def json_str = groovy.json.JsonOutput.toJson(json_map) // Converts the Groovy map into a valid JSON string      
+        """
+        echo '${json_str}' > ${group}_coyote.json_INFO
+        """
+    stub:
+    """
+    touch ${group}_coyote.json_INFO
+    
+    """
+}
+
+process  OUTPUTS_YAML_COYOTE {
+    label "process_single"
+    tag "$group"
+    // this process creates the yaml file for loading into coyote3.
+
+    input:
+        tuple val(group), val(meta), path(vcf), path(json_INFO)
+
+    output:
+        tuple val(group), path("${group}.coyote3.yaml"), emit: yaml_coyote3
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        def meta_json    = groovy.json.JsonOutput.toJson(meta) // groovy.json.JsonOutput built-in Groovy class.
+        // meta written as a json instead of passed as a shell argument as done previously in old COYOYE_YAML process.
+        // avoid shell issues if meta fields contain special characters and
+        // for easier passing of metadata to python
+        // the single quotation marks below are included here to be consistent with the previous yaml format, but they are not strictly necessary
+        """
+        cat << 'META_EOF' > meta.json
+        ${meta_json}
+        META_EOF
+
+        make_coyote_yaml.py \\
+            --group            '${group}' \\
+            --meta             meta.json \\
+            --vcf              ${vcf} \\
+            --json_info        ${json_INFO} \\
+            --subdir           '${params.subdir}' \\
+            --assay            '${params.coyote_group}' \\
+            --environment      '${environment}' \\
+            --pipeline_name    '${workflow.manifest.name}' \\
+            --pipeline_version '${workflow.manifest.version}' \\
+            --out              ${group}.coyote3.yaml
+            
+        """
+
+    stub:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        """
+        echo "STUB: make_coyote_yaml.py would run with:"
+        echo "  --group            ${group}"
+        echo "  --meta             meta.json"
+        echo "  --vcf              ${vcf}"
+        echo "  --json_info        ${json_INFO}"
+        echo "  --subdir           ${params.subdir}"
+        echo "  --assay            ${params.coyote_group}"
+        echo "  --environment      ${environment}"
+        echo "  --pipeline_name    ${workflow.manifest.name}"
+        echo "  --pipeline_version ${workflow.manifest.version}"
+        echo "  --out              ${group}.coyote3.yaml"
+        touch ${group}.coyote3.yaml
+        """
+}
