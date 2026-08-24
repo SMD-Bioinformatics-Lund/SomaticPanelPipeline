@@ -165,9 +165,9 @@ process COYOTE_YAML {
         }
 
         """
-        cat <<-'END_YAML' > ${process_group}.coyote3.yaml
-        ${yaml_lines.join('\n')}
-        END_YAML
+cat <<'END_YAML' > ${process_group}.coyote3.yaml
+${yaml_lines.join('\n')}
+END_YAML
         """
 
     stub:

@@ -141,7 +141,8 @@ workflow CNVKIT {
                 }
 
             cnvkit_tc_call_input = cnvkit_tc_input.filter { group, meta, part, cns, cnr, vcf, tbi ->
-                meta.purity && meta.purity.toString() != 'false'
+                def raw_purity = meta.containsKey('purity_raw') ? meta.purity_raw : meta.purity
+                raw_purity != null && raw_purity.toString().trim() && raw_purity.toString() != 'false'
             }.map { group, meta, part, cns, cnr, vcf, tbi ->
                 tuple(group, meta, part, cns, vcf, tbi)
             }
@@ -183,7 +184,7 @@ workflow CNVKIT {
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
             cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment.mix(
                 CNVKIT_CALL.out.cnvkitsegment.filter { group, meta, part, cns ->
-                    part == "backbone" && (!meta.purity || meta.purity.toString() == 'false')
+                    part == "backbone" && !meta.purity
                 }
             )
             cnvkit_vcf_tumor = CNVKIT_EXPORT_VCF.out.cnvkit_vcf.mix(CNVKIT_EXPORT_VCF_TC.out.cnvkit_vcf)

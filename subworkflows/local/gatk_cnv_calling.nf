@@ -38,11 +38,24 @@ workflow GATK {
         GATK_PLOT_DENOISED_COPY_RATIOS ( GATK_DENOISE_READ_COUNTS.out.denoised_counts )
         ch_versions = ch_versions.mix(GATK_PLOT_DENOISED_COPY_RATIOS.out.versions)
 
-        GATK_MODEL_SEGMENTS { GATKCOV_BAF.out.gatk_baf.join(GATK_DENOISE_READ_COUNTS.out.denoised_counts,by:[0,1]).groupTuple() }
+        ch_model_segments_input = GATKCOV_BAF.out.gatk_baf
+            .join(GATK_DENOISE_READ_COUNTS.out.denoised_counts, by:[0,1])
+            .groupTuple()
+            .filter { group, meta, allele, stdCR, denoised ->
+                def samples = (meta instanceof List ? meta.flatten() : [meta]).findAll { it }
+                samples.any { sample_meta ->
+                    sample_meta.type?.toString()?.toLowerCase() in ['t', 'tumor']
+                }
+            }
+
+        GATK_MODEL_SEGMENTS ( ch_model_segments_input )
         ch_versions = ch_versions.mix(GATK_MODEL_SEGMENTS.out.versions)
 
         ch_model_segments = GATK_MODEL_SEGMENTS.out.model_segments.map { group, meta, cr_seg, hets, model_final ->
-            tumor_meta = meta.find { it.type == "T" || it.type == "tumor" }
+            def samples = (meta instanceof List ? meta.flatten() : [meta]).findAll { it }
+            def tumor_meta = samples.find { sample_meta ->
+                sample_meta.type?.toString()?.toLowerCase() in ['t', 'tumor']
+            } ?: samples[0]
             tuple(group, tumor_meta, cr_seg, hets, model_final)
         }
 

@@ -16,7 +16,9 @@ process SVDB_MERGE_PANEL {
         def args    = task.ext.args     ?: ''
         def prefix  = task.ext.prefix   ?: "${meta.id}"
         def caller_order = ['manta', 'delly', 'gatk', 'cnvkit', 'genefuse']
-        def records = [callers, vcfs].transpose()
+        def caller_list = callers instanceof List ? callers : [callers]
+        def vcf_list = vcfs instanceof List ? vcfs : [vcfs]
+        def records = [caller_list, vcf_list].transpose()
         def ordered_records = caller_order.collectMany { caller ->
             records.findAll { record -> record[0] == caller }
         }

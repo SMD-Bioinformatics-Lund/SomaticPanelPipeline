@@ -35,6 +35,40 @@ def leading_float(value):
     return 0.0
 
 
+def split_genotype(value):
+    """Return two genotype alleles from a VCF GT field.
+
+    FreeBayes output is normally diploid and slash-separated, but phased or
+    partially missing values can appear in real data. Perl treated missing
+    numeric values as zero; this parser keeps the filtering path alive with the
+    same practical behavior instead of raising IndexError.
+    """
+    if value is None or value == "" or value == ".":
+        return ["0", "0"]
+
+    separator = "/" if "/" in value else "|" if "|" in value else None
+    values = value.split(separator) if separator else [value]
+
+    values = [allele if allele not in ("", ".") else "0" for allele in values]
+    while len(values) < 2:
+        values.append("0")
+    return values[:2]
+
+
+def allele_number(value):
+    """Convert a genotype allele to an integer using Perl-like coercion."""
+    return int(leading_float(value))
+
+
+def list_number(values, idx):
+    """Return a numeric list value, using zero for missing values."""
+    if -len(values) <= idx < len(values):
+        return leading_float(values[idx])
+    if idx < 0 or idx >= len(values):
+        return 0.0
+    return leading_float(values[idx])
+
+
 def format_compact_number(value):
     """Format a numeric value for VCF INFO output.
 
@@ -155,13 +189,13 @@ def filter_vcf(
                     status = "FAIL_GT"
 
                 gl_values = gt.get("GL", "").split(",")
-                gt_values = gt.get("GT", "").split("/")
+                gt_values = split_genotype(gt.get("GT", ""))
                 ao_values = (gt.get("AO") or "0").split(",")
 
                 dp = gt.get("DP", "")
 
-                gt0 = int(gt_values[0])
-                gt1 = int(gt_values[1])
+                gt0 = allele_number(gt_values[0])
+                gt1 = allele_number(gt_values[1])
                 idx = int((gt1 * (gt1 + 1) / 2) + gt0)
 
                 depth[sample_type] = dp
@@ -170,8 +204,8 @@ def filter_vcf(
                 likelihood[sample_type] = gl_values
                 gl_idx[sample_type] = idx
 
-            lod_norm = leading_float(likelihood["N"][gl_idx["N"]]) - leading_float(likelihood["N"][gl_idx["T"]])
-            lod_tumor = leading_float(likelihood["T"][gl_idx["T"]]) - leading_float(likelihood["T"][gl_idx["N"]])
+            lod_norm = list_number(likelihood["N"], gl_idx["N"]) - list_number(likelihood["N"], gl_idx["T"])
+            lod_tumor = list_number(likelihood["T"], gl_idx["T"]) - list_number(likelihood["T"], gl_idx["N"])
             dqual = lod_tumor + lod_norm
 
             if genotype["T"][0] == genotype["T"][1] and (
@@ -185,7 +219,9 @@ def filter_vcf(
             if lod_norm < lod_threshold or lod_tumor < lod_threshold:
                 status = "FAIL_LOD"
 
-            if int(genotype["T"][1]) != int(genotype["N"][0]) and int(genotype["T"][1]) != int(genotype["N"][1]):
+            if allele_number(genotype["T"][1]) != allele_number(genotype["N"][0]) and allele_number(
+                genotype["T"][1]
+            ) != allele_number(genotype["N"][1]):
                 talt = genotype["T"][1]
             else:
                 talt = genotype["T"][0]
@@ -193,9 +229,9 @@ def filter_vcf(
                     status = "WARN_NOVAR"
 
             if leading_float(depth["N"]) > 0 and leading_float(depth["T"]) > 0:
-                talt_idx = int(talt) - 1
-                nvaf = leading_float(altobs["N"][talt_idx]) / leading_float(depth["N"])
-                tvaf = leading_float(altobs["T"][talt_idx]) / leading_float(depth["T"])
+                talt_idx = allele_number(talt) - 1
+                nvaf = list_number(altobs["N"], talt_idx) / leading_float(depth["N"])
+                tvaf = list_number(altobs["T"], talt_idx) / leading_float(depth["T"])
                 if nvaf > 0 and (tvaf / nvaf < min_vaf_ratio):
                     status = "FAIL_NVAF"
 

@@ -153,7 +153,8 @@ def get_varinfo(info,gt,start):
         varinfo["ratio"] = float(info["FOLD_CHANGE_LOG"])
     elif "gatkCN" in info:
         gatkcn = info['gatkCN'].split(',')[0]
-        varinfo["ratio"] = float(int_like(gatkcn)/2)
+        gatkcn_value = int_like(gatkcn)
+        varinfo["ratio"] = gatkcn_value / 2 if gatkcn_value else 0
     elif "SVTYPE" in info:
         if info["SVTYPE"] == "DEL":
             varinfo["ratio"] = "DEL"

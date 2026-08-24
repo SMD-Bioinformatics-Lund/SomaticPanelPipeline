@@ -58,7 +58,7 @@ def write_coyote_segment_intervals(vcf_file, sample_id, out_file):
             probes = var["INFO"].get("PROBES", 0)
             if var["INFO"].get("FOLD_CHANGE_LOG"):
                 fold = var["INFO"]["FOLD_CHANGE_LOG"]
-            elif var["INFO"].get("gatkCN"):
+            elif var["INFO"].get("gatkCN") is not None and leading_float(var["INFO"]["gatkCN"]) != 0:
                 fold = leading_float(var["INFO"]["gatkCN"]) / 2
             elif svtype == "DEL":
                 fold = "DEL"

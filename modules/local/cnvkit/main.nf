@@ -199,10 +199,12 @@ process CNVKIT_CALL {
     script:
         def args     = task.ext.args ?: ""
         def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
+        def raw_purity = meta.containsKey('purity_raw') ? meta.purity_raw : meta.purity
+        def has_raw_purity = raw_purity != null && raw_purity.toString().trim() && raw_purity.toString() != 'false'
 
         call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns"
-        if (meta.purity && tc == "true") {
-            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns"
+        if (tc == "true" && has_raw_purity) {
+            call = "cnvkit.py call $cns -v $vcf --purity ${raw_purity} -o ${prefix}.${part}.call.purity.cns"
         }
 
         """
@@ -220,10 +222,12 @@ process CNVKIT_CALL {
 
     stub:
         def prefix   = task.ext.prefix ?: "${group}.${meta.id}"
+        def raw_purity = meta.containsKey('purity_raw') ? meta.purity_raw : meta.purity
+        def has_raw_purity = raw_purity != null && raw_purity.toString().trim() && raw_purity.toString() != 'false'
 
         call = "cnvkit.py call $cns -v $vcf -o ${prefix}.${part}.call.cns"
-        if (meta.purity && tc == "true") {
-            call = "cnvkit.py call $cns -v $vcf --purity ${meta.purity} -o ${prefix}.${part}.call.purity.cns"
+        if (tc == "true" && has_raw_purity) {
+            call = "cnvkit.py call $cns -v $vcf --purity ${raw_purity} -o ${prefix}.${part}.call.purity.cns"
         }
 
         """

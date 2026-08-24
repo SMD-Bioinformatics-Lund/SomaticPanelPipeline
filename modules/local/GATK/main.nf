@@ -209,7 +209,10 @@ process GATK_PLOT_DENOISED_COPY_RATIOS {
 
 process GATK_MODEL_SEGMENTS {
     label 'process_high'
-    tag "$group"
+    tag {
+        def tumor_idx = meta.type.findIndexOf { it == 'tumor' || it == 'T' }
+        meta.id[tumor_idx]
+    }
 
     input:
         tuple val(group), val(meta), file(allele), file(stdCR), file(denoised)

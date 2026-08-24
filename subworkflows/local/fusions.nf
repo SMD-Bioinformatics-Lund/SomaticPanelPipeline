@@ -23,11 +23,6 @@ workflow FUSIONS {
         GENEFUSE_JSON_TO_VCF(GENEFUSE.out.genefuse_json)
         ch_versions = ch_versions.mix(GENEFUSE_JSON_TO_VCF.out.versions)
 
-        // join meta-info. fastq-meta-channel differs from global meta-channel
-        // GENEFUSE_TUMOR = GENEFUSE_JSON_TO_VCF.out.genefuse_vcf.join(meta.filter( it -> it[1].type == "T" ) ).map{ val-> tuple(val[0], val[2], val[1] ) }
-
-        GENEFUSE_TUMOR = GENEFUSE_JSON_TO_VCF.out.genefuse_vcf
-
         // manta //
         MANTA_FUSIONS(bam_markdup.filter { it -> it[1].type == "T" }.groupTuple(), params.mantafusions, "fusions")
         ch_versions         = ch_versions.mix(MANTA_FUSIONS.out.versions)
@@ -40,7 +35,7 @@ workflow FUSIONS {
         FILTER_MANTA(MANTA_FUSION_TUMOR)
         ch_versions = ch_versions.mix(FILTER_MANTA.out.versions)
 
-        GENEFUSE_TUMOR_LABELLED = GENEFUSE_TUMOR.map { group, meta, vcf ->
+        GENEFUSE_TUMOR_LABELLED = GENEFUSE_JSON_TO_VCF.out.genefuse_vcf.map { group, meta, vcf ->
             tuple(group, meta, 'genefuse', vcf)
         }
         MANTA_FUSION_TUMOR_LABELLED = FILTER_MANTA.out.bnd_filtered.map { group, meta, vcf ->

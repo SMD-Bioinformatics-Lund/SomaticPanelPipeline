@@ -25,17 +25,22 @@ def _natural_key(value):
     return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", value)]
 
 
+def _format_number_like_perl(value):
+    """Format numeric values without a trailing .0 when they are integers."""
+    number = leading_float(value)
+    if number.is_integer():
+        return str(int(number))
+    return f"{number:.15g}"
+
+
 def _format_merged_gatk_record(agg, info, tumor=False):
     """Serialize one merged GATK/CNV segment record."""
     fields = agg[:7]
     if tumor:
         info_items = []
         for key in ("END", "SVLEN", "SVTYPE", "FOLD_CHANGE_LOG", "FOLD_CHANGE", "PROBES"):
-            values = str(info[key]).split(",")
-            if key in {"FOLD_CHANGE_LOG", "FOLD_CHANGE"}:
-                value = sum(leading_float(item) for item in values) / len(values)
-            elif key == "PROBES":
-                value = int(sum(leading_float(item) for item in values))
+            if key == "SVLEN":
+                value = _format_number_like_perl(info[key])
             else:
                 value = info[key]
             info_items.append(f"{key}={value}")
@@ -76,10 +81,7 @@ def _merge_gatk_type(vcf_file, svtype, tumor=False):
                     agg[2] += "," + data[2]
                     agg_info["END"] = info["END"]
                     agg_info["SVLEN"] = leading_float(agg_info["SVLEN"]) + leading_float(info["SVLEN"])
-                    if tumor:
-                        for key in ("FOLD_CHANGE_LOG", "FOLD_CHANGE", "PROBES"):
-                            agg_info[key] = f"{agg_info[key]},{info[key]}"
-                    else:
+                    if not tumor:
                         agg_info["gatkCN"] = f"{agg_info['gatkCN']},{info['gatkCN']}"
                     continue
                 variants.append(_format_merged_gatk_record(agg, agg_info, tumor=tumor))
