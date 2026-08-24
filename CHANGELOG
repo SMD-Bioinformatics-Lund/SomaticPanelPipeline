@@ -9,11 +9,15 @@
 - Moved reusable command steps into their tool modules, including `vcffilter`/`vcfglxgt` in the vcflib module and `bcftools annotate` in the bcftools module.
 - Refactored CNV calling into dedicated CNVkit and GATK subworkflows, with command-specific processes for calling, plotting, exporting, filtering, merging, and GENS/CDM preparation.
 - Refactored BAM/VCF QC steps for panel depth, low-coverage reporting, ID-SNP genotyping, contamination reporting, and CDM handoff so intermediate files remain internal unless they were previously published deliverables.
+- Integrated the main-branch Coyote3 YAML export flow into `ADD_TO_DB` using split helper processes while keeping the legacy Coyote command output and current meta-aware channel format.
 - Converted several legacy Perl utilities to Python equivalents with explicit output files, while keeping the Perl scripts in `bin/` for traceability during the transition.
 - Simplified Coyote, SVDB, GATK merge/filter, CNVkit GENS merge, and annotation helper steps to reduce inline shell logic in Nextflow process blocks.
 - Removed unused local process definitions and retired unused nf-core module copies that are no longer part of the active workflow graph.
 - Dropped obsolete concatenate VCF process blocks that were no longer imported by any workflow or subworkflow, keeping only the active aggregate VCF process.
 - Preserved existing result folders and published file names where outputs are user-facing, while keeping newly introduced intermediate split outputs unpublished.
+
+## 3.2.5
+- process COYOTE_YAML in add_to_db.nf replaced by processes OUTPUT_FILES and OUTPUTS_YAML_COYOTE to create a YAML for Coyote3 without echoing info and without the use of FindIndexOf for optional files.
 
 ### 3.2.4
 - Clean up nextflow.hopper.config

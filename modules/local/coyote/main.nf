@@ -20,6 +20,8 @@ process COYOTE {
         def normal = normal_idx >= 0 ? samples[normal_idx] : null
         def process_group = samples.size() >= 2 ? "${group}p" : group
         def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        def tumor_sex = tumor.sex?.toString()?.toLowerCase()
+        def coyote_sex = tumor_sex in ['male', 'm', '1'] ? 'male' : tumor_sex in ['female', 'f', '2'] ? 'female' : 'unknown'
         def access_dir = [
             cnv       : 'cnv',
             transloc  : 'fusions',
@@ -138,6 +140,8 @@ process COYOTE_YAML {
             "sequencing_scope: 'panel'",
             "omics_layer: 'DNA'",
             "sequencing_technology: 'Illumina'",
+            "sex: '${coyote_sex}'",
+            "readmode: 'PE'",
             "pipeline: '${workflow.manifest.name}'",
             "pipeline_version: ${workflow.manifest.version}",
             "case_ffpe: ${tumor.ffpe ? true : false}",
@@ -175,5 +179,85 @@ END_YAML
         def process_group = samples.size() >= 2 ? "${group}p" : group
         """
         touch ${process_group}.coyote3.yaml
+        """
+}
+
+process OUTPUT_FILES {
+    label "process_single"
+    tag "$group"
+
+    input:
+        tuple val(group), val(labels), path(files, stageAs: "?/*")
+
+    output:
+        tuple val(group), path("${group}_coyote.json_INFO"), emit: json_INFO
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def json_map = [labels, files.collect { it.name }]
+            .transpose()
+            .collectEntries { label, filename -> [(label): filename] }
+        def json_str = groovy.json.JsonOutput.toJson(json_map)
+        """
+        printf '%s\\n' '${json_str}' > ${group}_coyote.json_INFO
+        """
+
+    stub:
+        """
+        touch ${group}_coyote.json_INFO
+        """
+}
+
+process OUTPUTS_YAML_COYOTE {
+    label "process_single"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), path(vcf), path(json_INFO)
+
+    output:
+        tuple val(group), path("${group}.coyote3.yaml"), emit: yaml_coyote3
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        def meta_json = groovy.json.JsonOutput.toJson(meta)
+        """
+        cat <<'META_EOF' > meta.json
+        ${meta_json}
+        META_EOF
+
+        make_coyote_yaml.py \\
+            --group            '${group}' \\
+            --meta             meta.json \\
+            --vcf              ${vcf} \\
+            --json_info        ${json_INFO} \\
+            --subdir           '${params.subdir}' \\
+            --assay            '${params.coyote_group}' \\
+            --environment      '${environment}' \\
+            --pipeline_name    '${workflow.manifest.name}' \\
+            --pipeline_version '${workflow.manifest.version}' \\
+            --out              ${group}.coyote3.yaml
+        """
+
+    stub:
+        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        """
+        echo "STUB: make_coyote_yaml.py would run with:"
+        echo "  --group            ${group}"
+        echo "  --meta             meta.json"
+        echo "  --vcf              ${vcf}"
+        echo "  --json_info        ${json_INFO}"
+        echo "  --subdir           ${params.subdir}"
+        echo "  --assay            ${params.coyote_group}"
+        echo "  --environment      ${environment}"
+        echo "  --pipeline_name    ${workflow.manifest.name}"
+        echo "  --pipeline_version ${workflow.manifest.version}"
+        echo "  --out              ${group}.coyote3.yaml"
+        touch ${group}.coyote3.yaml
         """
 }
