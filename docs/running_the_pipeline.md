@@ -8,7 +8,7 @@ Requirements for running the pipeline:
     * [Singularity/3.8.0](https://docs.sylabs.io/guides/4.4/user-guide/#)
     * Java/13.0.2
     * perl: 5.26.2 (unsure, might be in a container)
-* [Auxiliary files](docs/auxiliary_files.md)
+* [Auxiliary files](list currently unavailable)
 
 ## Source code
 
