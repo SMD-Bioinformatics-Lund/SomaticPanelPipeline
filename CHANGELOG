@@ -6,6 +6,8 @@
 - Separated CNVkit and GATK CNV workflows, restored the complete FreeBayes post-call chain, and moved reusable commands into their respective tool modules.
 - Merged main-branch 3.2.0-3.2.5 functionality, including reference validation, QC-only entry points, normal germline calling, Peddy outputs, and Coyote3 metadata handling.
 - Added published-output safeguards so split-process intermediates remain internal unless they were published by the legacy workflow.
+- Moved superseded Perl utilities to `bin/legacy_v3.2.5/` and Python migration candidates not yet selected by active processes to `bin/python_migration/`; shared Python libraries and scripts used by the active workflow remain in `bin/`.
+- Some processes still depend on the legacy `SomaticPanelPipeline_2021-06-24.sif` container and remain scheduled for later tool-specific container and process splitting.
 - Requires Nextflow `25.04.0` or later. This release adopts only the required compatibility updates for Nextflow 25; further syntax modernization is still required.
 
 ## 3.2.5
