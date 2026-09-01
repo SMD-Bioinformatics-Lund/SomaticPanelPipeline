@@ -1,20 +1,12 @@
 ## Changelog ##
 
 ## v3.3.0
-- Massive `SomaticPanelPipeline_2021-06-24.sif` container has been split into its respective individual containers which is easy to update and maintain.
-- Merged main-branch 3.2.0-3.2.4 updates into the split-module branch, including reference validation, QC-only workflow entry updates, normal germline DNAscope calling, and Peddy sex-check/CDM outputs.
-- Modernized the pipeline module structure so major command chains are split into smaller, easier-to-maintain DSL2 processes with dedicated containers and clearer process names.
-- Refactored SNV calling and annotation steps for FreeBayes, VarDict, Pindel, VEP post-processing, germline marking, CNVkit germline preparation, and VCF normalization while preserving the established published output names.
-- Restored the full FreeBayes post-call chain as separate processes: LowCov filtering, LowFrq filtering, genotype cleanup, somatic/unpaired filtering, and FORMAT/AD removal.
-- Moved reusable command steps into their tool modules, including `vcffilter`/`vcfglxgt` in the vcflib module and `bcftools annotate` in the bcftools module.
-- Refactored CNV calling into dedicated CNVkit and GATK subworkflows, with command-specific processes for calling, plotting, exporting, filtering, merging, and GENS/CDM preparation.
-- Refactored BAM/VCF QC steps for panel depth, low-coverage reporting, ID-SNP genotyping, contamination reporting, and CDM handoff so intermediate files remain internal unless they were previously published deliverables.
-- Integrated the main-branch Coyote3 YAML export flow into `ADD_TO_DB` using split helper processes while keeping the legacy Coyote command output and current meta-aware channel format.
-- Converted several legacy Perl utilities to Python equivalents with explicit output files, while keeping the Perl scripts in `bin/` for traceability during the transition.
-- Simplified Coyote, SVDB, GATK merge/filter, CNVkit GENS merge, and annotation helper steps to reduce inline shell logic in Nextflow process blocks.
-- Removed unused local process definitions and retired unused nf-core module copies that are no longer part of the active workflow graph.
-- Dropped obsolete concatenate VCF process blocks that were no longer imported by any workflow or subworkflow, keeping only the active aggregate VCF process.
-- Preserved existing result folders and published file names where outputs are user-facing, while keeping newly introduced intermediate split outputs unpublished.
+- Split the legacy monolithic pipeline container into smaller, tool-specific containers and command-specific DSL2 processes.
+- Refactored SNV calling, annotation, CNV calling, QC, Coyote export, and supporting utilities while retaining the established user-facing result folders and output names.
+- Separated CNVkit and GATK CNV workflows, restored the complete FreeBayes post-call chain, and moved reusable commands into their respective tool modules.
+- Merged main-branch 3.2.0-3.2.5 functionality, including reference validation, QC-only entry points, normal germline calling, Peddy outputs, and Coyote3 metadata handling.
+- Added published-output safeguards so split-process intermediates remain internal unless they were published by the legacy workflow.
+- Requires Nextflow `25.04.0` or later. This release adopts only the required compatibility updates for Nextflow 25; further syntax modernization is still required.
 
 ## 3.2.5
 - process COYOTE_YAML in add_to_db.nf replaced by processes OUTPUT_FILES and OUTPUTS_YAML_COYOTE to create a YAML for Coyote3 without echoing info and without the use of FindIndexOf for optional files.

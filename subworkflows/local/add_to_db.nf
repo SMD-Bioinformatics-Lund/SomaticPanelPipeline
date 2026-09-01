@@ -13,7 +13,7 @@ workflow ADD_TO_DB {
         segments        // channel: [optional] [ val(group), file(segments) ]
         s_json          // channel: [optional] [ val(group), file(segments) ]
         gens            // channel: [optional] [ val(group), val(meta), file(gens) ]
-        gatcov_plot     // channel: [optional] [ val(group), file(plot) ]
+        gatcov_plot     // channel: [optional] [ val(group), val(meta), file(plot) ]
         fusions         // channel: [optional] [ val(group), file(vcf) ]
         biomarkers      // channel: [optional] [ val(group), file(json) ]
         cnvkit_plot     // channel: [optional] [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
@@ -33,7 +33,7 @@ workflow ADD_TO_DB {
         cnv_json_for_coyote = s_json.map { group, cnv_file ->
             tuple(group, 'cnv', cnv_file.name)
         }
-        gatk_plot_for_coyote = gatcov_plot.map { group, plot_file ->
+        gatk_plot_for_coyote = gatcov_plot.map { group, meta, plot_file ->
             tuple(group, 'cnvprofile', plot_file.name)
         }
         biomarkers_for_coyote = biomarkers.map { group, biomarker_file ->
@@ -58,7 +58,7 @@ workflow ADD_TO_DB {
             .map { group, meta, type, cov_file ->
                 tuple(group, 'cov', cov_file)
             }
-        coyote_gatk_plot = gatcov_plot.map { group, plot_file ->
+        coyote_gatk_plot = gatcov_plot.map { group, meta, plot_file ->
             tuple(group, 'cnvprofile_gatk', plot_file)
         }
         coyote_cnvkit_plot = cnvkit_plot

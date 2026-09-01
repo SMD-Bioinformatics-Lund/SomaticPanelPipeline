@@ -20,10 +20,24 @@ process PEDDY {
             meta.sex == 'M' ? 1 :
             meta.sex == 'F' ? 2 : 0
         )
+        def ped_sex = (
+            meta.sex == 'M' ? 'male' :
+            meta.sex == 'F' ? 'female' : 'unknown'
+        )
 
         """
+        export MPLCONFIGDIR="\$PWD/.matplotlib"
+        mkdir -p "\$MPLCONFIGDIR"
+
         echo -e "${group}\t${meta.id}\t0\t0\t${sex_code}\t2" > ${meta.id}.ped
         peddy --sites hg38 $vcf ${meta.id}.ped --prefix ${prefix}
+
+        # Targeted panels can contain no Peddy sex-chromosome sites. Preserve the
+        # completed Peddy reports and let the CDM conversion record sex QC as unavailable.
+        if [[ ! -f ${prefix}.sex_check.csv ]]; then
+            printf 'sample_id,ped_sex,predicted_sex,error\\n%s,%s,unknown,unavailable\\n' \\
+                '${meta.id}' '${ped_sex}' > ${prefix}.sex_check.csv
+        fi
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

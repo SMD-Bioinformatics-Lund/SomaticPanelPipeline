@@ -39,11 +39,11 @@ def validatePathValue(label, value) {
         return
     }
 
-    if (!(value instanceof String)) {
-        error "ERROR: Parameter '${label}' : '${value}' is not a string path."
+    if (!(value instanceof CharSequence) && !(value instanceof java.nio.file.Path) && !(value instanceof File)) {
+        error "ERROR: Parameter '${label}' : '${value}' is not a filesystem path."
     }
 
-    def f = file(value)
+    def f = file(value.toString())
 
     if (!f.exists()) {
         error "ERROR: Param '${label}' points to missing path: ${value}"

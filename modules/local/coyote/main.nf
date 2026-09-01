@@ -196,7 +196,7 @@ process OUTPUT_FILES {
         task.ext.when == null || task.ext.when
 
     script:
-        def json_map = [labels, files.collect { it.name }]
+        def json_map = [labels, files.collect { it.toString().replaceAll('.+/', '') }]
             .transpose()
             .collectEntries { label, filename -> [(label): filename] }
         def json_str = groovy.json.JsonOutput.toJson(json_map)
