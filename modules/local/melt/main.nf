@@ -24,7 +24,7 @@ process MELT {
             -cov $COV_DEV \\
             -e $INS_SIZE
 
-        merge_melt.pl ${params.meltheader} ${meta.id}
+        merge_melt.py --vcf-header ${params.meltheader} --sample-id ${meta.id} --out ${prefix}.melt.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

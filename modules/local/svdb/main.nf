@@ -3,7 +3,7 @@ process SVDB_MERGE_PANEL {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(vcfs)
+        tuple val(group), val(meta), val(callers), file(vcfs)
 
     output:
         tuple val(group), val(meta), file("*.merged.vcf"), emit: merged_vcf
@@ -15,34 +15,17 @@ process SVDB_MERGE_PANEL {
     script:
         def args    = task.ext.args     ?: ''
         def prefix  = task.ext.prefix   ?: "${meta.id}"
+        def caller_order = ['manta', 'delly', 'gatk', 'cnvkit', 'genefuse']
+        def caller_list = callers instanceof List ? callers : [callers]
+        def vcf_list = vcfs instanceof List ? vcfs : [vcfs]
+        def records = [caller_list, vcf_list].transpose()
+        def ordered_records = caller_order.collectMany { caller ->
+            records.findAll { record -> record[0] == caller }
+        }
 
-        // for each sv-caller add idx, find vcf and find priority, add in priority order! //
-        // index of vcfs added from mix //
-        manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
-        delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
-        cnvkit_idx = vcfs.findIndexOf{ it =~ 'cnvkit' }
-        gatk_idx = vcfs.findIndexOf{ it =~ 'gatk' }
-        genefuse_idx = vcfs.findIndexOf{ it =~ 'genefuse' }
+        def vcfs_svdb = ordered_records.collect { record -> "${record[1]}:${record[0]}" }.join(' ')
+        def priority = ordered_records.collect { record -> record[0] }.unique().join(',')
 
-        // find vcfs //
-        manta = manta_idx >= 0 ? vcfs[manta_idx].collect {it + ':manta ' } : null
-        delly = delly_idx >= 0 ? vcfs[delly_idx].collect {it + ':delly ' } : null
-        cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
-        gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
-        genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = (manta ?: []) + (delly ?: []) + (gatk ?: []) + (cnvkit ?: []) + (genefuse ?: [])
-        vcfs_svdb = tmp.join(' ')
-
-        // find priorities //
-        mantap = manta_idx >= 0 ? 'manta' : null
-        dellyp = delly_idx >= 0 ? 'delly' : null
-        gatkp = gatk_idx >= 0 ? 'gatk' : null
-        cnvkitp = cnvkit_idx >= 0 ? 'cnvkit' : null
-        genefusep = genefuse_idx >= 0 ? 'genefuse' : null
-        tmpp = [mantap, dellyp, gatkp, cnvkitp, genefusep]
-        tmpp = tmpp - null
-        priority = tmpp.join(',')
-    
         """
         svdb --merge --vcf $vcfs_svdb $args --priority $priority > ${prefix}.merged.vcf
     
@@ -54,34 +37,7 @@ process SVDB_MERGE_PANEL {
 
     stub:
         def prefix  = task.ext.prefix   ?: "${meta.id}"
-        // for each sv-caller add idx, find vcf and find priority, add in priority order! //
-        // index of vcfs added from mix //
-        manta_idx = vcfs.findIndexOf{ it =~ 'manta' }
-        delly_idx = vcfs.findIndexOf{ it =~ 'delly' }
-        cnvkit_idx = vcfs.findIndexOf{ it =~ 'cnvkit' }
-        gatk_idx = vcfs.findIndexOf{ it =~ 'gatk' }
-        genefuse_idx = vcfs.findIndexOf{ it =~ 'genefuse' }
-
-        // find vcfs //
-        manta = manta_idx >= 0 ? vcfs[manta_idx].collect {it + ':manta ' } : null
-        delly = delly_idx >= 0 ? vcfs[delly_idx].collect {it + ':delly ' } : null
-        cnvkit = cnvkit_idx >= 0 ? vcfs[cnvkit_idx].collect {it + ':cnvkit ' } : null
-        gatk = gatk_idx >= 0 ? vcfs[gatk_idx].collect {it + ':gatk ' } : null
-        genefuse = genefuse_idx >= 0 ? vcfs[genefuse_idx].collect {it + ':genefuse ' } : null
-        tmp = (manta ?: []) + (delly ?: []) + (gatk ?: []) + (cnvkit ?: []) + (genefuse ?: [])
-        vcfs_svdb = tmp.join(' ')
-
-        // find priorities //
-        mantap = manta_idx >= 0 ? 'manta' : null
-        dellyp = delly_idx >= 0 ? 'delly' : null
-        gatkp = gatk_idx >= 0 ? 'gatk' : null
-        cnvkitp = cnvkit_idx >= 0 ? 'cnvkit' : null
-        genefusep = genefuse_idx >= 0 ? 'genefuse' : null
-        tmpp = [mantap, dellyp, gatkp, cnvkitp, genefusep]
-        tmpp = tmpp - null
-        priority = tmpp.join(',')
         """
-        echo $vcfs_svdb $priority
         touch ${prefix}.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
@@ -98,11 +54,11 @@ process SVDB_MERGE_SINGLES {
     tag "$group"
 
     input:
-        tuple val(group), val(vc), file(vcfs)
+        tuple val(group), val(meta), val(vc), file(vcfs)
         
     output:
-        tuple val(group), val(vc), file("*_${vc}.merged.vcf"),  emit: singles_merged_vcf
-        path "versions.yml",                                    emit: versions
+        tuple val(group), val(meta), val(vc), file("*_${vc}.merged.vcf"),   emit: singles_merged_vcf
+        path "versions.yml",                                                emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -142,11 +98,11 @@ process SVDB_ANNOTATE_ARTEFACTS {
 
     input:
         tuple val(group), val(meta), file(vcf)
-	val(dbs)
+        val(dbs)
         
     output:
-        tuple val(group), val(meta), file("${meta.id}.cnv.artefacts.vcf"),  emit: artefacts
-        path "versions.yml",                                                emit: versions
+        tuple val(group), val(meta), file("*.cnv.artefacts.vcf"),  emit: artefacts
+        path "versions.yml",                                       emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -154,74 +110,28 @@ process SVDB_ANNOTATE_ARTEFACTS {
     script:
         def args   = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
+        def db_manifest = dbs.collect { db_name, db_vcf -> "${db_name}\\t${db_vcf}\\n" }.join('')
 
-        // Build the sequential svdb chain as a bash loop
-        // We generate bash code dynamically in Groovy, then insert it below.
-        def svdb_chain = dbs.collect { db_name, db_vcf ->
-            """
-            echo "[SVDB] Annotating with ${db_name} (${db_vcf})"
-            svdb --query ${args} \\
-                 --out_frq AFRQ_${db_name} \\
-                 --out_occ ACOUNT_${db_name} \\
-                 --db ${db_vcf} \\
-                 --query_vcf "\$input_vcf" \\
-                 > tmp_${db_name}.vcf
-            input_vcf="tmp_${db_name}.vcf"
-            """
-        }.join("\n\n")
+        """
+        printf '${db_manifest}' > svdb_dbs.tsv
 
-        // Emit final bash script
-        return """
-        set -euo pipefail
+        svdb_annotate_artefacts.sh \\
+            --query-vcf ${vcf} \\
+            --dbs svdb_dbs.tsv \\
+            --out ${prefix}.cnv.artefacts.vcf \\
+            -- ${args}
 
-        # Start from the original input VCF
-        input_vcf="${vcf}"
-
-        # Sequentially annotate using all DBs
-        ${svdb_chain}
-
-        # Final output file
-        mv "\$input_vcf" "${meta.id}.cnv.artefacts.vcf"
-
-        # Version tracking
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             svdb: \$( svdb 2>&1 | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )
         END_VERSIONS
         """
+
     stub:
-        def args   = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
+        """
+        touch ${prefix}.cnv.artefacts.vcf
 
-        // Build the sequential svdb chain as a bash loop
-        // We generate bash code dynamically in Groovy, then insert it below.
-        def svdb_chain = dbs.collect { db_name, db_vcf ->
-            """
-            echo "[SVDB] Annotating with ${db_name} (${db_vcf})"
-            echo --query ${args} \\
-                 --out_frq AFRQ_${db_name} \\
-                 --out_occ ACOUNT_${db_name} \\
-                 --db ${db_vcf} \\
-                 --query_vcf "\$input_vcf" \\
-                 > tmp_${db_name}.vcf
-            input_vcf="tmp_${db_name}.vcf"
-            """
-        }.join("\n\n")
-
-        // Emit final bash script
-        return """
-        set -euo pipefail
-
-        # Start from the original input VCF
-        input_vcf="${vcf}"
-
-        # Sequentially annotate using all DBs
-        ${svdb_chain}
-
-        # Final output file
-        mv "\$input_vcf" "${meta.id}.cnv.artefacts.vcf"
-
-        # Version tracking
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             svdb: \$( svdb 2>&1 | head -1 | sed 's/usage: SVDB-\\([0-9]\\.[0-9]\\.[0-9]\\).*/\\1/' )

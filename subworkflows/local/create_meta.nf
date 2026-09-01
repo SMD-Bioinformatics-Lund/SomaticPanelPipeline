@@ -60,14 +60,15 @@ def create_fastq_channel(LinkedHashMap row, paired) {
 	meta.type               = row.type
 	meta.clarity_sample_id  = row.clarity_sample_id
 	meta.ffpe               = row.containsKey("ffpe") && row.ffpe ? true : false
-	meta.purity             = (row.containsKey("purity") ? row.purity : false)
+	meta.purity_raw         = (row.containsKey("purity") ? row.purity : false)
+	meta.purity             = normalize_purity(meta.purity_raw)
 	meta.sequencing_run     = row.sequencing_run
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
     meta.sex                = (row.containsKey("sex") ? row.sex : false)
 	meta.clarity_pool_id    = row.clarity_pool_id
     meta.paired             = paired
     def sub = false
-    if (meta.reads && params.sample) {  
+    if (meta.reads && params.sample) {
         if (meta.reads.toInteger() > params.sample_val) {
             sub = (params.sample_val / meta.reads.toInteger()).round(2)
             if (sub == 1.00) sub = 0.99
@@ -79,4 +80,12 @@ def create_fastq_channel(LinkedHashMap row, paired) {
 	fastq_meta = [row.group, meta, file(row.read1), file(row.read2) ]
 
 	return fastq_meta
+}
+
+def normalize_purity(purity) {
+    def value = purity?.toString()?.trim()
+    if (!value || value ==~ /(?i:false|0+(?:\.0*)?)/) {
+        return false
+    }
+    return purity
 }

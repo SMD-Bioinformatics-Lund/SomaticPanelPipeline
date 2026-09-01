@@ -1,65 +1,92 @@
 #!/usr/bin/env nextflow
 
-include { COYOTE_YAML          } from '../../modules/local/coyote/main'
-include { COYOTE               } from '../../modules/local/coyote/main'
-include { OUTPUT_FILES         } from '../../modules/local/coyote/main' // newly added process to ease data import into Coyote3
-include { OUTPUTS_YAML_COYOTE  } from '../../modules/local/coyote/main' // newly added process to ease data import into Coyote3
+include { COYOTE              } from '../../modules/local/coyote/main'
+include { OUTPUT_FILES        } from '../../modules/local/coyote/main'
+include { OUTPUTS_YAML_COYOTE } from '../../modules/local/coyote/main'
 
 workflow ADD_TO_DB {
 
-    take: 
+    take:
         vcf             // channel: [mandatory] [ val(group), val(meta), file(vcf) ]
-        lowcov          // channel: [mandatory] [ val(group), val(meta.type), file(lowcov) ]
-        lowcov_d4       // channel: [mandatory] [ val(group), val(meta.type), file(lowcov) ]
+        lowcov          // channel: [mandatory] [ val(group), val(meta), val(meta.type), file(lowcov) ]
+        lowcov_d4       // channel: [mandatory] [ val(group), val(meta), val(meta.type), file(lowcov) ]
         segments        // channel: [optional] [ val(group), file(segments) ]
         s_json          // channel: [optional] [ val(group), file(segments) ]
         gens            // channel: [optional] [ val(group), val(meta), file(gens) ]
-        gatcov_plot     // channel: [optional] [ val(group), file(plot) ]
+        gatcov_plot     // channel: [optional] [ val(group), val(meta), file(plot) ]
         fusions         // channel: [optional] [ val(group), file(vcf) ]
         biomarkers      // channel: [optional] [ val(group), file(json) ]
         cnvkit_plot     // channel: [optional] [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
 
     main:
-        ch_coyote_info = Channel.empty() // Gather data for json_INFO listing output files for export into Coyote3
-        lc = lowcov.map{ val-> tuple(val[0], val[2] ) }
-        lc_d4 = lowcov_d4.map{ val-> tuple(val[0], val[2] ) }
-        cnvkit_plot.groupTuple().set { cnvkit_plot_ch }
-        cnvkit_plot_ch.map { tuple ->
-            if (tuple[1].size() >= 2) {
-                int idx = tuple[1].findIndexOf { it['type'] == 'T' || it['type'] == 'tumor' }
-                [tuple[0], tuple[3][idx]]
-            } else {
-                [tuple[0], tuple[3][0]]
-            }
-        }.set { cnvkit_png }
+        lowcov_for_coyote = lowcov.map { group, meta, type, lowcov_file ->
+            tuple(group, 'lowcov', lowcov_file.name)
+        }
 
-        ch_coyote_info = ch_coyote_info
-        .mix(lowcov_d4
-            .filter { group, type, file -> type == 'T' || type == 'tumor' }
-            .map {group, type, file -> tuple(group, 'cov', file) }) // using directly the naming in coyote yaml for coyote_cov_json
-        .mix(gatcov_plot
-            .map { group, file -> tuple(group, 'cnvprofile_gatk', file) }) // file is modeled.png (preferred for coyote)
-        .mix(cnvkit_plot
-            .filter { group, meta, part, file -> meta.type == 'T' || meta.type == 'tumor'} 
-            .map { group, meta, part, file -> tuple(group, 'cnvprofile_cnvkit', file) }) // file is cnvkit_overview.png (if modeled.png absent)
-        .mix(s_json
-            .map { group, file -> tuple(group, 'cnv', file) }) // using directly the naming in coyote yaml)
-        .mix(fusions
-            .map { group, file -> tuple(group, 'transloc', file) }) // using directly the naming in coyote yaml for merged.annotated.vcf
-        .mix(biomarkers
-            .map { group, file -> tuple(group, 'biomarkers', file) }) // using directly the naming in coyote yaml for bio.json
-    
-        optional = lc.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
-        optional_json = lc_d4.mix(s_json,gatcov_plot,biomarkers,fusions,cnvkit_png).groupTuple()
-        COYOTE { vcf.join(optional) }
-        // COYOTE_YAML { vcf.join(optional_json) }
-        ch_coyote_info_grouped = ch_coyote_info.groupTuple()
-        OUTPUT_FILES ( ch_coyote_info_grouped ) // creates a json_INFO from the channel ch_coyote_info_grouped
-        OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) ) 
+        cnvkit_plot.groupTuple().set { cnvkit_plot_grouped }
+        cnvkit_png_for_coyote = cnvkit_plot_grouped.map { group, metas, parts, plots ->
+            def tumor_idx = metas.findIndexOf { sample_meta -> sample_meta.type == 'T' || sample_meta.type == 'tumor' }
+            tumor_idx = tumor_idx >= 0 ? tumor_idx : 0
+            tuple(group, 'cnvprofile', plots[tumor_idx].name)
+        }
+
+        cnv_json_for_coyote = s_json.map { group, cnv_file ->
+            tuple(group, 'cnv', cnv_file.name)
+        }
+        gatk_plot_for_coyote = gatcov_plot.map { group, meta, plot_file ->
+            tuple(group, 'cnvprofile', plot_file.name)
+        }
+        biomarkers_for_coyote = biomarkers.map { group, biomarker_file ->
+            tuple(group, 'biomarkers', biomarker_file.name)
+        }
+        fusions_for_coyote = fusions.map { group, fusion_file ->
+            tuple(group, 'transloc', fusion_file.name)
+        }
+
+        coyote_optional = lowcov_for_coyote
+            .mix(cnv_json_for_coyote, gatk_plot_for_coyote, biomarkers_for_coyote, fusions_for_coyote, cnvkit_png_for_coyote)
+            .groupTuple(by: [0])
+
+        coyote_input = vcf.join(coyote_optional).map { group, meta, vcf_file, import_types, import_files ->
+            tuple(group, meta, vcf_file, import_types, import_files)
+        }
+
+        coyote_cov_json = lowcov_d4
+            .filter { group, meta, type, cov_file ->
+                type.toString().toLowerCase() in ['t', 'tumor']
+            }
+            .map { group, meta, type, cov_file ->
+                tuple(group, 'cov', cov_file)
+            }
+        coyote_gatk_plot = gatcov_plot.map { group, meta, plot_file ->
+            tuple(group, 'cnvprofile_gatk', plot_file)
+        }
+        coyote_cnvkit_plot = cnvkit_plot
+            .filter { group, meta, part, plot_file ->
+                meta.type.toString().toLowerCase() in ['t', 'tumor']
+            }
+            .map { group, meta, part, plot_file ->
+                tuple(group, 'cnvprofile_cnvkit', plot_file)
+            }
+        coyote_cnv_json = s_json.map { group, cnv_file ->
+            tuple(group, 'cnv', cnv_file)
+        }
+        coyote_fusions = fusions.map { group, fusion_file ->
+            tuple(group, 'transloc', fusion_file)
+        }
+        coyote_biomarkers = biomarkers.map { group, biomarker_file ->
+            tuple(group, 'biomarkers', biomarker_file)
+        }
+
+        coyote_info = coyote_cov_json
+            .mix(coyote_gatk_plot, coyote_cnvkit_plot, coyote_cnv_json, coyote_fusions, coyote_biomarkers)
+            .groupTuple(by: [0])
+
+        COYOTE ( coyote_input )
+        OUTPUT_FILES ( coyote_info )
+        OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) )
 
     emit:
-        coyotedone = COYOTE.out.coyote_import        // channel: [ val(group), file(coyote) ]
-        //coyotedone = COYOTE_YAML.out.coyote_import   // channel: [ val(group), file(coyote) ], old way to make the YAML for Coyote3
-        coyoteyaml = OUTPUTS_YAML_COYOTE.out.yaml_coyote3 // channel: [ val(group), file(coyote) ]
+        coyotedone = COYOTE.out.coyote_import
+        coyoteyaml = OUTPUTS_YAML_COYOTE.out.yaml_coyote3
 }
-

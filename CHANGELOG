@@ -1,5 +1,15 @@
 ## Changelog ##
 
+## v3.3.0
+- Split the legacy monolithic pipeline container into smaller, tool-specific containers and command-specific DSL2 processes.
+- Refactored SNV calling, annotation, CNV calling, QC, Coyote export, and supporting utilities while retaining the established user-facing result folders and output names.
+- Separated CNVkit and GATK CNV workflows, restored the complete FreeBayes post-call chain, and moved reusable commands into their respective tool modules.
+- Merged main-branch 3.2.0-3.2.5 functionality, including reference validation, QC-only entry points, normal germline calling, Peddy outputs, and Coyote3 metadata handling.
+- Added published-output safeguards so split-process intermediates remain internal unless they were published by the legacy workflow.
+- Moved superseded Perl utilities to `bin/legacy_v3.2.5/` and Python migration candidates not yet selected by active processes to `bin/python_migration/`; shared Python libraries and scripts used by the active workflow remain in `bin/`.
+- Some processes still depend on the legacy `SomaticPanelPipeline_2021-06-24.sif` container and remain scheduled for later tool-specific container and process splitting.
+- Requires Nextflow `25.04.0` or later. This release adopts only the required compatibility updates for Nextflow 25; further syntax modernization is still required.
+
 ## 3.2.5
 - process COYOTE_YAML in add_to_db.nf replaced by processes OUTPUT_FILES and OUTPUTS_YAML_COYOTE to create a YAML for Coyote3 without echoing info and without the use of FindIndexOf for optional files.
 
@@ -20,96 +30,94 @@
 ## 3.2.1
 - fixed the missing versions output emitted from the CONTAMINATION process in vcf_qc
 
-## 3.2.0
+## v3.2.0
 - Added sex check as vcf qc
 - bam start for dev work only
 - germline calling for normal bam
 
-## 3.1.17
+## v3.1.17
 - Fixed CNVkit call step to skip optional Nexus OGT BAF/LogR export when the input VCF has no variant records.
 
-## 3.1.16
+## v3.1.16
 - Filtered out variants arising from backbone probe regions and IDSNPS (e.g., CCDC51, HLA-A) in solid, hematology assay, but parp_inhib, myeloid and lymphoid profiles remains unchanged.
 
-
-## 3.1.15
+## v3.1.15
 - Fixed issue created with GMShem keeps failing at check samplesheet.
 
-## 3.1.14
+## v3.1.14
 - Fixed Gens command where `!` is printed in the filename and ids in the command.
 
-## 3.1.13
+## v3.1.13
 - Fix: Markgermline now takes the severe consequences from annotation VEP.
 - Updated likely_benign clinvar in solid_mg.json file
 - Also now takes the genomAd from either genome or exon frequencies.
 
-## 3.1.12
+## v3.1.12
 - Fix: `GENS_V4` process removed and moved the command to generate `.gens_v4_somatic` file to `MERGE_GENS` process
 
-## 3.1.11
+## v3.1.11
 - Fix: GENS v4 process attempted to load index files (e.g. .tbi) instead of the actual data files; corrected the load command to use the proper GENS v4 output files to prevent downstream failures.
 
-## 3.1.10
+## v3.1.10
 - Gens v4 output file name changed from `.gens_v4` -> `.gens_v4_somatic`
 
-## 3.1.9
+## v3.1.9
 ### HotFix
 - Added access dir path for gens_v4 files
 
-## 3.1.8
+## v3.1.8
 - Added GENS_V4 process to make it work with new version of GENS
 
-## 3.1.7
+## v3.1.7
 - CNVs for certain manta ins got no cnv size, cause downstream crashes in coyote. Now fixed
 
-## 3.1.6
+## v3.1.6
 - CNVs as JSON. Updated import script to ol'coyote to support this. 
 - Added multiple SVDB annotations via config-map
 
-## 3.1.5
+## v3.1.5
 - added more meta information to the coyote3 load yaml and legacy coyote
 
-## 3.1.4
+## v3.1.4
 - generate_gens_data_from_cnvkit.pl no longer uses deprecated AD-field from freebayes
 
-## 3.1.3
+## v3.1.3
 - cnvJSON.py could not handle merged GATK variants, now asumes copy number to be the same for merged
 
-## 3.1.2
+## v3.1.2
 - gmshem to downsample at 100 mbp
 - coyote-yaml renamed and always saved in non-cron dir
 - coyote_cli params to decide what is added to cron dir
 
-## 3.1.1
+## v3.1.1
 - added some meta info to the coyote yaml and coyote load command 
 
-## 3.1.0
+## v3.1.0
 - Added GMSHem profile
 - changed to bcftools decomposing and normalization
 
-## 3.0.19
+## v3.0.19
 - fixed illegal division error in filter_tnscope_somatic script
 
-## 3.0.18
+## v3.0.18
 - added tnscope parameters to find snvs only
 
-## 3.0.17
+## v3.0.17
 - reverted clinsig rescue for failed variants
 
-## 3.0.16
+## v3.0.16
 - updated solid msi loci
 
-## 3.0.15
+## v3.0.15
 - added a QC workflow for only running qc-processes
 
-
-## 3.0.14
+## v3.0.14
 - theano base_dir now correctly set for GATK:PREPROCESS
 
-## 3.0.13
+## v3.0.13
 - added --no-home run_options for singularity. Was causing issues with container when run as worker
 
-## 3.0.12
+## v3.0.12
 - ID-SNPs pairs missmatching fixed. Channel did not keep track of T vs N json
 
 ## v3.0.11

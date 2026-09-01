@@ -1,6 +1,7 @@
-#!/usr/bin/env python
-import json
+#!/usr/bin/env python3
+
 import argparse
+import json
 
 # Function to load JSON data from a file
 def load_json_file(file_path):
@@ -31,19 +32,37 @@ def combine_json_files(info_json_file, genotype_json_file, partner_run_json_file
 
     # Save the combined data to the output file
     save_json_file(combined_data, output_file)
-    print(f"Combined JSON saved to {output_file}")
 
 # Argument parser setup
 def parse_args():
     parser = argparse.ArgumentParser(description='Append genotype JSON into Info JSON and save the result.')
-    
-    # Add arguments for the input JSON files and the output file
-    parser.add_argument('info_json_file', help='Path to the Info JSON file')
-    parser.add_argument('genotype_json_file', help='Path to the genotype JSON file')
-    parser.add_argument('--partner_run_json_file', help='Path to the partner sample run JSON file (optional)', default=None)
-    parser.add_argument('output_file', help='Path to the output combined JSON file')
 
-    return parser.parse_args()
+    # Positional arguments are kept for backward compatibility with existing calls.
+    parser.add_argument('info_json_file_pos', nargs='?', help='Path to the Info JSON file')
+    parser.add_argument('genotype_json_file_pos', nargs='?', help='Path to the genotype JSON file')
+    parser.add_argument(
+        '--partner-run-json-file',
+        '--partner_run_json_file',
+        dest='partner_run_json_file',
+        help='Path to the partner sample run JSON file (optional)',
+        default=None,
+    )
+    parser.add_argument('output_file_pos', nargs='?', help='Path to the output combined JSON file')
+    parser.add_argument('--info-json', dest='info_json_file', help='Path to the Info JSON file')
+    parser.add_argument('--genotype-json', dest='genotype_json_file', help='Path to the genotype JSON file')
+    parser.add_argument('--out', dest='output_file', help='Path to the output combined JSON file')
+
+    args = parser.parse_args()
+    args.info_json_file = args.info_json_file or args.info_json_file_pos
+    args.genotype_json_file = args.genotype_json_file or args.genotype_json_file_pos
+    args.output_file = args.output_file or args.output_file_pos
+    missing = [
+        name for name in ("info_json_file", "genotype_json_file", "output_file")
+        if getattr(args, name) is None
+    ]
+    if missing:
+        parser.error(f"missing required arguments: {', '.join(missing)}")
+    return args
 
 if __name__ == "__main__":
     # Parse command-line arguments

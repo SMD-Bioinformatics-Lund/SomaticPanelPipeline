@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-include { CREATE_SNVPON               } from '../../modules/local/filters/main'
+include { CREATE_SNVPON               } from '../../modules/local/pon/main'
 
 workflow CREATE_SNV_PON {
     take: 

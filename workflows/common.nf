@@ -46,16 +46,16 @@ workflow SPP_COMMON {
     // Checks input, creates meta-channel and decides whether data should be downsampled //
     CHECK_INPUT ( Channel.fromPath(csv), params.paired )
 
-	parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
-	VALIDATE_PARAMETERS(parameters_to_validate)
-    
+    parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
+    VALIDATE_PARAMETERS(parameters_to_validate)
+
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
     .set{ ch_trim }
     ch_versions = ch_versions.mix(ch_trim.versions)
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
-    ALIGN_SENTIEON ( 
+    ALIGN_SENTIEON (
         ch_trim.fastq_trim,
         CHECK_INPUT.out.bam,
         CHECK_INPUT.out.meta
@@ -77,11 +77,10 @@ workflow SPP_COMMON {
     )
     .set { pgx_files }
 
-    SNV_CALLING ( 
+    SNV_CALLING (
         ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
-        CHECK_INPUT.out.meta,
         ch_qc.melt_qc,
         ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
@@ -91,7 +90,6 @@ workflow SPP_COMMON {
     SNV_ANNOTATE (
         ch_vcf.agg_vcf,
         ch_vcf.concat_vcfs,
-        CHECK_INPUT.out.meta
     )
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
@@ -115,7 +113,7 @@ workflow SPP_COMMON {
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
         ch_vcf_anno.germline_variants,
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup,
         gatk_ref
     )
@@ -125,7 +123,7 @@ workflow SPP_COMMON {
     CNV_ANNOTATE (
         ch_cnvcalled.tumor_vcf,
         ch_cnvcalled.normal_vcf,
-        CHECK_INPUT.out.meta
+        // CHECK_INPUT.out.meta
     )
     .set { ch_cnv }
     ch_versions = ch_versions.mix(ch_cnv.versions)
@@ -133,14 +131,14 @@ workflow SPP_COMMON {
 
     FUSIONS (
         ch_trim.fastq_trim,
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup
     )
     .set { ch_fusion }
     ch_versions = ch_versions.mix(ch_fusion.versions)
 
     BIOMARKERS (
-        CHECK_INPUT.out.meta,
+        // CHECK_INPUT.out.meta,
         ch_cnvcalled.cnvkit_hrd,
         ch_mapped.bam_umi, 
         ch_mapped.bam_dedup
@@ -151,8 +149,8 @@ workflow SPP_COMMON {
 
     ADD_TO_DB (
         ch_vcf_anno.finished_vcf,
-        ch_qc.lowcov.filter { item -> item[1] == 'T' },
-        ch_qc.lowcov_d4.filter { item -> item[1] == 'T' },
+        ch_qc.lowcov.filter { item -> item[2] == 'T' },
+        ch_qc.lowcov_d4.filter { item -> item[2] == 'T' },
         ch_cnv.segments,
         ch_cnv.s_json,
         ch_cnvcalled.gens,
@@ -198,20 +196,19 @@ workflow.onComplete {
 
 workflow.onError {
 
-	def msg = """\
-	Success     : ${workflow.success}
-	scriptFile  : ${workflow.scriptFile}
-	workDir     : ${workflow.workDir}
-	csv         : ${params.csv}
-	errorMessage: ${workflow.errorMessage}
-	"""
-	def base = file(params.csv).getBaseName()
-	//File logFile = new File("${params.crondir}/logs/${base}.complete")
-	File logFile = new File("${params.resultsdir}/cron/logs/" + base + ".complete")
-	if ( !logFile.exists() ) {
-		if (!logFile.getParentFile().exists()) {
-			logFile.getParentFile().mkdirs()
-		}
-		logFile.text = msg
-	}
+    def msg = """\
+    Success     : ${workflow.success}
+    scriptFile  : ${workflow.scriptFile}
+    workDir     : ${workflow.workDir}
+    csv         : ${params.csv}
+    errorMessage: ${workflow.errorMessage}
+    """
+    def base = file(params.csv).getBaseName()
+    File logFile = new File("${params.resultsdir}/cron/logs/" + base + ".complete")
+    if ( !logFile.exists() ) {
+        if (!logFile.getParentFile().exists()) {
+            logFile.getParentFile().mkdirs()
+        }
+        logFile.text = msg
+    }
 }

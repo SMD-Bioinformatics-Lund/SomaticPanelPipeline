@@ -3,7 +3,7 @@ process COYOTE {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(vcf), file(importy)
+        tuple val(group), val(meta), file(vcf), val(import_types), val(import_files)
 
     output:
         tuple val(group), file("*.coyote"), emit: coyote_import
@@ -12,189 +12,82 @@ process COYOTE {
         task.ext.when == null || task.ext.when
 
     script:
-        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
-        process_group = group
-        tumor_idx = 0
-        tumor_idx_lowcov = 0
-        tumor_reads = meta.reads[tumor_idx] ?: null
-        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
-        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
-        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
-        normal_sample = null
-        clarity_control_id = null
-        clarity_control_pool_id = null
-        control_reads = null
-        control_ffpe = null
-        control_sequencing_run = null
-        control_purity = null
-        sample_no = meta.id.size()
-        if( meta.id.size() >= 2 ) {
-            process_group = group + 'p'
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            normal_sample = meta.id[normal_idx]
-            clarity_control_id = meta.clarity_sample_id[normal_idx]
-            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
-            control_reads = meta.reads[normal_idx] ?: null
-            control_ffpe = meta.ffpe[normal_idx] ? true : false
-            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
-            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
-        }
-        tumor_sample = meta.id[tumor_idx]
+        def samples = meta instanceof List ? meta : [meta]
+        def tumor_idx = samples.findIndexOf { it.type == 'tumor' || it.type == 'T' }
+        tumor_idx = tumor_idx >= 0 ? tumor_idx : 0
+        def normal_idx = samples.findIndexOf { it.type == 'normal' || it.type == 'N' }
+        def tumor = samples[tumor_idx]
+        def normal = normal_idx >= 0 ? samples[normal_idx] : null
+        def process_group = samples.size() >= 2 ? "${group}p" : group
+        def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        def tumor_sex = tumor.sex?.toString()?.toLowerCase()
+        def coyote_sex = tumor_sex in ['male', 'm', '1'] ? 'male' : tumor_sex in ['female', 'f', '2'] ? 'female' : 'unknown'
+        def access_dir = [
+            cnv       : 'cnv',
+            transloc  : 'fusions',
+            biomarkers: 'biomarkers',
+            cnvprofile: 'plots',
+            lowcov    : 'QC'
+        ]
+        def import_order = ['cnv', 'transloc', 'biomarkers', 'cnvprofile', 'lowcov']
+        def seen_import_types = [] as Set
+        def import_records = [import_types, import_files].transpose()
+            .findAll { record -> record[0] != 'cnvprofile' || seen_import_types.add(record[0]) }
+            .sort { a, b -> import_order.indexOf(a[0]) <=> import_order.indexOf(b[0]) }
+        def import_args = import_records
+            .findAll { record -> access_dir.containsKey(record[0]) }
+            .collect { record -> "--${record[0]} /access/${params.subdir}/${access_dir[record[0]]}/${record[1]}" }
 
-        // find what to load into coyote, depending on what files are in $import //
-        // index of imports added from mix //
-        cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
-        fusions_idx    = importy.findIndexOf{ it =~ 'annotated' }
-        biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
-        lowcov_idx     = importy.findIndexOf{ it =~ 'lowcov' }
-        cnvplot_idx    = importy.findIndexOf{ it =~ 'modeled.png' }
-        cnvkit_idx     = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
-
-        // add matching flags //
-        cnvseg     = cnvseg_idx     >= 0 ? importy[cnvseg_idx].collect {'--cnv /access/' + params.subdir + '/cnv/' + it } : null
-        fusions    = fusions_idx    >= 0 ? importy[fusions_idx].collect {'--transloc /access/' + params.subdir + '/fusions/' + it } : null
-        biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'--biomarkers /access/' + params.subdir + '/biomarkers/' + it } : null
-        cnvplot    = cnvplot_idx    >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
-        lowcov     = lowcov_idx     >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
-        purity     = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
-        tmp        = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
-        cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
-
-        if ( cnvplot == null && cnvkit_idx >= 0 ){
-            cnvplot = importy[cnvkit_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it }
+        if (tumor.purity) {
+            import_args << "--purity ${tumor.purity.toFloat()}"
         }
 
-        lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
-        purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
-        tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
-        import_command = tmp.join(' ')
+        def command = [
+            "/data/bnf/scripts/import_DSL2_to_coyote.pl",
+            "--group ${params.coyote_group}",
+            "--vcf /access/${params.subdir}/vcf/${vcf}",
+            "--id ${process_group}",
+            "--clarity-sample-id ${tumor.clarity_sample_id}",
+            "--clarity_case_id ${tumor.clarity_sample_id}",
+            "--clarity_control_id ${normal?.clarity_sample_id}",
+            "--build 38",
+            "--gens ${tumor.id}",
+            "--subpanel ${tumor.diagnosis}",
+            "--clarity-pool-id ${tumor.clarity_pool_id}",
+            "--clarity_case_pool_id ${tumor.clarity_pool_id}",
+            "--clarity_control_pool_id ${normal?.clarity_pool_id}",
+            "--sample_no ${samples.size()}",
+            "--case_id ${tumor.id}",
+            "--control_id ${normal?.id}",
+            "--profile ${environment}",
+            "--assay ${params.coyote_group}",
+            "--sequencing_scope panel",
+            "--omics_layer DNA",
+            "--sequencing_technology Illumina",
+            "--pipeline ${workflow.manifest.name}",
+            "--pipeline_version ${workflow.manifest.version}",
+            "--case_ffpe ${tumor.ffpe ? true : false}",
+            "--case_sequencing_run ${tumor.sequencing_run ?: null}",
+            "--case_reads ${tumor.reads ?: null}",
+            "--case_purity ${tumor.purity ? tumor.purity.toFloat() : null}",
+            "--control_ffpe ${normal ? (normal.ffpe ? true : false) : null}",
+            "--control_sequencing_run ${normal?.sequencing_run ?: null}",
+            "--control_reads ${normal?.reads ?: null}",
+            "--control_purity ${normal?.purity ? normal.purity.toFloat() : null}",
+            "--paired ${samples.size() >= 2}"
+        ] + import_args
 
         """
-        echo "/data/bnf/scripts/import_DSL2_to_coyote.pl --group $params.coyote_group \\
-            --vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
-            --clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
-            --clarity_case_id ${meta.clarity_sample_id[tumor_idx]} \\
-            --clarity_control_id ${clarity_control_id} \\
-            --build 38 \\
-            --gens ${meta.id[tumor_idx]} \\
-            --subpanel ${meta.diagnosis[tumor_idx]} \\
-            --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
-            --clarity_case_pool_id ${meta.clarity_pool_id[tumor_idx]} \\
-            --clarity_control_pool_id ${clarity_control_pool_id} \\
-            --sample_no $sample_no \\
-            --case_id ${tumor_sample} \\
-            --control_id ${normal_sample} \\
-            --profile ${environment} \\
-            --assay $params.coyote_group \\
-            --sequencing_scope panel \\
-            --omics_layer DNA \\
-            --sequencing_technology Illumina \\
-            --pipeline ${workflow.manifest.name} \\
-            --pipeline_version ${workflow.manifest.version} \\
-            --case_ffpe ${tumor_ffpe} \\
-            --case_sequencing_run ${tumor_sequencing_run} \\
-            --case_reads ${tumor_reads} \\
-            --case_purity ${tumor_purity} \\
-            --control_ffpe ${control_ffpe} \\
-            --control_sequencing_run ${control_sequencing_run} \\
-            --control_reads ${control_reads} \\
-            --control_purity ${control_purity} \\
-            --paired ${meta.id.size() >= 2} \\
-            $import_command" > ${process_group}.coyote
+        cat <<-'END_COYOTE' > ${process_group}.coyote
+        ${command.join(' ')}
+        END_COYOTE
         """
 
     stub:
-        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
-        process_group = group
-        tumor_idx = 0
-        tumor_idx_lowcov = 0
-        tumor_reads = meta.reads[tumor_idx] ?: null
-        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
-        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
-        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
-        normal_sample = null
-        clarity_control_id = null
-        clarity_control_pool_id = null
-        control_reads = null
-        control_ffpe = null
-        control_sequencing_run = null
-        control_purity = null
-        sample_no = meta.id.size()
-        if( meta.id.size() >= 2 ) {
-            process_group = group + 'p'
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            normal_sample = meta.id[normal_idx]
-            clarity_control_id = meta.clarity_sample_id[normal_idx]
-            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
-            control_reads = meta.reads[normal_idx] ?: null
-            control_ffpe = meta.ffpe[normal_idx] ? true : false
-            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
-            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
-        }
-        tumor_sample = meta.id[tumor_idx]
-        // find what to load into coyote, depending on what files are in $import //
-        // index of imports added from mix //
-        cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
-        fusions_idx    = importy.findIndexOf{ it =~ 'annotated' }
-        biomarkers_idx = importy.findIndexOf{ it =~ 'bio' }
-        lowcov_idx     = importy.findIndexOf{ it =~ 'lowcov' }
-        cnvplot_idx    = importy.findIndexOf{ it =~ 'modeled.png' }
-        cnvkit_idx     = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
-
-
-        // add matching flags //
-        cnvseg     = cnvseg_idx     >= 0 ? importy[cnvseg_idx].collect {'--cnv /access/' + params.subdir + '/cnv/' + it } : null
-        fusions    = fusions_idx    >= 0 ? importy[fusions_idx].collect {'--transloc /access/' + params.subdir + '/fusions/' + it } : null
-        biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'--biomarkers /access/' + params.subdir + '/biomarkers/' + it } : null
-        cnvplot    = cnvplot_idx    >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
-        lowcov     = lowcov_idx     >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
-        purity     = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
-        tmp        = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
-        cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it } : null
-
-        if ( cnvplot == null && cnvkit_idx >= 0 ){
-            cnvplot = importy[cnvkit_idx].collect {'--cnvprofile  /access/' + params.subdir + '/plots/' + it }
-        } 
-
-        lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'--lowcov /access/' + params.subdir + '/QC/' + it } : null
-        purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { '--purity ' + it} : null
-        tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
-        import_command = tmp.join(' ')
-
-        """        
-        echo "/data/bnf/scripts/import_DSL2_to_coyote.pl --group $params.coyote_group \\
-            --vcf /access/${params.subdir}/vcf/${vcf} --id ${process_group} \\
-            --clarity-sample-id ${meta.clarity_sample_id[tumor_idx]} \\
-            --clarity_case_id ${meta.clarity_sample_id[tumor_idx]} \\
-            --clarity_control_id ${clarity_control_id} \\
-            --build 38 \\
-            --gens ${meta.id[tumor_idx]} \\
-            --subpanel ${meta.diagnosis[tumor_idx]} \\
-            --clarity-pool-id ${meta.clarity_pool_id[tumor_idx]} \\
-            --clarity_case_pool_id ${meta.clarity_pool_id[tumor_idx]} \\
-            --clarity_control_pool_id ${clarity_control_pool_id} \\
-            --sample_no $sample_no \\
-            --case_id ${tumor_sample} \\
-            --control_id ${normal_sample} \\
-            --profile ${environment} \\
-            --assay $params.coyote_group \\
-            --sequencing_scope panel \\
-            --omics_layer DNA \\
-            --sequencing_technology Illumina \\
-            --pipeline ${workflow.manifest.name} \\
-            --pipeline_version ${workflow.manifest.version} \\
-            --case_ffpe ${tumor_ffpe} \\
-            --case_sequencing_run ${tumor_sequencing_run} \\
-            --case_reads ${tumor_reads} \\
-            --case_purity ${tumor_purity} \\
-            --control_ffpe ${control_ffpe} \\
-            --control_sequencing_run ${control_sequencing_run} \\
-            --control_reads ${control_reads} \\
-            --control_purity ${control_purity} \\
-            --paired ${meta.id.size() >= 2} \\
-            $import_command" > ${process_group}.coyote
+        def samples = meta instanceof List ? meta : [meta]
+        def process_group = samples.size() >= 2 ? "${group}p" : group
+        """
+        touch ${process_group}.coyote
         """
 }
 
@@ -203,7 +96,7 @@ process COYOTE_YAML {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(vcf), file(importy)
+        tuple val(group), val(meta), file(vcf), val(import_types), val(import_files)
 
     output:
         tuple val(group), file("*.coyote3.yaml"), emit: coyote_import
@@ -212,220 +105,114 @@ process COYOTE_YAML {
         task.ext.when == null || task.ext.when
 
     script:
-        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
-        process_group = group
-        tumor_idx = 0
-        tumor_idx_lowcov = 0
-        tumor_reads = meta.reads[tumor_idx] ?: null
-        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
-        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
-        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
-        normal_sample = null
-        clarity_control_id = null
-        clarity_control_pool_id = null
-        control_reads = null
-        control_ffpe = null
-        control_sequencing_run = null
-        control_purity = null
-        sample_no = meta.id.size()
-        if( meta.id.size() >= 2 ) {
-            process_group = group + 'p'
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            normal_sample = meta.id[normal_idx]
-            clarity_control_id = meta.clarity_sample_id[normal_idx]
-            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
-            control_reads = meta.reads[normal_idx] ?: null
-            control_ffpe = meta.ffpe[normal_idx] ? true : false
-            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
-            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
+        def samples = meta instanceof List ? meta : [meta]
+        def tumor_idx = samples.findIndexOf { it.type == 'tumor' || it.type == 'T' }
+        tumor_idx = tumor_idx >= 0 ? tumor_idx : 0
+        def normal_idx = samples.findIndexOf { it.type == 'normal' || it.type == 'N' }
+        def tumor = samples[tumor_idx]
+        def normal = normal_idx >= 0 ? samples[normal_idx] : null
+        def process_group = samples.size() >= 2 ? "${group}p" : group
+        def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        def access_dir = [
+            cnv       : 'cnv',
+            transloc  : 'fusions',
+            biomarkers: 'biomarkers',
+            cnvprofile: 'plots',
+            lowcov    : 'QC',
+            cov       : 'QC'
+        ]
+        def import_order = ['cnv', 'transloc', 'biomarkers', 'cnvprofile', 'lowcov', 'cov']
+        def yaml_lines = [
+            "---",
+            "subpanel: '${tumor.diagnosis}'",
+            "name: '${process_group}'",
+            "clarity_case_id: '${tumor.clarity_sample_id}'",
+            "clarity_control_id: '${normal?.clarity_sample_id}'",
+            "clarity_case_pool_id: '${tumor.clarity_pool_id}'",
+            "clarity_control_pool_id: '${normal?.clarity_pool_id}'",
+            "genome_build: 38",
+            "vcf_files: /access/${params.subdir}/vcf/${vcf}",
+            "sample_no: ${samples.size()}",
+            "case_id: '${tumor.id}'",
+            "control_id: '${normal?.id}'",
+            "profile: '${environment}'",
+            "assay: '${params.coyote_group}'",
+            "sequencing_scope: 'panel'",
+            "omics_layer: 'DNA'",
+            "sequencing_technology: 'Illumina'",
+            "sex: '${coyote_sex}'",
+            "readmode: 'PE'",
+            "pipeline: '${workflow.manifest.name}'",
+            "pipeline_version: ${workflow.manifest.version}",
+            "case_ffpe: ${tumor.ffpe ? true : false}",
+            "case_sequencing_run: '${tumor.sequencing_run ?: null}'",
+            "case_reads: ${tumor.reads ?: null}",
+            "case_purity: ${tumor.purity ? tumor.purity.toFloat() : null}",
+            "control_ffpe: ${normal ? (normal.ffpe ? true : false) : null}",
+            "control_sequencing_run: '${normal?.sequencing_run ?: null}'",
+            "control_reads: ${normal?.reads ?: null}",
+            "control_purity: ${normal?.purity ? normal.purity.toFloat() : null}",
+            "paired: ${samples.size() >= 2}"
+        ]
+
+        def seen_import_types = [] as Set
+        def import_records = [import_types, import_files].transpose()
+            .findAll { record -> record[0] != 'cnvprofile' || seen_import_types.add(record[0]) }
+            .sort { a, b -> import_order.indexOf(a[0]) <=> import_order.indexOf(b[0]) }
+
+        yaml_lines += import_records
+            .findAll { record -> access_dir.containsKey(record[0]) }
+            .collect { record -> "${record[0]}: /access/${params.subdir}/${access_dir[record[0]]}/${record[1]}" }
+
+        if (tumor.purity) {
+            yaml_lines << "purity: ${tumor.purity.toFloat()}"
         }
-        tumor_sample = meta.id[tumor_idx]
-        // find what to load into coyote, depending on what files are in $import //
-        // index of imports added from mix //
-        cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
-        fusions_idx    = importy.findIndexOf{ it =~ 'annotated' }
-        biomarkers_idx = importy.findIndexOf{ it =~ 'bio.json' }
-        cov_idx        = importy.findIndexOf{ it =~ 'cov.json' }
-        cnvplot_idx    = importy.findIndexOf{ it =~ 'modeled.png' }
-        lowcov_idx     = importy.findIndexOf{ it =~ 'lowcov.bed' }
-        cnvkit_idx     = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
-
-        // add matching flags //
-        cnvseg     = cnvseg_idx     >= 0 ? importy[cnvseg_idx].collect {'cnv: /access/' + params.subdir + '/cnv/' + it } : null
-        fusions    = fusions_idx    >= 0 ? importy[fusions_idx].collect {'transloc: /access/' + params.subdir + '/fusions/' + it } : null
-        biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'biomarkers: /access/' + params.subdir + '/biomarkers/' + it } : null
-        cnvplot    = cnvplot_idx    >= 0 ? importy[cnvplot_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it } : null
-        lowcov     = lowcov_idx     >= 0 ? importy[lowcov_idx].collect {'lowcov: /access/' + params.subdir + '/QC/' + it } : null
-        cov        = cov_idx        >= 0 ? importy[cov_idx].collect {'cov: /access/' + params.subdir + '/QC/' + it } : null
-        purity     = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { 'purity: ' + it} : null
-        tmp        = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
-        cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it } : null
-        if ( cnvplot == null && cnvkit_idx >= 0 ){
-            cnvplot = importy[cnvkit_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it }
-        } 
-        lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'lowcov: /access/' + params.subdir + '/QC/' + it } : null
-        purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { 'purity: ' + it} : null
-        tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [] ) + (cov ?: [] )
-        import_command = tmp.join('\n')
 
         """
-        echo --- > ${process_group}.coyote3.yaml
-        echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo name: \\'${process_group}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_case_id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_control_id: \\'${clarity_control_id}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_case_pool_id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_control_pool_id: \\'${clarity_control_pool_id}\\' >> ${process_group}.coyote3.yaml
-        echo genome_build: 38 >> ${process_group}.coyote3.yaml
-        echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote3.yaml
-        echo sample_no: ${sample_no} >> ${process_group}.coyote3.yaml
-        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote3.yaml
-        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote3.yaml
-        echo profile: \\'${environment}\\' >> ${process_group}.coyote3.yaml
-        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote3.yaml
-        echo sequencing_scope: \\'panel\\' >> ${process_group}.coyote3.yaml
-        echo omics_layer: \\'DNA\\' >> ${process_group}.coyote3.yaml
-        echo sequencing_technology: \\'Illumina\\' >> ${process_group}.coyote3.yaml
-        echo pipeline: \\'${workflow.manifest.name}\\' >> ${process_group}.coyote3.yaml
-        echo pipeline_version: ${workflow.manifest.version} >> ${process_group}.coyote3.yaml
-        echo case_ffpe: ${tumor_ffpe} >> ${process_group}.coyote3.yaml
-        echo case_sequencing_run: \\'${tumor_sequencing_run}\\' >> ${process_group}.coyote3.yaml
-        echo case_reads: ${tumor_reads} >> ${process_group}.coyote3.yaml
-        echo case_purity: ${tumor_purity} >> ${process_group}.coyote3.yaml
-        echo control_ffpe: ${control_ffpe} >> ${process_group}.coyote3.yaml
-        echo control_sequencing_run: \\'${control_sequencing_run}\\' >> ${process_group}.coyote3.yaml
-        echo control_reads: ${control_reads} >> ${process_group}.coyote3.yaml
-        echo control_purity: ${control_purity} >> ${process_group}.coyote3.yaml
-        echo paired: ${meta.id.size() >= 2} >> ${process_group}.coyote3.yaml
-        printf "$import_command" >> ${process_group}.coyote3.yaml
+cat <<'END_YAML' > ${process_group}.coyote3.yaml
+${yaml_lines.join('\n')}
+END_YAML
         """
+
     stub:
-        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
-        process_group = group
-        tumor_idx = 0
-        tumor_idx_lowcov = 0
-        tumor_reads = meta.reads[tumor_idx] ?: null
-        tumor_ffpe = meta.ffpe[tumor_idx] ? true : false
-        tumor_sequencing_run = meta.sequencing_run[tumor_idx] ?: null
-        tumor_purity = meta.purity[tumor_idx] ? meta.purity[tumor_idx].toFloat() : null
-        normal_sample = null
-        clarity_control_id = null
-        clarity_control_pool_id = null
-        control_reads = null
-        control_ffpe = null
-        control_sequencing_run = null
-        control_purity = null
-        sample_no = meta.id.size()
-        if( meta.id.size() >= 2 ) {
-            process_group = group + 'p'
-            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-            normal_sample = meta.id[normal_idx]
-            sample_no = meta.id.size()
-            clarity_control_id = meta.clarity_sample_id[normal_idx]
-            clarity_control_pool_id = meta.clarity_pool_id[normal_idx]
-            control_reads = meta.reads[normal_idx] ?: null
-            control_ffpe = meta.ffpe[normal_idx] ? true : false
-            control_sequencing_run = meta.sequencing_run[normal_idx] ?: null
-            control_purity = meta.purity[normal_idx] ? meta.purity[normal_idx].toFloat() : null
-        }
-        tumor_sample = meta.id[tumor_idx]
-        // find what to load into coyote, depending on what files are in $import //
-        // index of imports added from mix //
-        cnvseg_idx     = importy.findIndexOf{ it =~ 'cnvs' }
-        fusions_idx    = importy.findIndexOf{ it =~ 'annotated' }
-        biomarkers_idx = importy.findIndexOf{ it =~ 'bio.json' }
-        cnvplot_idx    = importy.findIndexOf{ it =~ 'modeled.png' }
-        lowcov_idx     = importy.findIndexOf{ it =~ 'lowcov.bed' }
-        cov_idx        = importy.findIndexOf{ it =~ 'cov.json' }
-        cnvkit_idx     = importy.findIndexOf{ it =~ 'cnvkit_overview.png' }
-
-        // add matching flags //
-        cnvseg     = cnvseg_idx     >= 0 ? importy[cnvseg_idx].collect {'cnv: /access/' + params.subdir + '/cnv/' + it } : null
-        fusions    = fusions_idx    >= 0 ? importy[fusions_idx].collect {'transloc: /access/' + params.subdir + '/fusions/' + it } : null
-        biomarkers = biomarkers_idx >= 0 ? importy[biomarkers_idx].collect {'biomarkers: /access/' + params.subdir + '/biomarkers/' + it } : null
-        cnvplot    = cnvplot_idx    >= 0 ? importy[cnvplot_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it } : null
-        lowcov     = lowcov_idx     >= 0 ? importy[lowcov_idx].collect {'lowcov: /access/' + params.subdir + '/QC/' + it } : null
-        cov        = cov_idx        >= 0 ? importy[cov_idx].collect {'cov: /access/' + params.subdir + '/QC/' + it } : null
-        purity     = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { 'purity: ' + it} : null
-        tmp        = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [])
-        cnvplot = cnvplot_idx >= 0 ? importy[cnvplot_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it } : null
-        if ( cnvplot == null && cnvkit_idx >= 0 ){
-            cnvplot = importy[cnvkit_idx].collect {'cnvprofile: /access/' + params.subdir + '/plots/' + it }
-        } 
-        lowcov = lowcov_idx >= 0 ? importy[lowcov_idx].collect {'lowcov: /access/' + params.subdir + '/QC/' + it } : null
-        purity = meta.purity[tumor_idx] != false ? meta.purity[tumor_idx].toFloat().collect { 'purity: ' + it} : null
-        tmp = (cnvseg ?: []) + (fusions ?: []) + (biomarkers ?: []) + (cnvplot ?: []) + (lowcov ?: []) + (purity ?: [] ) + (cov ?: [] )
-        import_command = tmp.join('\n')
-
+        def samples = meta instanceof List ? meta : [meta]
+        def process_group = samples.size() >= 2 ? "${group}p" : group
         """
-        echo --- > ${process_group}.coyote3.yaml
-        echo subpanel: \\'${meta.diagnosis[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo name: \\'${process_group}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_case_id: \\'${meta.clarity_sample_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_control_id: \\'${clarity_control_id}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_case_pool_id: \\'${meta.clarity_pool_id[tumor_idx]}\\' >> ${process_group}.coyote3.yaml
-        echo clarity_control_pool_id: \\'${clarity_control_pool_id}\\' >> ${process_group}.coyote3.yaml
-        echo genome_build: 38 >> ${process_group}.coyote3.yaml
-        echo vcf_files: /access/${params.subdir}/vcf/${vcf} >> ${process_group}.coyote3.yaml
-        echo sample_no: ${sample_no} >> ${process_group}.coyote3.yaml
-        echo case_id: \\'${tumor_sample}\\' >> ${process_group}.coyote3.yaml
-        echo control_id: \\'${normal_sample}\\' >> ${process_group}.coyote3.yaml
-        echo profile: \\'${environment}\\' >> ${process_group}.coyote3.yaml
-        echo assay: \\'$params.coyote_group\\' >> ${process_group}.coyote3.yaml
-        echo sequencing_scope: \\'panel\\' >> ${process_group}.coyote3.yaml
-        echo omics_layer: \\'DNA\\' >> ${process_group}.coyote3.yaml
-        echo sequencing_technology: \\'Illumina\\' >> ${process_group}.coyote3.yaml
-        echo pipeline: \\'${workflow.manifest.name}\\' >> ${process_group}.coyote3.yaml
-        echo pipeline_version: ${workflow.manifest.version} >> ${process_group}.coyote3.yaml
-        echo case_ffpe: ${tumor_ffpe} >> ${process_group}.coyote3.yaml
-        echo case_sequencing_run: \\'${tumor_sequencing_run}\\' >> ${process_group}.coyote3.yaml
-        echo case_reads: ${tumor_reads} >> ${process_group}.coyote3.yaml
-        echo case_purity: ${tumor_purity} >> ${process_group}.coyote3.yaml
-        echo control_ffpe: ${control_ffpe} >> ${process_group}.coyote3.yaml
-        echo control_sequencing_run: \\'${control_sequencing_run}\\' >> ${process_group}.coyote3.yaml
-        echo control_reads: ${control_reads} >> ${process_group}.coyote3.yaml
-        echo control_purity: ${control_purity} >> ${process_group}.coyote3.yaml
-        echo paired: ${meta.id.size() >= 2} >> ${process_group}.coyote3.yaml
-        printf "$import_command" >> ${process_group}.coyote3.yaml
+        touch ${process_group}.coyote3.yaml
         """
 }
 
 process OUTPUT_FILES {
-    label "process_single"  
-    tag "$group" 
-    // this process creates a json file with names of the optional files to be loaded into coyote3. Those optional files are
-    // associated with their yaml labels (cnv, fusions, biomarkers, cnvplot, cov).
+    label "process_single"
+    tag "$group"
+
     input:
-        tuple val(group), val(labels), path(files, stageAs: "?/*") // if files have the same name, they are staged 
+        tuple val(group), val(labels), path(files, stageAs: "?/*")
 
     output:
-        tuple val(group), path("${group}_coyote.json_INFO"), emit:json_INFO
+        tuple val(group), path("${group}_coyote.json_INFO"), emit: json_INFO
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
-        def json_map = [labels, files.collect {it.toString().replaceAll('.+/', '')}] // remove path, keep file name only.
-            .transpose() // pair each <yaml_label> with corresponding file names.
-            .collectEntries { label, fname -> [(label): fname]  } 
+        def json_map = [labels, files.collect { it.toString().replaceAll('.+/', '') }]
+            .transpose()
+            .collectEntries { label, filename -> [(label): filename] }
+        def json_str = groovy.json.JsonOutput.toJson(json_map)
+        """
+        printf '%s\\n' '${json_str}' > ${group}_coyote.json_INFO
+        """
 
-        def json_str = groovy.json.JsonOutput.toJson(json_map) // Converts the Groovy map into a valid JSON string      
-        """
-        echo '${json_str}' > ${group}_coyote.json_INFO
-        """
     stub:
-    """
-    touch ${group}_coyote.json_INFO
-    
-    """
+        """
+        touch ${group}_coyote.json_INFO
+        """
 }
 
-process  OUTPUTS_YAML_COYOTE {
+process OUTPUTS_YAML_COYOTE {
     label "process_single"
     tag "$group"
-    // this process creates the yaml file for loading into coyote3.
 
     input:
         tuple val(group), val(meta), path(vcf), path(json_INFO)
@@ -437,14 +224,10 @@ process  OUTPUTS_YAML_COYOTE {
         task.ext.when == null || task.ext.when
 
     script:
-        environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
-        def meta_json    = groovy.json.JsonOutput.toJson(meta) // groovy.json.JsonOutput built-in Groovy class.
-        // meta written as a json instead of passed as a shell argument as done previously in old COYOYE_YAML process.
-        // avoid shell issues if meta fields contain special characters and
-        // for easier passing of metadata to python
-        // the single quotation marks below are included here to be consistent with the previous yaml format, but they are not strictly necessary
+        def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
+        def meta_json = groovy.json.JsonOutput.toJson(meta)
         """
-        cat << 'META_EOF' > meta.json
+        cat <<'META_EOF' > meta.json
         ${meta_json}
         META_EOF
 
@@ -459,7 +242,6 @@ process  OUTPUTS_YAML_COYOTE {
             --pipeline_name    '${workflow.manifest.name}' \\
             --pipeline_version '${workflow.manifest.version}' \\
             --out              ${group}.coyote3.yaml
-            
         """
 
     stub:

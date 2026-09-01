@@ -1,53 +1,3 @@
-process CNVKIT2OVAHRDSCAR {
-    label "process_single"
-    tag "$id"
-
-    input:
-        tuple val(group), val(id), val(type), file(segments)
-
-    output:
-        tuple val(group), val(id), val(type), val(caller), file("*.cnvkit.ovaHRDscar.txt"), emit: ovaHRDscar_segments
-        path "versions.yml",                                                                emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def prefix = task.ext.prefix ?: "${id}"
-
-        caller = "cnvkit"
-        if (segments =~ /purity/) {
-            caller = "cnvkitpurity"
-        }
-
-        """
-        cnvkit2HRD.pl $segments $id > ${prefix}.cnvkit.ovaHRDscar.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-    
-    stub:
-        def prefix = task.ext.prefix ?: "${id}"
-        caller = "cnvkit"
-        if (segments =~ /purity/) {
-            caller = "cnvkitpurity"
-        }
-
-        """
-        touch ${prefix}.cnvkit.ovaHRDscar.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-
-}
-
-
 process CNVKIT2SCARHRD {
     label "process_single"
     tag "${meta.id}"
@@ -68,11 +18,11 @@ process CNVKIT2SCARHRD {
         caller = "cnvkit"
 
         """
-        cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${prefix}.cnvkit.scarHRD.txt
+        cnvkit2HRD.py --input $segments --sample-id ${meta.id} --ploidy $ploidyv --out ${prefix}.cnvkit.scarHRD.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
         END_VERSIONS
         """  
 
@@ -85,7 +35,7 @@ process CNVKIT2SCARHRD {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            python: \$(python --version 2>&1 | sed -e 's/Python //g')
         END_VERSIONS
         """ 
 }
@@ -130,40 +80,4 @@ process SCARHRD {
         END_VERSIONS
         """ 
 
-}
-
-// TODO SHOULD BE REMOVED?
-process OVAHRDSCAR {
-    publishDir "${params.outdir}/${params.subdir}/ovaHRDscar/", mode: 'copy', overwrite: true, pattern: '*.txt'
-    cpus 1
-    time '1h'
-    tag "$id"
-    container = '/fs1/resources/containers/ovaHRDscar.sif'
-
-    input:
-        tuple val(group), val(id), val(type), val(sc), file(segments)
-
-    output:
-        tuple val(group), val(id), val(type), file("${group}_${sc}_ovaHRDscar_results.txt"),    emit: ovaHRDscar_score
-        path "versions.yml",                                                                    emit: versions
-
-    script:
-        """
-        Rscript /fs1/viktor/SomaticPanelPipeline_dsl2/bin/Run_ovarHRDscar.R $segments > ${group}_${sc}_ovaHRDscar_results.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            Rscript: \$( Rscript --version |& sed 's/^.*version //' | cut -f1 -d ' ')
-        END_VERSIONS
-        """
-
-    stub:
-        """
-        touch ${group}_${sc}_ovaHRDscar_results.txt
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            Rscript: \$( Rscript --version |& sed 's/^.*version //' | cut -f1 -d ' ')
-        END_VERSIONS
-        """
 }
