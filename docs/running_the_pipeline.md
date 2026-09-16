@@ -7,7 +7,7 @@ Requirements for running the pipeline:
     * [Nextflow/23.04.2](https://www.nextflow.io/)
     * [Singularity/3.8.0](https://docs.sylabs.io/guides/4.4/user-guide/#)
     * Java/13.0.2
-    * perl: 5.26.2 (unsure, might be in a container)
+    * perl: 5.26.2
 * [Auxiliary files](list currently unavailable)
 
 ## Source code
