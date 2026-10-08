@@ -528,6 +528,7 @@ process MERGE_SEGMENTS {
 
     output:
         tuple val(group), file("*.cn-segments.panel.merged.bed"), emit: merged
+        path "versions.yml", emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -537,12 +538,22 @@ process MERGE_SEGMENTS {
         def prefix = task.ext.prefix ?: "${group}"
         """
         cat $segments > ${prefix}.cn-segments.panel.merged.bed
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            coreutils: \$(cat --version | sed -n '1s/.* //p')
+        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${group}"
         """
         touch ${prefix}.cn-segments.panel.merged.bed
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            coreutils: \$(cat --version | sed -n '1s/.* //p')
+        END_VERSIONS
         """
 
 }
@@ -556,6 +567,7 @@ process MERGE_JSON {
 
     output:
         tuple val(group), file("*.cnvs.merged.json"), emit: merged
+        path "versions.yml", emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -567,11 +579,21 @@ process MERGE_JSON {
         if (meta.id.size() >= 2) {
             """
             jq $args $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
         else {
             """
             cat $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
 
@@ -583,11 +605,21 @@ process MERGE_JSON {
         if (meta.id.size() >= 2) {
             """
             echo jq $args $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
         else {
             """
             echo $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
 

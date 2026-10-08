@@ -39,7 +39,9 @@ workflow CNV_ANNOTATE {
 		COYOTE_SEGMENTS ( tumor.mix(normal) )
 
 		MERGE_SEGMENTS ( COYOTE_SEGMENTS.out.filtered.groupTuple() )
+		ch_versions = ch_versions.mix(MERGE_SEGMENTS.out.versions)
 		MERGE_JSON ( COYOTE_SEGMENTS_JSON.out.json_panel.groupTuple() )
+		ch_versions = ch_versions.mix(MERGE_JSON.out.versions)
 		COYOTE_JSON = MERGE_JSON.out.merged
 
 		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions)
