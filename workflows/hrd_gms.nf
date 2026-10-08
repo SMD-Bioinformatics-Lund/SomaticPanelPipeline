@@ -4,8 +4,11 @@
 nextflow.enable.dsl = 2
 
 
+include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
+include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
 include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoftwareversions/main'
@@ -18,21 +21,6 @@ CRONDIR = params.crondir
 
 csv = file(params.csv)
 println(csv)
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, file(row.read1), file(row.read2)) }
-    .set { fastq }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("ffpe") ? row.ffpe : false)) }
-    .set { meta }
-
-Channel
-    .fromPath(params.csv).splitCsv(header:true)
-    .map{ row-> tuple(row.group, row.id, row.type, (row.containsKey("purity") ? row.purity : false)) }
-    .set { meta_purity }
 
 
 // Split bed file in to smaller parts to be used for parallel variant calling
@@ -53,17 +41,33 @@ workflow SOLID_GMS {
 
     ch_versions = Channel.empty()
 
-    ALIGN_SENTIEON ( fastq )
+    CHECK_INPUT ( Channel.fromPath(csv) )
+
+    ALIGN_SENTIEON ( CHECK_INPUT.out.fastq, CHECK_INPUT.out.bam, CHECK_INPUT.out.meta )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    SNV_CALLING ( ch_mapped.bam_umi.groupTuple(), beds) //, meta )
+    BAM_QC ( ch_mapped.bam_umi, ch_mapped.bam_dedup, ch_mapped.dedup_metrics )
+    .set { ch_qc }
+    ch_versions = ch_versions.mix(ch_qc.versions)
+
+    SNV_CALLING (
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
+        beds,
+        ch_qc.melt_qc,
+        ch_qc.dedup_bam_is_metrics.groupTuple()
+    )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
 
+    SNV_ANNOTATE ( ch_vcf.agg_vcf, ch_vcf.concat_vcfs )
+    .set { ch_vcf_anno }
+    ch_versions = ch_versions.mix(ch_vcf_anno.versions)
+
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
-        ch_vcf.germline_variants,
+        ch_vcf_anno.germline_variants,
         ch_mapped.bam_dedup,
         gatk_ref
     )
@@ -71,15 +75,16 @@ workflow SOLID_GMS {
     ch_versions = ch_versions.mix(ch_cnvcalled.versions)
 
     BIOMARKERS ( 
-        ch_cnvcalled.baflogr,
-        ch_cnvcalled.cnvkitsegment,
-        ch_cnvcalled.cnvkitsegment_purity
+        ch_cnvcalled.cnvkit_hrd,
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup
     )
+    .set { ch_bio }
     ch_versions = ch_versions.mix(ch_bio.versions)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml'),
-        meta
+        CHECK_INPUT.out.meta
     )
 }
 

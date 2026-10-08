@@ -6,9 +6,10 @@ nextflow.enable.dsl = 2
 include { CHECK_INPUT                   } from '../subworkflows/local/create_meta'
 include { ALIGN_SENTIEON                } from '../subworkflows/local/align_sentieon'
 include { SNV_CALLING                   } from '../subworkflows/local/snv_calling'
+include { SNV_ANNOTATE                  } from '../subworkflows/local/snv_annotate'
 include { CNV_CALLING                   } from '../subworkflows/local/cnv_calling'
 include { BIOMARKERS                    } from '../subworkflows/local/biomarkers'
-include { QC                            } from '../subworkflows/local/qc'
+include { BAM_QC                        } from '../subworkflows/local/bam_qc'
 include { ADD_TO_DB                     } from '../subworkflows/local/add_to_db'
 include { SAMPLE                        } from '../subworkflows/local/sample'
 include { CNV_ANNOTATE                  } from '../subworkflows/local/cnv_annotate'
@@ -18,9 +19,6 @@ println(params.genome_file)
 
 csv = file(params.csv)
 println(csv)
-
-cnvkit_reference_exons   = params.cnvkit_reference_exons      ? Channel.fromPath(params.cnvkit_reference_exons).map {it -> [[id:it[0].simpleName], it]}.collect(): ( ch_references.cnvkit_reference_exons                ?: Channel.empty() )
-cnvkit_reference_backbone   = params.cnvkit_reference_backbone      ? Channel.fromPath(params.cnvkit_reference_backbone).map {it -> [[id:it[0].simpleName], it]}.collect(): ( ch_references.cnvkit_reference_backbone                ?: Channel.empty() )
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -50,29 +48,38 @@ workflow LYMPH_GMS {
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim
+        ch_trim.fastq_trim,
+        CHECK_INPUT.out.bam,
+        CHECK_INPUT.out.meta
     )
     .set { ch_mapped }
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    QC ( 
-        ch_mapped.qc_out, 
-        ch_mapped.bam_lowcov
+    BAM_QC (
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
+        ch_mapped.dedup_metrics
     )
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
 
     SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+        ch_mapped.bam_umi,
+        ch_mapped.bam_dedup,
         beds,
-        // CHECK_INPUT.out.meta
+        ch_qc.melt_qc,
+        ch_qc.dedup_bam_is_metrics.groupTuple()
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
 
+    SNV_ANNOTATE ( ch_vcf.agg_vcf, ch_vcf.concat_vcfs )
+    .set { ch_vcf_anno }
+    ch_versions = ch_versions.mix(ch_vcf_anno.versions)
+
     CNV_CALLING ( 
         ch_mapped.bam_umi, 
-        ch_vcf.germline_variants,
+        ch_vcf_anno.germline_variants,
         ch_mapped.bam_dedup,
         gatk_ref
     )

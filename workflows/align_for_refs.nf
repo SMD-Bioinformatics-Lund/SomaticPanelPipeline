@@ -28,7 +28,9 @@ workflow SPP_ALIGN_REFS {
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
     ALIGN_SENTIEON ( 
-        ch_trim.fastq_trim
+        ch_trim.fastq_trim,
+        CHECK_INPUT.out.bam,
+        CHECK_INPUT.out.meta
     )
     .set { ch_mapped } 
     ch_versions = ch_versions.mix(ch_mapped.versions)
