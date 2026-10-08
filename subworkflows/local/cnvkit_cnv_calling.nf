@@ -141,8 +141,7 @@ workflow CNVKIT {
                 }
 
             cnvkit_tc_call_input = cnvkit_tc_input.filter { group, meta, part, cns, cnr, vcf, tbi ->
-                def raw_purity = meta.containsKey('purity_raw') ? meta.purity_raw : meta.purity
-                raw_purity != null && raw_purity.toString().trim() && raw_purity.toString() != 'false'
+                meta.purity
             }.map { group, meta, part, cns, cnr, vcf, tbi ->
                 tuple(group, meta, part, cns, vcf, tbi)
             }

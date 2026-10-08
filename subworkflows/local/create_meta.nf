@@ -104,8 +104,16 @@ def create_fastq_channel(LinkedHashMap row) {
 
 def normalize_purity(purity) {
     def value = purity?.toString()?.trim()
-    if (!value || value ==~ /(?i:false|0+(?:\.0*)?)/) {
+    if (!value || value.equalsIgnoreCase('false')) {
         return false
     }
-    return purity
+    try {
+        def fraction = value.toBigDecimal()
+        if (fraction < 0 || fraction > 1) {
+            error "Purity must be a fraction between 0 and 1: ${value}"
+        }
+        return fraction == 0 ? false : value
+    } catch (NumberFormatException exception) {
+        error "Purity must be numeric or empty: ${value}"
+    }
 }
