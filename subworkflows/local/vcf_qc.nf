@@ -30,6 +30,7 @@ workflow VCF_QC {
 
         PEDDY ( ped_ch_tumor.mix(ped_ch_normal) )
         PEDDY2CDM ( PEDDY.out.peddy_files )
+        ch_versions = ch_versions.mix(PEDDY2CDM.out.versions)
 
         CONTAMINATION { vep_vcf }
         ch_versions = ch_versions.mix(CONTAMINATION.out.versions)

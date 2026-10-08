@@ -18,6 +18,7 @@ workflow CNV_ANNOTATE {
 
 		if (params.loqusdb_export) {
 			SVDB_ANNOTATE_ARTEFACTS(tumor, params.loqusdb_vcfs)
+			ch_versions = ch_versions.mix(SVDB_ANNOTATE_ARTEFACTS.out.versions)
 			gene_input = SVDB_ANNOTATE_ARTEFACTS.out.artefacts.mix(normal)
 		}
 
@@ -31,7 +32,9 @@ workflow CNV_ANNOTATE {
 		ch_gene_gtf = Channel.value(file(params.gene_gtf))
 
 		GENE_INTERSECT ( ch_gene_intersect_input.combine(ch_gene_gtf) )
+		ch_versions = ch_versions.mix(GENE_INTERSECT.out.versions)
 		COYOTE_SEGMENTS_JSON ( GENE_INTERSECT.out.intersected )
+		ch_versions = ch_versions.mix(COYOTE_SEGMENTS_JSON.out.versions)
 
 		COYOTE_SEGMENTS ( tumor.mix(normal) )
 

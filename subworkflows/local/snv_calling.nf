@@ -79,6 +79,7 @@ workflow SNV_CALLING {
 
         TNSCOPE ( paired_calling_ch, beds)
         FILTER_TNSCOPE ( TNSCOPE.out.vcfparts_tnscope )
+        ch_versions         = ch_versions.mix(FILTER_TNSCOPE.out.versions.first())
         ch_versions         = ch_versions.mix(TNSCOPE.out.versions.first())
 
         DNASCOPE ( normal_bam_umi )
@@ -119,6 +120,7 @@ workflow SNV_CALLING {
         }
 
         SVDB_MERGE_SINGLES ( ch_melt_split.has_normal )
+        ch_versions = ch_versions.mix(SVDB_MERGE_SINGLES.out.versions)
 
         MELT_MERGED = SVDB_MERGE_SINGLES.out.singles_merged_vcf.mix(
             ch_melt_split.tumor_only.map { group, metas, vc, vcfs ->

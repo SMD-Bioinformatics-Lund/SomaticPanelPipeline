@@ -34,6 +34,7 @@ process SENTIEON_QC_TO_CDM {
 
     output:
         tuple val(group), val(meta), path("*_${meta.type}.QC"), emit: qc_cdm
+        path "versions.yml", emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -42,12 +43,22 @@ process SENTIEON_QC_TO_CDM {
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
         qc_sentieon.pl ${meta.id}_${meta.type} panel > ${prefix}_${meta.type}.QC
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
         touch ${prefix}_${meta.type}.QC
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+        END_VERSIONS
         """
 }
 
@@ -310,6 +321,7 @@ process PEDDY2CDM {
     output:
         tuple val(group), val(meta), path("*peddy.json"), emit: json
         tuple val(group), val(meta), path("*peddy2cdm"), emit: cdm
+        path "versions.yml", emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -325,12 +337,22 @@ process PEDDY2CDM {
             --sample $sample_arg \\
             $args \\
             $args2
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1 | sed 's/Python //')
+        END_VERSIONS
         """
 
     stub:
         """
         touch ${group}_peddy.json
         touch ${group}.peddy2cdm
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            python: \$(python --version 2>&1 | sed 's/Python //')
+        END_VERSIONS
         """
 }
 
