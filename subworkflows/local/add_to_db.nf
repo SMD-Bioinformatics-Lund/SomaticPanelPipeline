@@ -47,9 +47,11 @@ workflow ADD_TO_DB {
             .mix(cnv_json_for_coyote, gatk_plot_for_coyote, biomarkers_for_coyote, fusions_for_coyote, cnvkit_png_for_coyote)
             .groupTuple(by: [0])
 
-        coyote_input = vcf.join(coyote_optional).map { group, meta, vcf_file, import_types, import_files ->
-            tuple(group, meta, vcf_file, import_types, import_files)
-        }
+        coyote_input = vcf.join(coyote_optional, remainder: true)
+            .filter { group, meta, vcf_file, import_types, import_files -> vcf_file != null }
+            .map { group, meta, vcf_file, import_types, import_files ->
+                tuple(group, meta, vcf_file, import_types ?: [], import_files ?: [])
+            }
 
         coyote_cov_json = lowcov_d4
             .filter { group, meta, type, cov_file ->
@@ -83,7 +85,11 @@ workflow ADD_TO_DB {
             .groupTuple(by: [0])
 
         COYOTE ( coyote_input )
-        OUTPUT_FILES ( coyote_info )
+        coyote_output_files = vcf.join(coyote_info, remainder: true)
+            .filter { group, meta, vcf_file, labels, files -> vcf_file != null }
+            .map { group, meta, vcf_file, labels, files -> tuple(group, labels ?: [], files ?: []) }
+
+        OUTPUT_FILES ( coyote_output_files )
         OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) )
 
     emit:
