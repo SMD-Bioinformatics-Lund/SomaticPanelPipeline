@@ -46,8 +46,8 @@ workflow SPP_CREATE_SNVPON {
         ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
-        Channel.of(tuple(1,5)),
-        Channel.of(tuple(1,5))
+        Channel.empty(),
+        Channel.empty()
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)
