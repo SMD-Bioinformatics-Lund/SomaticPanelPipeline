@@ -335,7 +335,7 @@ process FILTER_VARDICT {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
