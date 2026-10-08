@@ -54,8 +54,8 @@ workflow CHECK_INPUT {
         vcf = reads.filter { group, meta, r1, r2 ->
             def read1 = r1.toString()
             def read2 = r2.toString()
-            read1.endsWith("vcf") &&
-                (read2.endsWith("tbi") || read2.endsWith("csi") || read2.endsWith("vcf.gz.tbi"))
+            (read1.endsWith(".vcf") || read1.endsWith(".vcf.gz")) &&
+                (read2.endsWith(".tbi") || read2.endsWith(".csi"))
         }
 
         meta = reads
