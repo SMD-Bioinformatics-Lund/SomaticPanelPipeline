@@ -6,7 +6,7 @@ process CNVKIT2SCARHRD {
         tuple val(group), val(meta), val(part), file(segments)
 
     output:
-        tuple val(group), val(meta), val(caller), file("${meta.id}.cnvkit.scarHRD.txt"),    emit: scarHRD_segments
+        tuple val(group), val(meta), val(caller), path(out_file),    emit: scarHRD_segments
         path "versions.yml",                                                                emit: versions
 
     when:
@@ -14,11 +14,12 @@ process CNVKIT2SCARHRD {
 
     script:
         def prefix = task.ext.prefix ?: "${meta.id}"
+        out_file = "${prefix}.cnvkit.scarHRD.txt"
         ploidyv = "NA"
         caller = "cnvkit"
 
         """
-        cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${prefix}.cnvkit.scarHRD.txt
+        cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${out_file}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -28,10 +29,11 @@ process CNVKIT2SCARHRD {
 
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
+        out_file = "${prefix}.cnvkit.scarHRD.txt"
         ploidyv = "NA"
         caller = "cnvkit"
         """
-        touch ${prefix}.cnvkit.scarHRD.txt
+        touch ${out_file}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
