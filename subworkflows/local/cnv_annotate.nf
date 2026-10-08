@@ -30,7 +30,7 @@ workflow CNV_ANNOTATE {
 		}
 		ch_gene_gtf = Channel.value(file(params.gene_gtf))
 
-		GENE_INTERSECT ( ch_gene_intersect_input, ch_gene_gtf )
+		GENE_INTERSECT ( ch_gene_intersect_input.combine(ch_gene_gtf) )
 		COYOTE_SEGMENTS_JSON ( GENE_INTERSECT.out.intersected )
 
 		COYOTE_SEGMENTS ( tumor.mix(normal) )

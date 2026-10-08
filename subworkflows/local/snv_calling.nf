@@ -94,10 +94,7 @@ workflow SNV_CALLING {
         }
         ch_regions_bed = Channel.value(file(params.regions_bed))
 
-        BEDTOOLS_INTERSECT (
-            ch_melt_intersect_input,
-            ch_regions_bed
-        )
+        BEDTOOLS_INTERSECT ( ch_melt_intersect_input.combine(ch_regions_bed) )
         ch_versions         = ch_versions.mix(BEDTOOLS_INTERSECT.out.versions.first())
 
 

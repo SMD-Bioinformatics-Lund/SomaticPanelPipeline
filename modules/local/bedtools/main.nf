@@ -3,8 +3,7 @@ process BEDTOOLS_INTERSECT {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), val(vc), file(input_file)
-        path(intersect)
+        tuple val(group), val(meta), val(vc), path(input_file), path(intersect)
 
     output:
         tuple val(group), val(meta), file("${out_file}"),          emit: intersected

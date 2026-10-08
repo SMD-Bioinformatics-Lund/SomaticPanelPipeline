@@ -66,7 +66,7 @@ workflow SNV_ANNOTATE {
             }
             ch_regions_backbone_idsnps = Channel.value(file(params.regions_backbone_idsnps))
 
-            CNV_BACKBONE_FILTER ( ch_cnv_backbone_input, ch_regions_backbone_idsnps )
+            CNV_BACKBONE_FILTER ( ch_cnv_backbone_input.combine(ch_regions_backbone_idsnps) )
             ch_versions = ch_versions.mix( CNV_BACKBONE_FILTER.out.versions )
             POST_ANNOTATION_FILTERS ( CNV_BACKBONE_FILTER.out.intersected )
         } else {
@@ -87,12 +87,10 @@ workflow SNV_ANNOTATE {
 
         ch_filter_for_cnv = ch_filter_for_cnv_joined
             .map { group, vc, vcf_unfilt, meta, germline_vcf ->
-                [ group, meta, vc, vcf_unfilt ]
+                tuple(group, meta, vc, vcf_unfilt, germline_vcf)
             }
 
-        ch_filter_for_cnv_germline = ch_filter_for_cnv_joined.map { group, vc, vcf_unfilt, meta, germline_vcf -> germline_vcf }
-
-        FILTER_FOR_CNV ( ch_filter_for_cnv, ch_filter_for_cnv_germline )
+        FILTER_FOR_CNV ( ch_filter_for_cnv )
         ch_versions = ch_versions.mix(FILTER_FOR_CNV.out.versions)
 
         FILTER_FOR_CNV_TABIX ( FILTER_FOR_CNV.out.vcf_intersected )
