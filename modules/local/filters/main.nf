@@ -435,8 +435,8 @@ process COYOTE_SEGMENTS {
         tuple val(group), val(meta), file(vcf)
 
     output:
-        tuple val(group), val(meta), file("*.cn-segments.panel.bed"),  emit: filtered
-        tuple val(group), val(meta), file("*.cn-segments.bed"),        emit: raw
+        tuple val(group), val(meta), path(panel_bed), emit: filtered
+        tuple val(group), val(meta), path(raw_bed),   emit: raw
         path "versions.yml",                                           emit: versions
 
     when:
@@ -445,10 +445,17 @@ process COYOTE_SEGMENTS {
     script:
         def args   = task.ext.args   ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
+        panel_bed = "${prefix}.cn-segments.panel.bed"
+        raw_bed = "${prefix}.cn-segments.bed"
         def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
+        def rename_outputs = prefix.toString() == meta.id.toString() ? '' : """
+        mv "${meta.id}.cn-segments.panel.bed" "${panel_bed}"
+        mv "${meta.id}.cn-segments.bed" "${raw_bed}"
+        """
 
         """
         coyote_segmentator.pl --vcf $vcf --id ${meta.id} $normal $args
+        ${rename_outputs}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -458,8 +465,10 @@ process COYOTE_SEGMENTS {
 
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
+        panel_bed = "${prefix}.cn-segments.panel.bed"
+        raw_bed = "${prefix}.cn-segments.bed"
         """
-        touch ${prefix}.cn-segments.panel.bed ${prefix}.cn-segments.bed
+        touch ${panel_bed} ${raw_bed}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
