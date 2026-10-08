@@ -3,10 +3,10 @@ process CREATE_SNVPON {
     tag "$vc"
 
     input:
-        tuple val(group), val(vc), path(vcfs)
+        tuple val(group), val(meta), val(vc), path(vcfs), path(tbis)
 
     output:
-        tuple val(group), val(vc), path("*_${vc}_PON.snv"), emit: SNV_PON
+        tuple val(group), val(meta), val(vc), path("*_${vc}_PON.snv"), emit: SNV_PON
         path "versions.yml",                                emit: versions
 
     when:
