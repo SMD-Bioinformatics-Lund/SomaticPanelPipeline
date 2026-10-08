@@ -18,11 +18,11 @@ process CNVKIT2SCARHRD {
         caller = "cnvkit"
 
         """
-        cnvkit2HRD.py --input $segments --sample-id ${meta.id} --ploidy $ploidyv --out ${prefix}.cnvkit.scarHRD.txt
+        cnvkit2HRD.pl $segments ${meta.id} $ploidyv > ${prefix}.cnvkit.scarHRD.txt
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """  
 
@@ -35,7 +35,7 @@ process CNVKIT2SCARHRD {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """ 
 }

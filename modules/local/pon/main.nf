@@ -15,11 +15,11 @@ process CREATE_SNVPON {
     script:
         def prefix = task.ext.prefix ?: "${params.assay}"
         """
-        create_snv_pon.py --vcf-mask "*.vcf.gz" --out ${prefix}_${vc}_PON.snv
+        create_snv_pon.pl "*.vcf.gz" > ${prefix}_${vc}_PON.snv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -31,7 +31,7 @@ process CREATE_SNVPON {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }

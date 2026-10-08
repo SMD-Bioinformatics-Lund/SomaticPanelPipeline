@@ -24,10 +24,11 @@ process MELT {
             -cov $COV_DEV \\
             -e $INS_SIZE
 
-        merge_melt.py --vcf-header ${params.meltheader} --sample-id ${meta.id} --out ${prefix}.melt.merged.vcf
+        merge_melt.pl ${params.meltheader} ${meta.id}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
             melt: \$(java -jar /opt/MELTv2.2.2/MELT.jar 2>&1 | grep ^MELTv | sed 's/MELTv//' | cut -d' ' -f1)
         END_VERSIONS
         """
@@ -39,6 +40,7 @@ process MELT {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
             melt: \$(java -jar /opt/MELTv2.2.2/MELT.jar 2>&1 | grep ^MELTv | sed 's/MELTv//' | cut -d' ' -f1)
         END_VERSIONS
         """

@@ -41,7 +41,7 @@ process SENTIEON_QC_TO_CDM {
     script:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        qc_sentieon.py --sample-id ${meta.id}_${meta.type} --type panel --out ${prefix}_${meta.type}.QC
+        qc_sentieon.pl ${meta.id}_${meta.type} panel > ${prefix}_${meta.type}.QC
         """
 
     stub:
@@ -56,7 +56,7 @@ process PANEL_DEPTH {
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(depth_tsv)
+        tuple val(group), val(meta), file(bam), file(bai)
 
     output:
         tuple val(group), val(meta), file("*.lowcov.depth.bed"),    emit: lowcov_bed
@@ -69,11 +69,11 @@ process PANEL_DEPTH {
         def args = task.ext.args ?: ""
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        panel_depth.py --depth $depth_tsv --out ${prefix}.lowcov.depth.bed $args
+        panel_depth.pl $bam $args > ${prefix}.lowcov.depth.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed 's/Python //')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -84,7 +84,7 @@ process PANEL_DEPTH {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed 's/Python //')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -104,26 +104,26 @@ process LOWCOV {
         task.ext.when == null || task.ext.when
 
     script:
+        def args = task.ext.args ?: ""
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        overlapping_genes.py \\
-            --intersect-bed $bed \\
-            --out ${prefix}.lowcov.bed
+        overlapping_genes.pl $bed $args > ${prefix}.lowcov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed 's/Python //')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
     stub:
+        def args = task.ext.args ?: ""
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
         touch ${prefix}.lowcov.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed 's/Python //')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }

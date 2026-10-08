@@ -1,11 +1,9 @@
 #!/usr/bin/env nextflow
 
 include { ANNOTATE_VEP                          				} from '../../modules/local/vep/main'
-include { COYOTE_SEGMENTS_BED                   				} from '../../modules/local/filters/main'
 include { COYOTE_SEGMENTS                       				} from '../../modules/local/filters/main'
 include { MERGE_SEGMENTS                        				} from '../../modules/local/filters/main'
 include { BEDTOOLS_INTERSECT as GENE_INTERSECT  				} from '../../modules/local/bedtools/main'
-include { BEDTOOLS_INTERSECT as COYOTE_SEGMENTS_INTERSECT 		} from '../../modules/local/bedtools/main'
 include { COYOTE_SEGMENTS_JSON                  				} from '../../modules/local/filters/main'
 include { MERGE_JSON                            				} from '../../modules/local/filters/main'
 include { SVDB_ANNOTATE_ARTEFACTS               				} from '../../modules/local/svdb/main'
@@ -35,17 +33,12 @@ workflow CNV_ANNOTATE {
 		GENE_INTERSECT ( ch_gene_intersect_input, ch_gene_gtf )
 		COYOTE_SEGMENTS_JSON ( GENE_INTERSECT.out.intersected )
 
-		COYOTE_SEGMENTS_BED ( tumor.mix(normal) )
-		ch_gencode_genes = Channel.value(file(params.gencode_genes))
-		COYOTE_SEGMENTS_INTERSECT ( COYOTE_SEGMENTS_BED.out.raw_segments_bed, ch_gencode_genes )
-		COYOTE_SEGMENTS ( COYOTE_SEGMENTS_INTERSECT.out.intersected )
+		COYOTE_SEGMENTS ( tumor.mix(normal) )
 
 		MERGE_SEGMENTS ( COYOTE_SEGMENTS.out.filtered.groupTuple() )
 		MERGE_JSON ( COYOTE_SEGMENTS_JSON.out.json_panel.groupTuple() )
 		COYOTE_JSON = MERGE_JSON.out.merged
 
-		ch_versions = ch_versions.mix(COYOTE_SEGMENTS_BED.out.versions)
-		ch_versions = ch_versions.mix(COYOTE_SEGMENTS_INTERSECT.out.versions)
 		ch_versions = ch_versions.mix(COYOTE_SEGMENTS.out.versions)
 
 	emit:

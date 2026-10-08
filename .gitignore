@@ -31,6 +31,7 @@ container/*.def
 container/sif/*sif
 container/containers.yml
 bin/__pycache__/
+bin/python_migrations/
 __pycache__
 .internal/
 configs/nextflow.test.config

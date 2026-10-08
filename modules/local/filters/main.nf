@@ -256,21 +256,21 @@ process FILTER_FREEBAYES {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
 
             """
-            filter_freebayes_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out filtered_${part}.vcf
+            filter_freebayes_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > filtered_${part}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else if( meta.id.size() == 1 ) {
             """
-            filter_freebayes_unpaired.py --vcf $vcf --out filtered_${part}.vcf
+            filter_freebayes_unpaired.pl $vcf > filtered_${part}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -282,7 +282,7 @@ process FILTER_FREEBAYES {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -357,11 +357,11 @@ process FILTER_PINDEL {
     script:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        filter_pindel_somatic.py --vcf ${vcf} --out ${prefix}_pindel.vcf
+        filter_pindel_somatic.pl ${vcf} ${prefix}_pindel.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(echo \$(python --version 2>&1) | sed 's/.*\\s//')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -372,7 +372,7 @@ process FILTER_PINDEL {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(echo \$(python --version 2>&1) | sed 's/.*\\s//')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -396,21 +396,21 @@ process FILTER_TNSCOPE {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            filter_tnscope_somatic.py --vcf $vcf --tumor ${meta.id[tumor_idx]} --normal ${meta.id[normal_idx]} --out ${vcf}.vcf
+            filter_tnscope_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > ${vcf}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else if( meta.id.size() == 1 ) {
             """
-            filter_tnscope_unpaired.py --vcf $vcf --out ${vcf}.vcf
+            filter_tnscope_unpaired.pl $vcf > ${vcf}.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version 2>&1 | sed -e 's/Python //g')
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -421,56 +421,18 @@ process FILTER_TNSCOPE {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
 
-
-process COYOTE_SEGMENTS_BED {
-    label "process_single"
-    tag "${meta.id}"
-
-    input:
-        tuple val(group), val(meta), file(vcf)
-
-    output:
-        tuple val(group), val(meta), val("coyote_segments"), file("*.cn-segments.raw.bed"), emit: raw_segments_bed
-        path "versions.yml",                                                                  emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def prefix = task.ext.prefix ?: "${meta.id}"
-
-        """
-        coyote_segmentator.py --vcf $vcf --sample-id ${meta.id} --segments-out ${prefix}.cn-segments.raw.bed
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix = task.ext.prefix ?: "${meta.id}"
-        """
-        touch ${prefix}.cn-segments.raw.bed
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
-        END_VERSIONS
-        """
-}
 
 process COYOTE_SEGMENTS {
     label "process_single"
     tag "${meta.id}"
 
     input:
-        tuple val(group), val(meta), file(intersect_bed)
+        tuple val(group), val(meta), file(vcf)
 
     output:
         tuple val(group), val(meta), file("*.cn-segments.panel.bed"),  emit: filtered
@@ -486,11 +448,11 @@ process COYOTE_SEGMENTS {
         def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
 
         """
-        coyote_segmentator.py --intersect-bed $intersect_bed --sample-id ${meta.id} --panel-out ${prefix}.cn-segments.panel.bed --raw-out ${prefix}.cn-segments.bed $normal $args
+        coyote_segmentator.pl --vcf $vcf --id ${meta.id} $normal $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -501,7 +463,7 @@ process COYOTE_SEGMENTS {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -641,11 +603,11 @@ process FILTER_MANTA {
         def args   = task.ext.args   ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        filter_manta.py --vcf $vcf --filtered-out ${prefix}_manta_filtered.vcf --bnd-out ${prefix}_manta_bnd_filtered.vcf $args
+        filter_manta.pl --vcf $vcf $args
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -657,7 +619,7 @@ process FILTER_MANTA {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version 2>&1 | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 

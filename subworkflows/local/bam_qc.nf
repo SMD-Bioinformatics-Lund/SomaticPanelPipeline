@@ -1,8 +1,6 @@
 #!/usr/bin/env nextflow
 
 include { SENTIEON_QC                               } from '../../modules/local/sentieon/main'
-include { DEPTH as SAMBAMBA_PANEL_DEPTH             } from '../../modules/local/sambamba/main'
-include { BEDTOOLS_INTERSECT as LOWCOV_INTERSECT    } from '../../modules/local/bedtools/main'
 include { QC_TO_CDM                                 } from '../../modules/local/qc/main'
 include { SENTIEON_QC_TO_CDM                        } from '../../modules/local/qc/main'
 include { PANEL_DEPTH                               } from '../../modules/local/qc/main'
@@ -37,25 +35,10 @@ workflow BAM_QC {
         LOWCOV_D4 ( bam_dedup )
         ch_versions = ch_versions.mix(LOWCOV_D4.out.versions)
 
-        SAMBAMBA_PANEL_DEPTH ( bam_dedup )
-        ch_versions = ch_versions.mix(SAMBAMBA_PANEL_DEPTH.out.versions)
-        
-        PANEL_DEPTH ( SAMBAMBA_PANEL_DEPTH.out.depth_tsv )
+        PANEL_DEPTH ( bam_dedup )
         ch_versions = ch_versions.mix(PANEL_DEPTH.out.versions)
 
-
-        ch_lowcov_intersect_input = PANEL_DEPTH.out.lowcov_bed.map { group, meta, bed ->
-            tuple(group, meta, 'lowcov', bed)
-        }
-        ch_gene_regions = Channel.value(file(params.gene_regions))
-
-        LOWCOV_INTERSECT (
-            ch_lowcov_intersect_input,
-            ch_gene_regions
-        )
-        ch_versions = ch_versions.mix(LOWCOV_INTERSECT.out.versions)
-
-        LOWCOV(LOWCOV_INTERSECT.out.intersected)
+        LOWCOV ( PANEL_DEPTH.out.lowcov_bed )
         ch_versions = ch_versions.mix(LOWCOV.out.versions)
 
         // Check genotypes of ID-SNPs

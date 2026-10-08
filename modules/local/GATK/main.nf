@@ -704,11 +704,11 @@ process FILTER_GATK {
     script:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        filter_gatk.py --vcf $gatk --out ${prefix}.gatk.filtered.vcf
+        filter_gatk.pl $gatk > ${prefix}.gatk.filtered.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -719,7 +719,7 @@ process FILTER_GATK {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -741,11 +741,11 @@ process MERGE_GATK {
     script:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        mergeGATK.py --vcf $gatk --out ${prefix}.gatk.filtered.merged.vcf
+        mergeGATK.pl $gatk > ${prefix}.gatk.filtered.merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -756,7 +756,7 @@ process MERGE_GATK {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -819,11 +819,11 @@ process MERGE_GATK_TUMOR {
     script:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
-        mergeGATK_tumor.py --vcf $gatk --out ${prefix}_gatk_tumor_merged.vcf
+        mergeGATK_tumor.pl $gatk > ${prefix}_gatk_tumor_merged.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -834,7 +834,7 @@ process MERGE_GATK_TUMOR {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            python: \$(python --version | sed -e 's/Python //g')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }

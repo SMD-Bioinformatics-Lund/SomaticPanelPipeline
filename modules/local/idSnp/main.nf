@@ -69,13 +69,11 @@ process SNP_CHECK {
 
         if(meta.id.size() == 2) {
             """
-            idsnp_controller.py \\
-                --vcf-sample $tumorvcf  \\
-                --vcf-control $normalvcf \\
+            idsnp_controller.pl \\
+                --vcf_sample $tumorvcf  \\
+                --vcf_control $normalvcf \\
                 --sample  $tumor_id \\
                 --control $normal_id \\
-                --csv-out s${tumor_id}_c${normal_id}.csv \\
-                --json-out s${tumor_id}_c${normal_id}.json \\
                 $args
 
             ## Why is the perl-script not doing all of the below code?
@@ -92,6 +90,7 @@ process SNP_CHECK {
         
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
                 python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
@@ -103,6 +102,7 @@ process SNP_CHECK {
             
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
                 python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
@@ -125,6 +125,7 @@ process SNP_CHECK {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
                 python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
@@ -137,6 +138,7 @@ process SNP_CHECK {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
                 python: \$(python --version 2>&1 | sed -e 's/Python //g')
             END_VERSIONS
             """
