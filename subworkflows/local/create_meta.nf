@@ -6,13 +6,34 @@ include { CSV_CHECK      } from '../../modules/local/check_input/main'
 workflow CHECK_INPUT {
     take:
         csv     // file(csv)
-        paired  // boolean
 
     main:
         CSV_CHECK(csv)
         checkedCSV = CSV_CHECK.out.csv.splitCsv(header:true, sep:',').set { csvmap }
 
-        reads     = csvmap.map { row -> create_fastq_channel(row, paired) }
+        reads = csvmap.map { row -> create_fastq_channel(row) }
+            .collect(flat: false)
+            .flatMap { samples ->
+                def ids = samples.collect { it[1].id }
+                if (ids.unique(false).size() != ids.size()) {
+                    error "Sample sheet contains duplicate sample IDs"
+                }
+                def groups = samples.groupBy { it[0] }
+                groups.each { group, members ->
+                    def types = members.collect { it[1].type?.toString()?.toLowerCase() }
+                    if (!group || types.any { !(it in ['t', 'tumor', 'n', 'normal']) }) {
+                        error "Each sample must have a group and a tumor/normal type"
+                    }
+                    if (members.size() > 2 || (members.size() == 2 &&
+                        !(types.count { it in ['t', 'tumor'] } == 1 && types.count { it in ['n', 'normal'] } == 1))) {
+                        error "Group ${group} must contain one sample or one tumor and one normal"
+                    }
+                }
+                samples.collect { sample ->
+                    def meta = sample[1] + [paired: groups[sample[0]].size() == 2]
+                    tuple(sample[0], meta, sample[2], sample[3])
+                }
+            }
 
         // FASTQ
         fastq = reads.filter { group, meta, r1, r2 ->
@@ -51,7 +72,7 @@ workflow CHECK_INPUT {
 
 
 // Function to get list of [ meta, [ fastq_1, fastq_2 ] ]
-def create_fastq_channel(LinkedHashMap row, paired) {
+def create_fastq_channel(LinkedHashMap row) {
 	// create meta map
 	def meta = [:]
 	meta.id             	= row.id
@@ -66,7 +87,6 @@ def create_fastq_channel(LinkedHashMap row, paired) {
 	meta.reads              = (row.containsKey("n_reads") ? row.n_reads : false)
     meta.sex                = (row.containsKey("sex") ? row.sex : false)
 	meta.clarity_pool_id    = row.clarity_pool_id
-    meta.paired             = paired
     def sub = false
     if (meta.reads && params.sample) {
         if (meta.reads.toInteger() > params.sample_val) {

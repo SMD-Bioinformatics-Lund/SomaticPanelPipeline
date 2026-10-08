@@ -21,7 +21,6 @@ include { VALIDATE_PARAMETERS           } from '../subworkflows/local/validate_p
 
 csv = file(params.csv)
 
-params.paired = csv.countLines() > 2 ? true : false
 
 
 // Split bed file in to smaller parts to be used for parallel variant calling
@@ -44,7 +43,7 @@ workflow SPP_COMMON {
     ch_versions = Channel.empty()
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
-    CHECK_INPUT ( Channel.fromPath(csv), params.paired )
+    CHECK_INPUT ( Channel.fromPath(csv) )
 
     parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
     VALIDATE_PARAMETERS(parameters_to_validate)
