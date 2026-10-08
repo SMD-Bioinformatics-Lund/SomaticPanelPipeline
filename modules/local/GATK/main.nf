@@ -588,6 +588,9 @@ process GATK_EXTRACT_GERMLINE_CNV_SHARDS {
         task.ext.when == null || task.ext.when
 
     script:
+        if (i.collect { it.toString() } != shard_no.collect { it.toString() }) {
+            error "GATK call shards do not match reference shards for ${meta.id}"
+        }
         """
         extract_gatk_cnv_shards.sh \\
             --ploidy ${ploidy} \\

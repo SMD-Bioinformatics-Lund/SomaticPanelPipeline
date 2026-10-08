@@ -87,13 +87,26 @@ workflow GATK {
         GATK_CALL_PLOIDY ( GATK_COUNT_GERMLINE.out.count_germline )
         ch_versions = ch_versions.mix(GATK_CALL_PLOIDY.out.versions)
 
-        GATK_CALL_GERMLINE_CNV ( GATK_COUNT_GERMLINE.out.count_germline.join(GATK_CALL_PLOIDY.out.gatk_ploidy,by:[0,1]).groupTuple(by:[0,1]).combine(gatk_ref) )
+        GATK_CALL_GERMLINE_CNV ( GATK_COUNT_GERMLINE.out.count_germline.join(GATK_CALL_PLOIDY.out.gatk_ploidy,by:[0,1]).combine(gatk_ref) )
         ch_versions = ch_versions.mix(GATK_CALL_GERMLINE_CNV.out.versions)
 
         CALLED = GATK_CALL_GERMLINE_CNV.out.gatk_call_germline.groupTuple(by:[0,1])
-        PLOIDY = GATK_CALL_PLOIDY.out.gatk_ploidy.groupTuple(by:[0,1])
+            .map { group, meta, ids, archives ->
+                def shards = [ids, archives].transpose().sort { a, b -> a[0].toInteger() <=> b[0].toInteger() }
+                tuple(group, meta, shards.collect { it[0] }, shards.collect { it[1] })
+            }
+        PLOIDY = GATK_CALL_PLOIDY.out.gatk_ploidy
 
-        GATK_EXTRACT_GERMLINE_CNV_SHARDS ( CALLED.join(PLOIDY,by:[0,1]).combine(gatk_ref.groupTuple(by:[3])) )
+        ch_model_shards = gatk_ref.collect(flat: false).map { references ->
+            def shards = references.sort { a, b -> a[0].toInteger() <=> b[0].toInteger() }
+            def ids = shards.collect { it[0] }
+            if (ids.unique(false).size() != ids.size()) {
+                error "GATK reference contains duplicate shard identifiers"
+            }
+            tuple(ids, shards.collect { it[1] })
+        }
+
+        GATK_EXTRACT_GERMLINE_CNV_SHARDS ( CALLED.join(PLOIDY,by:[0,1]).combine(ch_model_shards) )
         ch_versions = ch_versions.mix(GATK_EXTRACT_GERMLINE_CNV_SHARDS.out.versions)
 
         POSTPROCESS ( GATK_EXTRACT_GERMLINE_CNV_SHARDS.out.extracted_germline_cnv )
