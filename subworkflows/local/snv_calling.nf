@@ -48,7 +48,7 @@ workflow SNV_CALLING {
 
         // Pindel
         PINDEL_CONFIG ( dedup_bam_is_metrics )
-        PINDEL_CALL ( dedup_bam_is_metrics, PINDEL_CONFIG.out.pindel_config )
+        PINDEL_CALL ( dedup_bam_is_metrics.join(PINDEL_CONFIG.out.pindel_config, by:[0,1]) )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
         PINDEL_TO_VCF ( PINDEL_CALL.out.pindel_raw )

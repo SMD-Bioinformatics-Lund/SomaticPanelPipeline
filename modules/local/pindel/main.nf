@@ -55,8 +55,7 @@ process PINDEL_CALL {
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(bams), file(bais), file(ins_size)
-        tuple val(group), val(meta), file(pindel_config)
+        tuple val(group), val(meta), file(bams), file(bais), file(ins_size), file(pindel_config)
 
     output:
         tuple val(group), val(meta), file("tmpout*"),    emit: pindel_raw
