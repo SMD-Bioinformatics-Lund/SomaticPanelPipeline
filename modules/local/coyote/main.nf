@@ -187,7 +187,7 @@ process OUTPUT_FILES {
     tag "$group"
 
     input:
-        tuple val(group), val(labels), path(files, stageAs: "?/*")
+        tuple val(group), val(labels), path(files, stageAs: "?/*"), val(bam_files)
 
     output:
         tuple val(group), path("${group}_coyote.json_INFO"), emit: json_INFO
@@ -199,6 +199,7 @@ process OUTPUT_FILES {
         def json_map = [labels, files.collect { it.toString().replaceAll('.+/', '') }]
             .transpose()
             .collectEntries { label, filename -> [(label): filename] }
+        json_map += bam_files
         def json_str = groovy.json.JsonOutput.toJson(json_map)
         """
         printf '%s\\n' '${json_str}' > ${group}_coyote.json_INFO

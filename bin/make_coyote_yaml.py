@@ -162,6 +162,12 @@ def main():
         "paired": is_paired,
     }
 
+    for key in ("case_bam", "case_bai", "control_bam", "control_bai"):
+        filename = output_files.get(key)
+        coyote_doc[key] = (
+            build_access_path(args.subdir, "bam", filename) if filename else None
+        )
+
     if "cnvprofile_gatk" in output_files:
         coyote_doc["cnvprofile"] = build_access_path(
             args.subdir, "plots", output_files["cnvprofile_gatk"]

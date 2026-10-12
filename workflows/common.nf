@@ -156,7 +156,8 @@ workflow SPP_COMMON {
         ch_cnvcalled.gatcov_plot,
         ch_fusion.fusions,
         ch_bio.biomarkers,
-        ch_cnvcalled.cnvkit_plot
+        ch_cnvcalled.cnvkit_plot,
+        ch_mapped.bam_umi
     )
 
     CUSTOM_DUMPSOFTWAREVERSIONS (

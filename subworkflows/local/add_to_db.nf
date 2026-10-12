@@ -17,6 +17,7 @@ workflow ADD_TO_DB {
         fusions         // channel: [optional] [ val(group), file(vcf) ]
         biomarkers      // channel: [optional] [ val(group), file(json) ]
         cnvkit_plot     // channel: [optional] [ val(group), val(meta), val(part), file(cnvkit_overview.png) ]
+        bam_umi         // channel: [optional] [ val(group), val(meta), file(bam), file(bai), file(bqsr) ]
 
     main:
         lowcov_for_coyote = lowcov.map { group, meta, type, lowcov_file ->
@@ -85,9 +86,32 @@ workflow ADD_TO_DB {
             .groupTuple(by: [0])
 
         COYOTE ( coyote_input )
+        coyote_bams = bam_umi
+            .map { group, meta, bam, bai, bqsr ->
+                tuple(group, meta.id, [bam: bam.name, bai: bai.name])
+            }
+            .groupTuple()
+            .map { group, ids, bam_files ->
+                tuple(group, [ids, bam_files].transpose().collectEntries { id, files -> [(id): files] })
+            }
+
         coyote_output_files = vcf.join(coyote_info, remainder: true)
             .filter { group, meta, vcf_file, labels, files -> vcf_file != null }
-            .map { group, meta, vcf_file, labels, files -> tuple(group, labels ?: [], files ?: []) }
+            .join(coyote_bams, remainder: true)
+            .filter { group, meta, vcf_file, labels, files, bam_files -> vcf_file != null }
+            .map { group, meta, vcf_file, labels, files, bam_files ->
+                def samples = meta instanceof List ? meta : [meta]
+                def case_meta = samples.find { it.type.toString().toLowerCase() in ['t', 'tumor'] } ?: samples[0]
+                def control_meta = samples.find { it.id != case_meta.id && it.type.toString().toLowerCase() in ['n', 'normal'] }
+                def case_files = bam_files?.get(case_meta.id)
+                def control_files = control_meta ? bam_files?.get(control_meta.id) : null
+                tuple(group, labels ?: [], files ?: [], [
+                    case_bam: case_files?.bam,
+                    case_bai: case_files?.bai,
+                    control_bam: control_files?.bam,
+                    control_bai: control_files?.bai
+                ])
+            }
 
         OUTPUT_FILES ( coyote_output_files )
         OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) )
