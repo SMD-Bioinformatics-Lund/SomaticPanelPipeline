@@ -108,8 +108,7 @@ workflow SNV_CALLING {
         ch_melt_grouped = BEDTOOLS_INTERSECT.out.vcf_intersected
             .groupTuple(by:[0,2])
             .filter { group, metas, vc, vcfs ->
-                SampleGroups.validateMetadata(group, metas)
-                SampleGroups.hasTumor(metas)
+                SampleGroups.validateMetadata(group, metas) && SampleGroups.hasTumor(metas)
             }
             .map { group, metas, vc, vcfs ->
                 [

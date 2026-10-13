@@ -6,7 +6,6 @@ include { SENTIEON_QC_TO_CDM                        } from '../../modules/local/
 include { PANEL_DEPTH                               } from '../../modules/local/qc/main'
 include { LOWCOV                                    } from '../../modules/local/qc/main'
 include { QC_VALUES                                 } from '../../modules/local/qc/main'
-include { VERIFYBAMID                               } from '../../modules/local/verifybamid/main'
 include { ANNOTATE as BCFTOOLS_ANNOTATE_IDSNP       } from '../../modules/local/bcftools/main'
 include { BCFTOOLS_MPILEUP_CALL                     } from '../../modules/local/bcftools/main'
 include { BCFTOOLS_QUERY_IDSNP                      } from '../../modules/local/bcftools/main'
@@ -70,9 +69,6 @@ workflow BAM_QC {
 
         PAIRGEN_CDM (SNP_CHECK.out.idsnp_tumor.mix(SNP_CHECK.out.idsnp_normal))
 
-        // // Calculate cross-sample contamination
-        // VERIFYBAMID { bam_umi }
-        // ch_versions = ch_versions.mix(VERIFYBAMID.out.versions)
     emit:
         qcdone                  =   QC_TO_CDM.out.cdm_done                  // channel: [ val(group), val(meta), file(cdm) ]
         lowcov                  =   LOWCOV.out.lowcov_regions               // channel: [ val(group), val(meta.type), file(lowcov.bed/cov.json) ]

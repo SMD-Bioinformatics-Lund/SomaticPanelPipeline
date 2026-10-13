@@ -48,7 +48,7 @@ process SNP_CHECK {
         path "versions.yml", optional: true,                                                            emit: versions
 
     when:
-        task.ext.when == null || task.ext.when
+        (task.ext.when == null || task.ext.when) && SampleGroups.validateMetadata(group, meta)
 
     script:
         

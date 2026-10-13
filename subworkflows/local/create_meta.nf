@@ -14,24 +14,19 @@ workflow CHECK_INPUT {
         reads = csvmap.map { row -> create_fastq_channel(row) }
             .collect(flat: false)
             .flatMap { samples ->
-                def ids = samples.collect { it[1].id }
-                if (ids.unique(false).size() != ids.size()) {
-                    error "Sample sheet contains duplicate sample IDs"
-                }
+                def duplicate_ids = samples.groupBy { it[1].id }
+                    .findAll { id, records -> records.size() > 1 }.keySet()
                 def groups = samples.groupBy { it[0] }
-                groups.each { group, members ->
-                    def types = members.collect { it[1].type?.toString()?.toLowerCase() }
-                    if (!group || types.any { !(it in ['t', 'tumor', 'n', 'normal']) }) {
-                        error "Each sample must have a group and a tumor/normal type"
+                groups.collectMany { group, members ->
+                    if (!group || members.any { it[1].id in duplicate_ids }) {
+                        SampleGroups.skip(group, 'missing group or sample IDs duplicated in the sample sheet')
+                        return []
                     }
-                    if (members.size() > 2 || (members.size() == 2 &&
-                        !(types.count { it in ['t', 'tumor'] } == 1 && types.count { it in ['n', 'normal'] } == 1))) {
-                        error "Group ${group} must contain one sample or one tumor and one normal"
+                    if (!SampleGroups.validateMetadata(group, members.collect { it[1] })) return []
+                    members.collect { sample ->
+                        def meta = sample[1] + [paired: members.size() == 2]
+                        tuple(sample[0], meta, sample[2], sample[3])
                     }
-                }
-                samples.collect { sample ->
-                    def meta = sample[1] + [paired: groups[sample[0]].size() == 2]
-                    tuple(sample[0], meta, sample[2], sample[3])
                 }
             }
 
