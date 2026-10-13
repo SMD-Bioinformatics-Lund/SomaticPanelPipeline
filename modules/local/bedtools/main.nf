@@ -41,3 +41,44 @@ process BEDTOOLS_INTERSECT {
         END_VERSIONS
         """
 }
+
+process BEDTOOLS_SORT {
+    label 'process_single'
+    tag "${meta.id}"
+
+    input:
+        tuple val(group), val(meta), val(vc), path(input_file)
+
+    output:
+        tuple val(group), val(meta), val(vc), path("out/${task.ext.prefix ?: meta.id}.${task.ext.suffix ?: 'sorted.bed'}"), emit: sorted_file
+        path 'versions.yml', emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def args = task.ext.args ?: ''
+        def prefix = task.ext.prefix ?: "${meta.id}"
+        def suffix = task.ext.suffix ?: 'sorted.bed'
+        """
+        mkdir -p out
+        bedtools sort -i ${input_file} ${args} > out/${prefix}.${suffix}
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed 's/bedtools v//')
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${meta.id}"
+        def suffix = task.ext.suffix ?: 'sorted.bed'
+        """
+        mkdir -p out
+        touch out/${prefix}.${suffix}
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            bedtools: \$(bedtools --version | sed 's/bedtools v//')
+        END_VERSIONS
+        """
+}

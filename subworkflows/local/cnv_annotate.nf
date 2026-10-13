@@ -6,7 +6,9 @@ include { MERGE_SEGMENTS                        				} from '../../modules/local/
 include { BEDTOOLS_INTERSECT as GENE_INTERSECT  				} from '../../modules/local/bedtools/main'
 include { COYOTE_SEGMENTS_JSON                  				} from '../../modules/local/filters/main'
 include { MERGE_JSON                            				} from '../../modules/local/filters/main'
-include { SVDB_ANNOTATE_ARTEFACTS               				} from '../../modules/local/svdb/main'
+include { SVDB_QUERY as SVDB_QUERY_ALL                        } from '../../modules/local/svdb/main'
+include { SVDB_QUERY as SVDB_QUERY_GC                         } from '../../modules/local/svdb/main'
+include { SVDB_QUERY as SVDB_QUERY_AT                         } from '../../modules/local/svdb/main'
 
 workflow CNV_ANNOTATE {
 	take: 
@@ -17,9 +19,30 @@ workflow CNV_ANNOTATE {
 		ch_versions = Channel.empty()
 
 		if (params.loqusdb_export) {
-			SVDB_ANNOTATE_ARTEFACTS(tumor, params.loqusdb_vcfs)
-			ch_versions = ch_versions.mix(SVDB_ANNOTATE_ARTEFACTS.out.versions)
-			gene_input = SVDB_ANNOTATE_ARTEFACTS.out.artefacts.mix(normal)
+			def databases = params.loqusdb_vcfs
+			if (!(databases instanceof Map) || databases.isEmpty()) {
+				error 'SVDB annotation requires a non-empty database map using ALL, GC and/or AT'
+			}
+			if (databases.keySet().toList() != ['ALL', 'GC', 'AT'].findAll { databases.containsKey(it) }) {
+				error 'SVDB databases must use ALL, GC and/or AT keys in that order'
+			}
+			annotated_vcf = tumor
+			if (databases.containsKey('ALL')) {
+				SVDB_QUERY_ALL(annotated_vcf, Channel.value(tuple([id: 'ALL'], file(databases.ALL))))
+				ch_versions = ch_versions.mix(SVDB_QUERY_ALL.out.versions)
+				annotated_vcf = SVDB_QUERY_ALL.out.queried_vcf
+			}
+			if (databases.containsKey('GC')) {
+				SVDB_QUERY_GC(annotated_vcf, Channel.value(tuple([id: 'GC'], file(databases.GC))))
+				ch_versions = ch_versions.mix(SVDB_QUERY_GC.out.versions)
+				annotated_vcf = SVDB_QUERY_GC.out.queried_vcf
+			}
+			if (databases.containsKey('AT')) {
+				SVDB_QUERY_AT(annotated_vcf, Channel.value(tuple([id: 'AT'], file(databases.AT))))
+				ch_versions = ch_versions.mix(SVDB_QUERY_AT.out.versions)
+				annotated_vcf = SVDB_QUERY_AT.out.queried_vcf
+			}
+			gene_input = annotated_vcf.mix(normal)
 		}
 
 		else {

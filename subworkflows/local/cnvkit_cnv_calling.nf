@@ -10,9 +10,14 @@ include { CNVKIT_EXPORT_VCF                                         } from '../.
 include { CNVKIT_EXPORT_NEXUS_OGT                                   } from '../../modules/local/cnvkit/main'
 include { CNVKIT_CALL as CNVKIT_CALL_TC                             } from '../../modules/local/cnvkit/main'
 include { CNVKIT_EXPORT_VCF as CNVKIT_EXPORT_VCF_TC                 } from '../../modules/local/cnvkit/main'
-include { MERGE_GENS                                                } from '../../modules/local/cnvkit/main'
-include { TABIX_BGZIPTABIX as CNVKIT_BAF_BGZIPTABIX                 } from '../../modules/local/tabix/main'
-include { TABIX_BGZIPTABIX as CNVKIT_COV_BGZIPTABIX                 } from '../../modules/local/tabix/main'
+include { PREPARE_BED as GENS_PREPARE_BED                           } from '../../modules/local/gens/main'
+include { EXPAND_ALLELES as GENS_EXPAND_ALLELES                     } from '../../modules/local/gens/main'
+include { WRITE_COMMANDS as GENS_WRITE_COMMANDS                   } from '../../modules/local/gens/main'
+include { BEDTOOLS_SORT as GENS_BASE_SORT                          } from '../../modules/local/bedtools/main'
+include { BEDTOOLS_SORT as GENS_MERGED_SORT                        } from '../../modules/local/bedtools/main'
+include { BGZIP as GENS_PART_BGZIP                                 } from '../../modules/local/tabix/main'
+include { BGZIP as GENS_MERGED_BGZIP                              } from '../../modules/local/tabix/main'
+include { TABIX_INDEX as GENS_TABIX_INDEX                         } from '../../modules/local/tabix/main'
 
 
 workflow CNVKIT {
@@ -77,24 +82,7 @@ workflow CNVKIT {
             CNVKIT_GENS ( cnvkit_full_gens_input )
             ch_versions = ch_versions.mix(CNVKIT_GENS.out.versions)
 
-            ch_cnvkit_baf = CNVKIT_GENS.out.cnvkit_gens.map { group, meta, part, baf, cov ->
-                tuple(group, meta, part, baf)
-            }
-            ch_cnvkit_cov = CNVKIT_GENS.out.cnvkit_gens.map { group, meta, part, baf, cov ->
-                tuple(group, meta, part, cov)
-            }
-            CNVKIT_BAF_BGZIPTABIX ( ch_cnvkit_baf )
-            CNVKIT_COV_BGZIPTABIX ( ch_cnvkit_cov )
-            cnvkit_gens_compressed = CNVKIT_BAF_BGZIPTABIX.out.gz_index
-                .join(CNVKIT_COV_BGZIPTABIX.out.gz_index, by:[0,1,2])
-                .map { group, meta, part, baf_gz, baf_tbi, cov_gz, cov_tbi ->
-                    tuple(group, meta, baf_gz, cov_gz)
-                }
-
-            MERGE_GENS ( cnvkit_gens_compressed )
-            ch_versions = ch_versions.mix(CNVKIT_BAF_BGZIPTABIX.out.versions)
-            ch_versions = ch_versions.mix(CNVKIT_COV_BGZIPTABIX.out.versions)
-            ch_versions = ch_versions.mix(MERGE_GENS.out.versions)
+            ch_gens_parts = CNVKIT_GENS.out.cnvkit_gens
 
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
             cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
@@ -179,24 +167,7 @@ workflow CNVKIT {
             CNVKIT_GENS ( cnvkit_split_gens_input )
             ch_versions = ch_versions.mix(CNVKIT_GENS.out.versions)
 
-            ch_cnvkit_baf = CNVKIT_GENS.out.cnvkit_gens.map { group, meta, part, baf, cov ->
-                tuple(group, meta, part, baf)
-            }
-            ch_cnvkit_cov = CNVKIT_GENS.out.cnvkit_gens.map { group, meta, part, baf, cov ->
-                tuple(group, meta, part, cov)
-            }
-            CNVKIT_BAF_BGZIPTABIX ( ch_cnvkit_baf )
-            CNVKIT_COV_BGZIPTABIX ( ch_cnvkit_cov )
-            cnvkit_gens_compressed = CNVKIT_BAF_BGZIPTABIX.out.gz_index
-                .join(CNVKIT_COV_BGZIPTABIX.out.gz_index, by:[0,1,2])
-                .map { group, meta, part, baf_gz, baf_tbi, cov_gz, cov_tbi ->
-                    tuple(group, meta, baf_gz, cov_gz)
-                }
-
-            MERGE_GENS ( cnvkit_gens_compressed.groupTuple(by:[0,1]) )
-            ch_versions = ch_versions.mix(CNVKIT_BAF_BGZIPTABIX.out.versions)
-            ch_versions = ch_versions.mix(CNVKIT_COV_BGZIPTABIX.out.versions)
-            ch_versions = ch_versions.mix(MERGE_GENS.out.versions)
+            ch_gens_parts = CNVKIT_GENS.out.cnvkit_gens
 
             cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
             cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment.mix(
@@ -209,11 +180,41 @@ workflow CNVKIT {
                 .map { val -> tuple(val[0], val[1], val[3]) }
         }
 
+        ch_gens_beds = ch_gens_parts.flatMap { group, meta, part, baf, cov ->
+            [tuple(group, meta, 'baf', baf), tuple(group, meta, 'cov', cov)]
+        }
+        GENS_PART_BGZIP ( ch_gens_beds )
+        ch_versions = ch_versions.mix(GENS_PART_BGZIP.out.versions)
+
+        if (params.cnvkit_split) {
+            GENS_PREPARE_BED ( ch_gens_beds.groupTuple(by: [0,1,2]) )
+            GENS_BASE_SORT ( GENS_PREPARE_BED.out.base_bed )
+            GENS_EXPAND_ALLELES ( GENS_BASE_SORT.out.sorted_file )
+            GENS_MERGED_SORT ( GENS_EXPAND_ALLELES.out.expanded_bed )
+            GENS_MERGED_BGZIP ( GENS_MERGED_SORT.out.sorted_file )
+            ch_gens_final = GENS_MERGED_BGZIP.out.compressed_file
+            ch_versions = ch_versions.mix(GENS_PREPARE_BED.out.versions, GENS_BASE_SORT.out.versions,
+                GENS_EXPAND_ALLELES.out.versions, GENS_MERGED_SORT.out.versions, GENS_MERGED_BGZIP.out.versions)
+        }
+        else {
+            ch_gens_final = GENS_PART_BGZIP.out.compressed_file
+        }
+
+        GENS_TABIX_INDEX ( ch_gens_final )
+        ch_gens_baf = GENS_TABIX_INDEX.out.indexed_file
+            .filter { group, meta, kind, bed, index -> kind == 'baf' }
+            .map { group, meta, kind, bed, index -> tuple(group, meta, bed, index) }
+        ch_gens_cov = GENS_TABIX_INDEX.out.indexed_file
+            .filter { group, meta, kind, bed, index -> kind == 'cov' }
+            .map { group, meta, kind, bed, index -> tuple(group, meta, bed, index) }
+        GENS_WRITE_COMMANDS ( ch_gens_baf.join(ch_gens_cov, by: [0,1], failOnDuplicate: true) )
+        ch_versions = ch_versions.mix(GENS_TABIX_INDEX.out.versions, GENS_WRITE_COMMANDS.out.versions)
+
     emit:
         plot      = cnvkitplot
         hrd       = cnvkit_hrd
         tumor_vcf = cnvkit_vcf_tumor
-        gens      = MERGE_GENS.out.dbload
-        gens_v4   = MERGE_GENS.out.gens_v4
+        gens      = GENS_WRITE_COMMANDS.out.dbload
+        gens_v4   = GENS_WRITE_COMMANDS.out.gens_v4
         versions  = ch_versions
 }

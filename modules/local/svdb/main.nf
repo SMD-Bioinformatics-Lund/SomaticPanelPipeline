@@ -92,17 +92,17 @@ process SVDB_MERGE_SINGLES {
 
 }
 
-process SVDB_ANNOTATE_ARTEFACTS {
+process SVDB_QUERY {
     label "process_low"
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(vcf)
-        val(dbs)
+        tuple val(group), val(meta), path(vcf)
+        tuple val(meta2), path(db)
         
     output:
-        tuple val(group), val(meta), file("*.cnv.artefacts.vcf"),  emit: artefacts
-        path "versions.yml",                                       emit: versions
+        tuple val(group), val(meta), path("out/*.vcf"), emit: queried_vcf
+        path "versions.yml",                          emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -110,16 +110,13 @@ process SVDB_ANNOTATE_ARTEFACTS {
     script:
         def args   = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
-        def db_manifest = dbs.collect { db_name, db_vcf -> "${db_name}\\t${db_vcf}\\n" }.join('')
-
+        def suffix = task.ext.suffix ?: 'query.vcf'
         """
-        printf '${db_manifest}' > svdb_dbs.tsv
-
-        svdb_annotate_artefacts.sh \\
-            --query-vcf ${vcf} \\
-            --dbs svdb_dbs.tsv \\
-            --out ${prefix}.cnv.artefacts.vcf \\
-            -- ${args}
+        mkdir -p out
+        svdb --query ${args} \\
+            --db ${db} \\
+            --query_vcf ${vcf} \\
+            > out/${prefix}.${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -129,8 +126,10 @@ process SVDB_ANNOTATE_ARTEFACTS {
 
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
+        def suffix = task.ext.suffix ?: 'query.vcf'
         """
-        touch ${prefix}.cnv.artefacts.vcf
+        mkdir -p out
+        touch out/${prefix}.${suffix}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

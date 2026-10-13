@@ -4,6 +4,8 @@
 - Split the legacy monolithic pipeline container into smaller, tool-specific containers and command-specific DSL2 processes.
 - Refactored SNV calling, annotation, CNV calling, QC, Coyote export, and supporting utilities while retaining the established user-facing result folders and output names.
 - Separated CNVkit and GATK CNV workflows, restored the complete FreeBayes post-call chain, and moved reusable commands into their respective tool modules.
+- Split GENS BED preparation, sorting, allele expansion, compression, indexing and import-command generation into dedicated processes while retaining full/split published filenames.
+- Run SVDB database queries as separate, sequential ALL, GC and AT process stages, retaining annotation fields and publishing only the final artefact VCF. Configured subsets retain this query order.
 - Merged main-branch 3.2.0-3.2.5 functionality, including reference validation, QC-only entry points, normal germline calling, Peddy outputs, and Coyote3 metadata handling.
 - Added published-output safeguards so split-process intermediates remain internal unless they were published by the legacy workflow.
 - Removed unused legacy process definitions and their stale imports, selectors and reference settings.

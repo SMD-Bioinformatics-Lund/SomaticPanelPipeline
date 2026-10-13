@@ -213,7 +213,7 @@ workflow SNV_CALLING {
         ch_versions         = ch_versions.mix(VT_TABIX_INDEX.out.versions.first())
 
 
-        ch_vt_normalized_vcfs = VT_TABIX_INDEX.out.indexed_vcf
+        ch_vt_normalized_vcfs = VT_TABIX_INDEX.out.indexed_file
         ch_bcftools_normalized_vcfs = BCFTOOLS_NORM_EXACT.out.normalized_vcfs
 
         BT_AGG (
