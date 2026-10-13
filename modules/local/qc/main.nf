@@ -80,22 +80,26 @@ process PANEL_DEPTH {
         def args = task.ext.args ?: ""
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
+        source activate sambamba
         panel_depth.pl $bam $args > ${prefix}.lowcov.depth.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            sambamba: \$(echo \$(sambamba --version 2>&1) | sed 's/sambamba //; s/ .*//')
         END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
         """
+        source activate sambamba
         touch ${prefix}.lowcov.depth.bed
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            sambamba: \$(echo \$(sambamba --version 2>&1) | sed 's/sambamba //; s/ .*//')
         END_VERSIONS
         """
 }
