@@ -105,6 +105,13 @@ workflow ADD_TO_DB {
             .join(coyote_bams, remainder: true, failOnDuplicate: true)
             .filter { group, meta, vcf_file, labels, files, bam_files -> vcf_file != null }
             .map { group, meta, vcf_file, labels, files, bam_files ->
+                def output_labels = labels ?: []
+                def output_files = files ?: []
+                if (output_labels.size() != output_files.size() ||
+                    output_labels.unique(false).size() != output_labels.size()) {
+                    SampleGroups.skip(group, 'duplicate or unaligned Coyote output labels/files')
+                    return null
+                }
                 def samples = SampleGroups.validateMetadata(group, meta)
                 if (!samples) return null
                 def case_meta = samples.find { SampleGroups.isTumor(it) } ?: samples[0]
@@ -121,7 +128,7 @@ workflow ADD_TO_DB {
                     SampleGroups.skip(group, 'BAM metadata contains foreign sample IDs')
                     return null
                 }
-                tuple(group, labels ?: [], files ?: [], [
+                tuple(group, output_labels, output_files, [
                     case_bam: case_files?.bam,
                     case_bai: case_files?.bai,
                     control_bam: control_files?.bam,

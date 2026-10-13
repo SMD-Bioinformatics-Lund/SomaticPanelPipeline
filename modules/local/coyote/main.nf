@@ -109,9 +109,6 @@ process OUTPUT_FILES {
         task.ext.when == null || task.ext.when
 
     script:
-        if (labels.size() != files.size() || labels.unique(false).size() != labels.size()) {
-            error "Duplicate or unaligned Coyote output labels in group '${group}'"
-        }
         def json_map = [labels, files.collect { it.toString().replaceAll('.+/', '') }]
             .transpose()
             .collectEntries { label, filename -> [(label): filename] }
