@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import logging
 import json
 import sys
@@ -50,12 +50,18 @@ callers
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
+def int_like(value):
+    return int(float(value))
+
 def main():
     parser = argparse.ArgumentParser(description="turn bedlike vcf into JSON for coyote CNVs")
     parser.add_argument("--normal", action="store_true", help="Set this flag to True.")
     parser.add_argument("--bed", type=str, help="Set this flag to True.")
     parser.add_argument("--panel", type=str, help="Set this flag to True.")
     parser.add_argument("--id", type=str, help="Set this flag to True.")
+    parser.add_argument("--out", help="Output JSON with all CNV records.")
+    parser.add_argument("--panelmatched-out", help="Output JSON with panel-matched CNV records.")
+    parser.add_argument("--out-prefix", help="Output prefix. Defaults to sample ID.")
 
     args = parser.parse_args()
 
@@ -64,8 +70,9 @@ def main():
     sample_id = args.id
     panel_genes = read_panel_genes(panel_file)
     variants = read_bedlike_vcf(file_name,panel_genes)
-    json_all = sample_id+"_cnvs.json"
-    json_matched = sample_id+"_cnvs_panelmatched.json"
+    out_prefix = args.out_prefix or sample_id
+    json_all = args.out or f"{out_prefix}_cnvs.json"
+    json_matched = args.panelmatched_out or f"{out_prefix}_cnvs_panelmatched.json"
     variants_matched = {}
     for var in variants:
         if args.normal:
@@ -98,8 +105,8 @@ def read_bedlike_vcf(file_name,panel_genes):
                 LOG.debug("Processing varid: %s", varid)
                 varinfo = get_varinfo(info,gt,start)
                 varinfo["chr"] = str(chrom)
-                varinfo["start"] = int(start)
-                varinfo["end"] = int(end)
+                varinfo["start"] = int_like(start)
+                varinfo["end"] = int_like(end)
 
                 if varid in variants:
                     genes = [genematch]
@@ -120,7 +127,7 @@ def read_bedlike_vcf(file_name,panel_genes):
                         variants[varid]["has_match"] = True
             
     except FileNotFoundError:
-        print(f"Error: File '{file_name}' not found.")
+        print(f"Error: File '{file_name}' not found.", file=sys.stderr)
     return variants
     
 def info_field(info):
@@ -139,23 +146,24 @@ def info_field(info):
 def get_varinfo(info,gt,start):
     varinfo = {}
     if "PROBES" in info:
-        varinfo["nprobes"] = int(info["PROBES"])
+        varinfo["nprobes"] = int_like(info["PROBES"])
     if "set" in info:
         varinfo["callers"] = info["set"]
     if "FOLD_CHANGE_LOG" in info:
         varinfo["ratio"] = float(info["FOLD_CHANGE_LOG"])
     elif "gatkCN" in info:
         gatkcn = info['gatkCN'].split(',')[0]
-        varinfo["ratio"] = float(int(gatkcn)/2)
+        gatkcn_value = int_like(gatkcn)
+        varinfo["ratio"] = gatkcn_value / 2 if gatkcn_value else 0
     elif "SVTYPE" in info:
         if info["SVTYPE"] == "DEL":
             varinfo["ratio"] = "DEL"
         elif info["SVTYPE"] in ["DUP", "INS"]:
             varinfo["ratio"] = "AMP"
     if "SVLEN" in info:
-        varinfo["size"] = abs(int(info["SVLEN"]))
+        varinfo["size"] = abs(int_like(info["SVLEN"]))
     elif 'END' in info:
-        varinfo["size"] = int(info['END']) - int(start) +1
+        varinfo["size"] = int_like(info['END']) - int_like(start) +1
     else:
         varinfo['size'] = 0
     if "PR" in gt:
@@ -167,7 +175,7 @@ def get_varinfo(info,gt,start):
         if key.startswith("AFRQ"):
             varinfo[key] = float(value)
         elif key.startswith("ACOUNT"):
-            varinfo[key] = int(value)
+            varinfo[key] = int_like(value)
     return varinfo
 
 def gt_field(gt_keys,gt_values):
@@ -213,4 +221,3 @@ def collate_genes(genes,panel_genes):
 
 if __name__ == "__main__":
     main()
-

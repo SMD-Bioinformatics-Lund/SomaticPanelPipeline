@@ -18,10 +18,16 @@ def parse_genotype_file(genotype_file_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Convert genotype data file into a JSON blob.")
-    parser.add_argument('genotype_file', type=str, help="Path to the genotype file")
-    parser.add_argument('output_file', type=str, help="Path to save the output JSON file")
+    parser.add_argument('genotype_file_pos', nargs='?', help="Path to the genotype file")
+    parser.add_argument('output_file_pos', nargs='?', help="Path to save the output JSON file")
+    parser.add_argument("--input", dest="genotype_file", help="Path to the genotype file")
+    parser.add_argument("--out", dest="output_file", help="Path to save the output JSON file")
     
     args = parser.parse_args()
+    args.genotype_file = args.genotype_file or args.genotype_file_pos
+    args.output_file = args.output_file or args.output_file_pos
+    if not args.genotype_file or not args.output_file:
+        parser.error("both --input and --out are required")
 
     genotype_data = parse_genotype_file(args.genotype_file)
     

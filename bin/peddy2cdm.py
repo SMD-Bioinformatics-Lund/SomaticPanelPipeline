@@ -26,10 +26,11 @@ def load_sex_check(file_path, sample):
             sample_id = row["sample_id"]
             if sample_id == sample:
                 found = True
-                sex_ok = row["error"].lower() == "false"
+                error = row["error"].strip().lower()
+                sex_ok = None if error in {"", "na", "none", "unavailable"} else error == "false"
                 ped_sex = row["ped_sex"]
     if not found:
-        exit(f"{sample} is not in pedigree")
+        exit(f"{sample} is not in sex-check output")
     return sex_ok, ped_sex
 
 

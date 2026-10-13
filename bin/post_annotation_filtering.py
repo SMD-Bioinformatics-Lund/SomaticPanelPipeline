@@ -1,10 +1,11 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python3
 from pysam import VariantFile
 from pprint import pprint
 import cmdvcf
 import argparse
 import fnmatch
 import re
+import sys
 
 
 def filter_flags(var,filters):
@@ -33,37 +34,41 @@ def override_filters(var, override_filters) -> bool:
                     return True, filter_key
     return False, None
 
-def read_vcf(infile,filters,af_cutoff, override_key_values):
+def read_vcf(infile, filters, af_cutoff, override_key_values, outfile):
     """
     
     """
     vcf_object = VariantFile(infile)
-    
-    print(vcf_object.header,end="")
-    
-    for var in vcf_object.fetch():
-        override = False
-        var_dict = cmdvcf.parse_variant(var,vcf_object.header)
-        
-        af_pass = check_gnomad_vaf(var_dict,af_cutoff)
-        
-        filter_pass = filter_flags(var_dict,filters)
 
-        if not filter_pass:
-            override, override_key = override_filters(var_dict, override_key_values)
+    out_fh = sys.stdout if outfile == "-" else open(outfile, "w")
+    try:
+        print(vcf_object.header, end="", file=out_fh)
+        for var in vcf_object.fetch():
+            override = False
+            var_dict = cmdvcf.parse_variant(var,vcf_object.header)
 
-        if override:
-            current_filter_column = var_dict["FILTER"]
+            af_pass = check_gnomad_vaf(var_dict,af_cutoff)
 
-            if "PASS" not in current_filter_column.split(";"):
-                new_filter_column = f"PASS;{override_key}_Override;{current_filter_column}"
-            else:
-                new_filter_column = f"{override_key}_Override;{current_filter_column}"
+            filter_pass = filter_flags(var_dict,filters)
 
-            var = re.sub(current_filter_column, new_filter_column, str(var))
-        
-        if af_pass and (filter_pass or override):
-            print(str(var),end="")
+            if not filter_pass:
+                override, override_key = override_filters(var_dict, override_key_values)
+
+            if override:
+                current_filter_column = var_dict["FILTER"]
+
+                if "PASS" not in current_filter_column.split(";"):
+                    new_filter_column = f"PASS;{override_key}_Override;{current_filter_column}"
+                else:
+                    new_filter_column = f"{override_key}_Override;{current_filter_column}"
+
+                var = re.sub(current_filter_column, new_filter_column, str(var))
+
+            if af_pass and (filter_pass or override):
+                print(str(var), end="", file=out_fh)
+    finally:
+        if out_fh is not sys.stdout:
+            out_fh.close()
 
 
 def main():
@@ -95,6 +100,12 @@ def main():
         type=str,
         help="semiclon-separated list of terms to keep if the variant is not passed by the filters, eg: 'CLIN_SIG=likely_pathogenic,pathogenic;CANONICAL=Yes,Y'"
     )
+    parser.add_argument(
+        "--out",
+        type=str,
+        required=True,
+        help="Output filtered VCF"
+    )
     args = parser.parse_args()
     if args.filters is not None:
         filters = args.filters.split(',')
@@ -108,7 +119,7 @@ def main():
             if kv
         ]
     
-    read_vcf(args.vcf,filters,af_cutoff, override_key_values)
+    read_vcf(args.vcf,filters,af_cutoff, override_key_values, args.out)
     
 
 def check_gnomad_vaf(var,af_cutoff):

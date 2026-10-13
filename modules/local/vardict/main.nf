@@ -7,8 +7,8 @@ process VARDICT {
         each file(bed)
 
     output:
-        tuple val("vardict"), val(group), file("vardict_${bed}.vcf"),   emit: vcfparts_vardict
-        path "versions.yml",                                            emit: versions
+        tuple val(group), val(meta), val("vardict"), file("vardict_${bed}.vcf.raw"),    emit: raw_vcfparts_vardict
+        path "versions.yml",                                                        emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -31,8 +31,6 @@ process VARDICT {
             | var2vcf_paired.pl -N "${meta.id[tumor_idx]}|${meta.id[normal_idx]}" \\
             -f $params.vardict_var_freq_cutoff_p > vardict_${bed}.vcf.raw
 
-            filter_vardict_somatic.pl vardict_${bed}.vcf.raw ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > vardict_${bed}.vcf
-
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
                 vardict: \$( realpath \$( command -v vardict-java ) | sed 's/.*java-//;s/-.*//' )
@@ -51,8 +49,6 @@ process VARDICT {
             | var2vcf_valid.pl -N ${meta.id[0]} \\
             -E -f 0.01 > vardict_${bed}.vcf.raw
 
-            filter_vardict_unpaired.pl vardict_${bed}.vcf.raw > vardict_${bed}.vcf
-
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
                 vardict: \$( realpath \$( command -v vardict-java ) | sed 's/.*java-//;s/-.*//' )
@@ -67,7 +63,7 @@ process VARDICT {
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
             echo tumor:${bams[tumor_idx]} ${meta.id[tumor_idx]} normal:${bams[normal_idx]} ${meta.id[normal_idx]}
-            touch vardict_${bed}.vcf
+            touch vardict_${bed}.vcf.raw
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -79,7 +75,7 @@ process VARDICT {
         else {
             """
             echo tumor:$bams
-            touch vardict_${bed}.vcf
+            touch vardict_${bed}.vcf.raw
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

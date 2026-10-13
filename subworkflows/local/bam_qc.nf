@@ -1,14 +1,18 @@
 #!/usr/bin/env nextflow
 
-include { SENTIEON_QC          } from '../../modules/local/sentieon/main'
-include { SENTIEON_QC_TO_CDM   } from '../../modules/local/sentieon/main'
-include { QC_TO_CDM            } from '../../modules/local/qc/main'
-include { LOWCOV               } from '../../modules/local/qc/main'
-include { QC_VALUES            } from '../../modules/local/qc/main'
-include { ALLELE_CALL          } from '../../modules/local/idSnp/main'
-include { SNP_CHECK            } from '../../modules/local/idSnp/main'
-include { PAIRGEN_CDM          } from '../../modules/local/idSnp/main'
-include { LOWCOV_D4            } from '../../modules/local/qc/main'
+include { SENTIEON_QC                               } from '../../modules/local/sentieon/main'
+include { QC_TO_CDM                                 } from '../../modules/local/qc/main'
+include { SENTIEON_QC_TO_CDM                        } from '../../modules/local/qc/main'
+include { PANEL_DEPTH                               } from '../../modules/local/qc/main'
+include { LOWCOV                                    } from '../../modules/local/qc/main'
+include { QC_VALUES                                 } from '../../modules/local/qc/main'
+include { ANNOTATE as BCFTOOLS_ANNOTATE_IDSNP       } from '../../modules/local/bcftools/main'
+include { BCFTOOLS_MPILEUP_CALL                     } from '../../modules/local/bcftools/main'
+include { BCFTOOLS_QUERY_IDSNP                      } from '../../modules/local/bcftools/main'
+include { GENOTYPE2JSON                             } from '../../modules/local/idSnp/main'
+include { SNP_CHECK                                 } from '../../modules/local/idSnp/main'
+include { PAIRGEN_CDM                               } from '../../modules/local/idSnp/main'
+include { LOWCOV_D4                                 } from '../../modules/local/qc/main'
 
 workflow BAM_QC {
     take:        
@@ -22,6 +26,7 @@ workflow BAM_QC {
         SENTIEON_QC ( bam_dedup.join(dedup_metrics, by:[0,1]) )
         ch_versions = ch_versions.mix(SENTIEON_QC.out.versions)
         SENTIEON_QC_TO_CDM( SENTIEON_QC.out.qc_files.join(dedup_metrics, by:[0,1]) )
+        ch_versions = ch_versions.mix(SENTIEON_QC_TO_CDM.out.versions)
         
         QC_VALUES ( SENTIEON_QC_TO_CDM.out.qc_cdm )
 
@@ -29,15 +34,37 @@ workflow BAM_QC {
 
         LOWCOV_D4 ( bam_dedup )
         ch_versions = ch_versions.mix(LOWCOV_D4.out.versions)
-        
-        LOWCOV ( bam_dedup )
+
+        PANEL_DEPTH ( bam_dedup )
+        ch_versions = ch_versions.mix(PANEL_DEPTH.out.versions)
+
+        LOWCOV ( PANEL_DEPTH.out.lowcov_bed )
         ch_versions = ch_versions.mix(LOWCOV.out.versions)
 
         // Check genotypes of ID-SNPs
-        ALLELE_CALL (bam_dedup)
-        ch_versions = ch_versions.mix(ALLELE_CALL.out.versions)
+        BCFTOOLS_MPILEUP_CALL (bam_dedup)
+        ch_versions = ch_versions.mix(BCFTOOLS_MPILEUP_CALL.out.versions)
 
-        SNP_CHECK(ALLELE_CALL.out.sample_id_genotypes.groupTuple())
+        BCFTOOLS_ANNOTATE_IDSNP (
+            BCFTOOLS_MPILEUP_CALL.out.raw_vcf.map { group, meta, vcf ->
+                tuple(group, meta, 'idsnp', vcf)
+            }
+        )
+        ch_versions = ch_versions.mix(BCFTOOLS_ANNOTATE_IDSNP.out.versions)
+
+        BCFTOOLS_QUERY_IDSNP (
+            BCFTOOLS_ANNOTATE_IDSNP.out.annotated_vcf.map { group, meta, vc, vcf ->
+                tuple(group, meta, vcf)
+            }
+        )
+        ch_versions = ch_versions.mix(BCFTOOLS_QUERY_IDSNP.out.versions)
+
+        GENOTYPE2JSON (BCFTOOLS_QUERY_IDSNP.out.genotypes)
+        ch_versions = ch_versions.mix(GENOTYPE2JSON.out.versions)
+
+        ch_idsnp_groups = GENOTYPE2JSON.out.sample_id_genotypes.groupTuple()
+            .map { record -> SampleGroups.validate(record) }
+        SNP_CHECK(ch_idsnp_groups)
         ch_versions = ch_versions.mix(SNP_CHECK.out.versions)
 
         PAIRGEN_CDM (SNP_CHECK.out.idsnp_tumor.mix(SNP_CHECK.out.idsnp_normal))

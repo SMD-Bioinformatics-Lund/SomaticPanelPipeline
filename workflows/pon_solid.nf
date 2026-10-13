@@ -12,7 +12,6 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS   } from '../modules/local/custom/dumpsoft
 
 
 csv = file(params.csv)
-params.paired = csv.countLines() > 2 ? true : false
 
 // Split bed file in to smaller parts to be used for parallel variant calling
 Channel
@@ -26,7 +25,7 @@ workflow SPP_CREATE_SNVPON {
     ch_versions = Channel.empty()
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
-    CHECK_INPUT ( Channel.fromPath(csv), params.paired  )
+    CHECK_INPUT ( Channel.fromPath(csv) )
 
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
@@ -34,7 +33,7 @@ workflow SPP_CREATE_SNVPON {
     ch_versions = ch_versions.mix(ch_trim.versions)
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
-    ALIGN_SENTIEON ( 
+    ALIGN_SENTIEON (
         ch_trim.fastq_trim,
         CHECK_INPUT.out.bam,
         CHECK_INPUT.out.meta
@@ -42,13 +41,12 @@ workflow SPP_CREATE_SNVPON {
     .set { ch_mapped } 
     ch_versions = ch_versions.mix(ch_mapped.versions)
 
-    SNV_CALLING ( 
-        ch_mapped.bam_umi.groupTuple(),
+    SNV_CALLING (
+        ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
-        CHECK_INPUT.out.meta,
-        Channel.of(tuple(1,2)),
-        Channel.of(tuple(1,2))
+        Channel.empty(),
+        Channel.empty()
     )
     .set { ch_vcf }
     ch_versions = ch_versions.mix(ch_vcf.versions)

@@ -70,7 +70,7 @@ for line in seg_in:
         start = line[1]
         variant.append(start)
         end = line[2]
-        num_probes = line[3]
+        num_probes = str(int(float(line[3])))
         log2 = float(line[4])
         gatk_call = line[5]
 

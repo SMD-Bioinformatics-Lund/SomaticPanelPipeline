@@ -10,9 +10,8 @@ process MANTA {
         val(type)
 
     output:
-        tuple val(group), file("${prefix}_manta.${type}.vcf"),                  emit: manta_vcf_tumor
-        tuple val(group), file("${prefix2}_manta.${type}.vcf"), optional: true, emit: manta_vcf_normal
-        path "versions.yml",                                                    emit: versions
+        tuple val(group), val(meta), file("*_manta.*.vcf"), emit: manta_vcf
+        path "versions.yml",                                emit: versions
         
 
     when:
@@ -23,8 +22,8 @@ process MANTA {
         def args2   = task.ext.args2 ?: ""
         tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal      = bam[normal_idx]
-        normal_id   = meta.id[normal_idx]
+        normal      = normal_idx >= 0 ? bam[normal_idx] : null
+        normal_id   = normal_idx >= 0 ? meta.id[normal_idx] : ''
         tumor       = bam[tumor_idx]
         tumor_id    = meta.id[tumor_idx]
         prefix      = task.ext.prefix  ?: tumor_id
@@ -60,7 +59,7 @@ process MANTA {
             source activate py2
             set -eu
             configManta.py \\
-                --tumorBam $bam \\
+                --tumorBam $tumor \\
                 --callRegions $reference \\
                 $args \\
                 --runDir .
@@ -79,8 +78,8 @@ process MANTA {
     stub:
         tumor_idx   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
         normal_idx  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal      = bam[normal_idx]
-        normal_id   = meta.id[normal_idx]
+        normal      = normal_idx >= 0 ? bam[normal_idx] : null
+        normal_id   = normal_idx >= 0 ? meta.id[normal_idx] : ''
         tumor       = bam[tumor_idx]
         tumor_id    = meta.id[tumor_idx]
         prefix      = task.ext.prefix  ?: tumor_id
