@@ -17,14 +17,17 @@ workflow FUSIONS {
         ch_versions = Channel.empty()
 
         // genefuse //
-        GENEFUSE(fastq.filter { it -> it[1].type == "T" })
+        GENEFUSE(fastq.filter { group, meta, r1, r2 -> SampleGroups.isTumor(meta) })
         ch_versions = ch_versions.mix(GENEFUSE.out.versions)
 
         GENEFUSE_JSON_TO_VCF(GENEFUSE.out.genefuse_json)
         ch_versions = ch_versions.mix(GENEFUSE_JSON_TO_VCF.out.versions)
 
         // manta //
-        MANTA_FUSIONS(bam_markdup.filter { it -> it[1].type == "T" }.groupTuple(), params.mantafusions, "fusions")
+        ch_manta_fusions = bam_markdup.filter { group, meta, bam, bai -> SampleGroups.isTumor(meta) }
+            .groupTuple()
+            .map { record -> SampleGroups.validate(record) }
+        MANTA_FUSIONS(ch_manta_fusions, params.mantafusions, "fusions")
         ch_versions         = ch_versions.mix(MANTA_FUSIONS.out.versions)
         MANTA_FUSION_TUMOR  = MANTA_FUSIONS.out.manta_vcf.flatMap { group, meta, vcfs ->
             files = vcfs instanceof List ? vcfs : [vcfs]

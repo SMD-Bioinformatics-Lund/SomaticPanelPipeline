@@ -41,6 +41,7 @@ workflow GATK {
         ch_model_segments_input = GATKCOV_BAF.out.gatk_baf
             .join(GATK_DENOISE_READ_COUNTS.out.denoised_counts, by:[0,1])
             .groupTuple()
+            .map { record -> SampleGroups.validate(record) }
             .filter { group, meta, allele, stdCR, denoised ->
                 def samples = (meta instanceof List ? meta.flatten() : [meta]).findAll { it }
                 samples.any { sample_meta ->
@@ -55,7 +56,7 @@ workflow GATK {
             def samples = (meta instanceof List ? meta.flatten() : [meta]).findAll { it }
             def tumor_meta = samples.find { sample_meta ->
                 sample_meta.type?.toString()?.toLowerCase() in ['t', 'tumor']
-            } ?: samples[0]
+            }
             tuple(group, tumor_meta, cr_seg, hets, model_final)
         }
 

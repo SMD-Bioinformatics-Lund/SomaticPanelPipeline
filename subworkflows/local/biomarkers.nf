@@ -18,17 +18,20 @@ workflow BIOMARKERS {
         ch_versions = Channel.empty()
 
         // HRD //
-        CNVKIT2SCARHRD ( cnvkitsegments.filter { it -> it[1].type == "T" })
+        CNVKIT2SCARHRD ( cnvkitsegments.filter { group, meta, part, cns -> SampleGroups.isTumor(meta) })
         ch_versions = ch_versions.mix(CNVKIT2SCARHRD.out.versions)
 
         SCARHRD ( CNVKIT2SCARHRD.out.scarHRD_segments)
         ch_versions = ch_versions.mix(SCARHRD.out.versions)
 
         // MSI //
-        MSISENSOR_MSI (bam_umi.groupTuple())
+        ch_msi_groups = bam_umi.groupTuple()
+            .map { record -> SampleGroups.validate(record) }
+            .filter { group, metas, bams, bais, bqsr -> SampleGroups.hasTumor(metas) }
+        MSISENSOR_MSI (ch_msi_groups.filter { group, metas, bams, bais, bqsr -> metas.size() == 2 })
         ch_versions = ch_versions.mix(MSISENSOR_MSI.out.versions)
 
-        MSISENSOR_PRO (bam_umi.groupTuple())
+        MSISENSOR_PRO (ch_msi_groups)
         ch_versions = ch_versions.mix(MSISENSOR_PRO.out.versions)
 
         // combine biomarkers //

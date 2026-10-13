@@ -1,11 +1,11 @@
 #!/usr/bin/env nextflow
 
 include { FREEBAYES                             } from '../../modules/local/freebayes/main'
-include { FILTER as FREEBAYES_FILTER_LOWCOV    } from '../../modules/local/vcflib/main'
-include { FILTER as FREEBAYES_FILTER_LOWFRQ    } from '../../modules/local/vcflib/main'
-include { GLXGT as FREEBAYES_VCFGLXGT          } from '../../modules/local/vcflib/main'
-include { FILTER_FREEBAYES                     } from '../../modules/local/filters/main'
-include { ANNOTATE as FREEBAYES_REMOVE_AD      } from '../../modules/local/bcftools/main'
+include { FILTER as FREEBAYES_FILTER_LOWCOV     } from '../../modules/local/vcflib/main'
+include { FILTER as FREEBAYES_FILTER_LOWFRQ     } from '../../modules/local/vcflib/main'
+include { GLXGT as FREEBAYES_VCFGLXGT           } from '../../modules/local/vcflib/main'
+include { FILTER_FREEBAYES                      } from '../../modules/local/filters/main'
+include { ANNOTATE as FREEBAYES_REMOVE_AD       } from '../../modules/local/bcftools/main'
 include { VARDICT                               } from '../../modules/local/vardict/main'
 include { FILTER_VARDICT                        } from '../../modules/local/filters/main'
 include { TNSCOPE                               } from '../../modules/local/sentieon/main'
@@ -42,13 +42,18 @@ workflow SNV_CALLING {
     main:
         ch_versions = Channel.empty()
         paired_calling_ch = bam_umi.groupTuple()
+            .map { record -> SampleGroups.validate(record) }
+            .filter { group, metas, bams, bais, bqsr -> SampleGroups.hasTumor(metas) }
         normal_bam_umi = bam_umi.filter { group, meta, bam, bai, bqsr ->
-            meta.type == 'N' || meta.type == 'normal'
+            SampleGroups.isNormal(meta)
         }
 
         // Pindel
-        PINDEL_CONFIG ( dedup_bam_is_metrics )
-        PINDEL_CALL ( dedup_bam_is_metrics.join(PINDEL_CONFIG.out.pindel_config, by:[0,1]) )
+        ch_pindel_input = dedup_bam_is_metrics
+            .map { record -> SampleGroups.validate(record) }
+            .filter { group, metas, bams, bais, metrics -> SampleGroups.hasTumor(metas) }
+        PINDEL_CONFIG ( ch_pindel_input )
+        PINDEL_CALL ( ch_pindel_input.join(PINDEL_CONFIG.out.pindel_config, by:[0,1], failOnDuplicate: true) )
         ch_versions         = ch_versions.mix(PINDEL_CALL.out.versions)
 
         PINDEL_TO_VCF ( PINDEL_CALL.out.pindel_raw )
@@ -102,6 +107,10 @@ workflow SNV_CALLING {
         /////////////////////////////////////////////////////////////////////////////////
         ch_melt_grouped = BEDTOOLS_INTERSECT.out.vcf_intersected
             .groupTuple(by:[0,2])
+            .filter { group, metas, vc, vcfs ->
+                SampleGroups.validateMetadata(group, metas)
+                SampleGroups.hasTumor(metas)
+            }
             .map { group, metas, vc, vcfs ->
                 [
                     group,

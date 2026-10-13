@@ -12,12 +12,12 @@ process COYOTE {
         task.ext.when == null || task.ext.when
 
     script:
-        def samples = meta instanceof List ? meta : [meta]
+        def samples = SampleGroups.validateMetadata(group, meta)
         def tumor_idx = samples.findIndexOf { it.type == 'tumor' || it.type == 'T' }
         tumor_idx = tumor_idx >= 0 ? tumor_idx : 0
         def normal_idx = samples.findIndexOf { it.type == 'normal' || it.type == 'N' }
         def tumor = samples[tumor_idx]
-        def normal = normal_idx >= 0 ? samples[normal_idx] : null
+        def normal = normal_idx >= 0 && normal_idx != tumor_idx ? samples[normal_idx] : null
         def process_group = samples.size() >= 2 ? "${group}p" : group
         def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         def tumor_sex = tumor.sex?.toString()?.toLowerCase()
@@ -32,6 +32,10 @@ process COYOTE {
         def import_order = ['cnv', 'transloc', 'biomarkers', 'cnvprofile', 'lowcov']
         def seen_import_types = [] as Set
         def import_records = [import_types, import_files].transpose()
+            .sort { a, b -> (a[0] == 'cnvprofile_gatk' ? 0 : 1) <=> (b[0] == 'cnvprofile_gatk' ? 0 : 1) }
+            .collect { record ->
+                record[0] in ['cnvprofile_gatk', 'cnvprofile_cnvkit'] ? ['cnvprofile', record[1]] : record
+            }
             .findAll { record -> record[0] != 'cnvprofile' || seen_import_types.add(record[0]) }
             .sort { a, b -> import_order.indexOf(a[0]) <=> import_order.indexOf(b[0]) }
         def import_args = import_records
@@ -196,6 +200,9 @@ process OUTPUT_FILES {
         task.ext.when == null || task.ext.when
 
     script:
+        if (labels.size() != files.size() || labels.unique(false).size() != labels.size()) {
+            error "Duplicate or unaligned Coyote output labels in group '${group}'"
+        }
         def json_map = [labels, files.collect { it.toString().replaceAll('.+/', '') }]
             .transpose()
             .collectEntries { label, filename -> [(label): filename] }

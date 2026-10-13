@@ -23,6 +23,15 @@ workflow CNVKIT {
     main:
         ch_versions = Channel.empty()
 
+        // One case-level BAF VCF is shared by that group's per-sample CNVkit tasks.
+        ch_germline_variants = germline_variants.groupTuple().map { group, metas, vcfs, indexes ->
+            if (vcfs.size() != 1 || indexes.size() != 1) {
+                error "CNVkit requires exactly one germline VCF/index per group '${group}'"
+            }
+            SampleGroups.validateMetadata(group, metas[0])
+            tuple(group, metas[0], vcfs[0], indexes[0])
+        }
+
         if (!params.cnvkit_split) {
             CNVKIT_FULL ( bam_umi, params.cnvkit_reference, "full" )
             batch_plot_cns = CNVKIT_FULL.out.cnvkit_cns
@@ -30,8 +39,9 @@ workflow CNVKIT {
             ch_versions = ch_versions.mix(CNVKIT_FULL.out.versions)
 
             cnvkit_full_input = batch_plot_cns.join(batch_plot_cnr, by:[0,1,3])
-                .combine(germline_variants, by:[0])
+                .combine(ch_germline_variants, by:[0])
                 .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    SampleGroups.requireMember(group, meta, germline_meta)
                     tuple(group, meta, part, cns, cnr, vcf, tbi)
                 }
 
@@ -55,8 +65,9 @@ workflow CNVKIT {
             CNVKIT_EXPORT_NEXUS_OGT ( cnvkit_nexus_input )
             ch_versions = ch_versions.mix(CNVKIT_EXPORT_NEXUS_OGT.out.versions)
 
-            cnvkit_full_gens_input = batch_plot_cnr.combine(germline_variants, by:[0])
+            cnvkit_full_gens_input = batch_plot_cnr.combine(ch_germline_variants, by:[0])
                 .map { group, meta, cnr, part, germline_meta, vcf, tbi ->
+                    SampleGroups.requireMember(group, meta, germline_meta)
                     tuple(group, meta, cnr, part, vcf, tbi)
                 }
 
@@ -99,8 +110,9 @@ workflow CNVKIT {
             ch_versions = ch_versions.mix(CNVKIT_BACKBONE.out.versions)
 
             cnvkit_backbone_input = CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3])
-                .combine(germline_variants, by:[0])
+                .combine(ch_germline_variants, by:[0])
                 .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    SampleGroups.requireMember(group, meta, germline_meta)
                     tuple(group, meta, part, cns, cnr, vcf, tbi)
                 }
 
@@ -112,8 +124,9 @@ workflow CNVKIT {
                     CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]),
                     CNVKIT_FULL.out.cnvkit_cns.join(CNVKIT_FULL.out.cnvkit_cnr, by:[0,1,3])
                 )
-                .combine(germline_variants, by:[0])
+                .combine(ch_germline_variants, by:[0])
                 .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    SampleGroups.requireMember(group, meta, germline_meta)
                     tuple(group, meta, part, cns, cnr, vcf, tbi)
                 }
 
@@ -135,8 +148,9 @@ workflow CNVKIT {
             ch_versions = ch_versions.mix(CNVKIT_EXPORT_NEXUS_OGT.out.versions)
 
             cnvkit_tc_input = CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3])
-                .combine(germline_variants, by:[0])
+                .combine(ch_germline_variants, by:[0])
                 .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    SampleGroups.requireMember(group, meta, germline_meta)
                     tuple(group, meta, part, cns, cnr, vcf, tbi)
                 }
 
@@ -153,8 +167,9 @@ workflow CNVKIT {
             ch_versions = ch_versions.mix(CNVKIT_EXPORT_VCF_TC.out.versions)
 
             cnvkit_split_gens_input = CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr)
-                .combine(germline_variants, by:[0])
+                .combine(ch_germline_variants, by:[0])
                 .map { group, meta, cnr, part, germline_meta, vcf, tbi ->
+                    SampleGroups.requireMember(group, meta, germline_meta)
                     tuple(group, meta, cnr, part, vcf, tbi)
                 }
 

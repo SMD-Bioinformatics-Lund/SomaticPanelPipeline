@@ -72,9 +72,9 @@ def optional_float(value):
 
 def normalize_sex(value):
     sex = str(value or "").strip().lower()
-    if sex in ("male", "m"):
+    if sex in ("male", "m", "1"):
         return "male"
-    if sex in ("female", "f"):
+    if sex in ("female", "f", "2"):
         return "female"
     return "unknown"
 
@@ -108,12 +108,39 @@ def main():
     with open(args.json_info, encoding="utf-8") as info_file:
         output_files = json.load(info_file)
 
+    if isinstance(all_samples_meta, dict):
+        all_samples_meta = [all_samples_meta]
+    if not isinstance(all_samples_meta, list) or not all_samples_meta or not all(
+        isinstance(sample, dict) for sample in all_samples_meta
+    ):
+        raise ValueError("Metadata must be a map or a nonempty list of sample maps")
+    roles = [
+        {"tumor": "t", "normal": "n"}.get(sample_type(sample), sample_type(sample))
+        for sample in all_samples_meta
+    ]
+    ids = [sample.get("id") for sample in all_samples_meta]
+    if (
+        len(ids) > 2
+        or any(not sample_id for sample_id in ids)
+        or len(set(ids)) != len(ids)
+        or any(sample.get("group") != args.group for sample in all_samples_meta)
+        or any(role not in ("t", "n") for role in roles)
+        or (len(ids) == 2 and sorted(roles) != ["n", "t"])
+    ):
+        raise ValueError(f"Invalid sample membership for Coyote group {args.group!r}")
+
     tumor_sample = next(
         (s for s in all_samples_meta if sample_type(s) in ("t", "tumor")),
         all_samples_meta[0],
     )
     normal_sample = next(
-        (s for s in all_samples_meta if sample_type(s) in ("n", "normal")), None
+        (
+            sample
+            for sample in all_samples_meta
+            if sample["id"] != tumor_sample["id"]
+            and sample_type(sample) in ("n", "normal")
+        ),
+        None,
     )
 
     is_paired = normal_sample is not None
@@ -168,13 +195,10 @@ def main():
             build_access_path(args.subdir, "bam", filename) if filename else None
         )
 
-    if "cnvprofile_gatk" in output_files:
-        coyote_doc["cnvprofile"] = build_access_path(
-            args.subdir, "plots", output_files["cnvprofile_gatk"]
-        )
-    elif "cnvprofile_cnvkit" in output_files:
-        coyote_doc["cnvprofile"] = build_access_path(
-            args.subdir, "plots", output_files["cnvprofile_cnvkit"]
+    if "cnvprofile_gatk" in output_files or "cnvprofile_cnvkit" in output_files:
+        filename = output_files.get("cnvprofile_gatk") or output_files.get("cnvprofile_cnvkit")
+        coyote_doc["cnvprofile"] = (
+            build_access_path(args.subdir, "plots", filename) if filename else None
         )
 
     optional_file_subfolders = {
@@ -187,8 +211,9 @@ def main():
 
     for coyote_key, subfolder in optional_file_subfolders.items():
         if coyote_key in output_files:
-            coyote_doc[coyote_key] = build_access_path(
-                args.subdir, subfolder, output_files[coyote_key]
+            filename = output_files[coyote_key]
+            coyote_doc[coyote_key] = (
+                build_access_path(args.subdir, subfolder, filename) if filename else None
             )
 
     if tumor_purity is not None:

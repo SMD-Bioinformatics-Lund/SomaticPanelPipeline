@@ -43,7 +43,7 @@ process SNP_CHECK {
         tuple val(group), val(meta), file(vcfs), file(genotypes)
 
     output:
-        tuple val(group), val(meta), val(tumor_id), val(tumor_seq_run), file("${tumor_id}.T.idsnp"),    emit: idsnp_tumor
+        tuple val(group), val(meta), val(tumor_id), val(tumor_seq_run), file("${tumor_id}.T.idsnp"),    emit: idsnp_tumor, optional: true
         tuple val(group), val(meta), val(normal_id), val(normal_seq_run), file("${normal_id}.N.idsnp"), emit: idsnp_normal, optional: true
         path "versions.yml", optional: true,                                                            emit: versions
 
@@ -53,21 +53,24 @@ process SNP_CHECK {
     script:
         
         def args                    = task.ext.args  ?: ""
-        tumor_idx                   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx                  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal_id                   = meta.id[normal_idx]
-        tumor_id                    = meta.id[tumor_idx]
+        def samples                 = SampleGroups.validateMetadata(group, meta)
+        tumor_idx                   = samples.findIndexOf { SampleGroups.isTumor(it) }
+        normal_idx                  = samples.findIndexOf { SampleGroups.isNormal(it) }
+        normal_id                   = normal_idx >= 0 ? samples[normal_idx].id : null
+        tumor_id                    = tumor_idx >= 0 ? samples[tumor_idx].id : null
                     
-        tumor_seq_run               = meta.sequencing_run[tumor_idx]
-        normal_seq_run              = meta.sequencing_run[normal_idx]
+        tumor_seq_run               = tumor_idx >= 0 ? samples[tumor_idx].sequencing_run : null
+        normal_seq_run              = normal_idx >= 0 ? samples[normal_idx].sequencing_run : null
 
-	    normalvcf                   = vcfs[normal_idx]
-	    tumorvcf                    = vcfs[tumor_idx]
+        normalvcf                   = normal_idx >= 0 ? vcfs[normal_idx] : null
+        tumorvcf                    = tumor_idx >= 0 ? vcfs[tumor_idx] : null
 
-        norGTjson                   = genotypes[normal_idx]
-        tumGTjson                   = genotypes[tumor_idx]
+        norGTjson                   = normal_idx >= 0 ? genotypes[normal_idx] : null
+        tumGTjson                   = tumor_idx >= 0 ? genotypes[tumor_idx] : null
+        def single_id               = samples[0].id
+        def single_role             = SampleGroups.isNormal(samples[0]) ? 'N' : 'T'
 
-        if(meta.id.size() == 2) {
+        if(samples.size() == 2) {
             """
             idsnp_controller.pl \\
                 --vcf_sample $tumorvcf  \\
@@ -96,9 +99,9 @@ process SNP_CHECK {
             """
         } else {
             """
-            echo "Not applicable" > s${tumor_id}.csv
-            echo  '{ "is_paired_sample" : false}' > ${tumor_id}.json
-            combinejsons.py --info-json ${tumor_id}.json --genotype-json ${tumGTjson} --out ${tumor_id}.T.idsnp
+            echo "Not applicable" > s${single_id}.csv
+            echo  '{ "is_paired_sample" : false}' > ${single_id}.json
+            combinejsons.py --info-json ${single_id}.json --genotype-json ${genotypes[0]} --out ${single_id}.${single_role}.idsnp
             
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
@@ -109,14 +112,17 @@ process SNP_CHECK {
         }
 
     stub:
-        tumor_idx                   = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
-        normal_idx                  = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
-        normal_id                   = meta.id[normal_idx]
-        tumor_id                    = meta.id[tumor_idx]
-        tumor_seq_run               = meta.sequencing_run[tumor_idx]
-        normal_seq_run              = meta.sequencing_run[normal_idx]
+        def samples                 = SampleGroups.validateMetadata(group, meta)
+        tumor_idx                   = samples.findIndexOf { SampleGroups.isTumor(it) }
+        normal_idx                  = samples.findIndexOf { SampleGroups.isNormal(it) }
+        normal_id                   = normal_idx >= 0 ? samples[normal_idx].id : null
+        tumor_id                    = tumor_idx >= 0 ? samples[tumor_idx].id : null
+        tumor_seq_run               = tumor_idx >= 0 ? samples[tumor_idx].sequencing_run : null
+        normal_seq_run              = normal_idx >= 0 ? samples[normal_idx].sequencing_run : null
+        def single_id               = samples[0].id
+        def single_role             = SampleGroups.isNormal(samples[0]) ? 'N' : 'T'
         
-        if(meta.id.size() == 2) {
+        if(samples.size() == 2) {
             """ 
             touch s${tumor_id}_c${normal_id}.csv
             touch ${tumor_id}.T.idsnp
@@ -132,9 +138,9 @@ process SNP_CHECK {
         } else {
         
             """
-            echo "Not applicable" > s${tumor_id}.csv
-            echo  '{ "is_paired_sample" : false }' > ${tumor_id}.json
-            touch ${tumor_id}.T.idsnp
+            echo "Not applicable" > s${single_id}.csv
+            echo  '{ "is_paired_sample" : false }' > ${single_id}.json
+            touch ${single_id}.${single_role}.idsnp
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":

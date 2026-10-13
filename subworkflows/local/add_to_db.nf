@@ -24,18 +24,15 @@ workflow ADD_TO_DB {
             tuple(group, 'lowcov', lowcov_file.name)
         }
 
-        cnvkit_plot.groupTuple().set { cnvkit_plot_grouped }
-        cnvkit_png_for_coyote = cnvkit_plot_grouped.map { group, metas, parts, plots ->
-            def tumor_idx = metas.findIndexOf { sample_meta -> sample_meta.type == 'T' || sample_meta.type == 'tumor' }
-            tumor_idx = tumor_idx >= 0 ? tumor_idx : 0
-            tuple(group, 'cnvprofile', plots[tumor_idx].name)
-        }
+        cnvkit_png_for_coyote = cnvkit_plot
+            .filter { group, meta, part, plot -> SampleGroups.isTumor(meta) }
+            .map { group, meta, part, plot -> tuple(group, 'cnvprofile_cnvkit', plot.name) }
 
         cnv_json_for_coyote = s_json.map { group, cnv_file ->
             tuple(group, 'cnv', cnv_file.name)
         }
         gatk_plot_for_coyote = gatcov_plot.map { group, meta, plot_file ->
-            tuple(group, 'cnvprofile', plot_file.name)
+            tuple(group, 'cnvprofile_gatk', plot_file.name)
         }
         biomarkers_for_coyote = biomarkers.map { group, biomarker_file ->
             tuple(group, 'biomarkers', biomarker_file.name)
@@ -48,7 +45,7 @@ workflow ADD_TO_DB {
             .mix(cnv_json_for_coyote, gatk_plot_for_coyote, biomarkers_for_coyote, fusions_for_coyote, cnvkit_png_for_coyote)
             .groupTuple(by: [0])
 
-        coyote_input = vcf.join(coyote_optional, remainder: true)
+        coyote_input = vcf.join(coyote_optional, remainder: true, failOnDuplicate: true)
             .filter { group, meta, vcf_file, import_types, import_files -> vcf_file != null }
             .map { group, meta, vcf_file, import_types, import_files ->
                 tuple(group, meta, vcf_file, import_types ?: [], import_files ?: [])
@@ -88,23 +85,35 @@ workflow ADD_TO_DB {
         COYOTE ( coyote_input )
         coyote_bams = bam_umi
             .map { group, meta, bam, bai, bqsr ->
+                SampleGroups.validateMetadata(group, meta)
                 tuple(group, meta.id, [bam: bam.name, bai: bai.name])
             }
             .groupTuple()
             .map { group, ids, bam_files ->
+                if (ids.unique(false).size() != ids.size()) {
+                    error "Duplicate BAM/BAI entries for group '${group}'"
+                }
                 tuple(group, [ids, bam_files].transpose().collectEntries { id, files -> [(id): files] })
             }
 
-        coyote_output_files = vcf.join(coyote_info, remainder: true)
+        coyote_output_files = vcf.join(coyote_info, remainder: true, failOnDuplicate: true)
             .filter { group, meta, vcf_file, labels, files -> vcf_file != null }
-            .join(coyote_bams, remainder: true)
+            .join(coyote_bams, remainder: true, failOnDuplicate: true)
             .filter { group, meta, vcf_file, labels, files, bam_files -> vcf_file != null }
             .map { group, meta, vcf_file, labels, files, bam_files ->
-                def samples = meta instanceof List ? meta : [meta]
-                def case_meta = samples.find { it.type.toString().toLowerCase() in ['t', 'tumor'] } ?: samples[0]
-                def control_meta = samples.find { it.id != case_meta.id && it.type.toString().toLowerCase() in ['n', 'normal'] }
+                def samples = SampleGroups.validateMetadata(group, meta)
+                def case_meta = samples.find { SampleGroups.isTumor(it) } ?: samples[0]
+                def control_meta = samples.find { it.id != case_meta.id && SampleGroups.isNormal(it) }
                 def case_files = bam_files?.get(case_meta.id)
                 def control_files = control_meta ? bam_files?.get(control_meta.id) : null
+                if ((case_files?.bam && case_files.bam == control_files?.bam) ||
+                    (case_files?.bai && case_files.bai == control_files?.bai)) {
+                    error "Case and control BAM/BAI publication names collide in Coyote group '${group}'"
+                }
+                def sample_ids = samples.collect { it.id } as Set
+                if (bam_files && !sample_ids.containsAll(bam_files.keySet())) {
+                    error "BAM metadata contains foreign sample IDs in Coyote group '${group}'"
+                }
                 tuple(group, labels ?: [], files ?: [], [
                     case_bam: case_files?.bam,
                     case_bai: case_files?.bai,
@@ -114,7 +123,7 @@ workflow ADD_TO_DB {
             }
 
         OUTPUT_FILES ( coyote_output_files )
-        OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO) )
+        OUTPUTS_YAML_COYOTE ( vcf.join(OUTPUT_FILES.out.json_INFO, by: 0, failOnDuplicate: true, failOnMismatch: true) )
 
     emit:
         coyotedone = COYOTE.out.coyote_import

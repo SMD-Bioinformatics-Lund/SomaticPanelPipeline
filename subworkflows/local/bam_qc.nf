@@ -63,7 +63,9 @@ workflow BAM_QC {
         GENOTYPE2JSON (BCFTOOLS_QUERY_IDSNP.out.genotypes)
         ch_versions = ch_versions.mix(GENOTYPE2JSON.out.versions)
 
-        SNP_CHECK(GENOTYPE2JSON.out.sample_id_genotypes.groupTuple())
+        ch_idsnp_groups = GENOTYPE2JSON.out.sample_id_genotypes.groupTuple()
+            .map { record -> SampleGroups.validate(record) }
+        SNP_CHECK(ch_idsnp_groups)
         ch_versions = ch_versions.mix(SNP_CHECK.out.versions)
 
         PAIRGEN_CDM (SNP_CHECK.out.idsnp_tumor.mix(SNP_CHECK.out.idsnp_normal))

@@ -78,15 +78,20 @@ workflow SNV_ANNOTATE {
         // BAF for CNVkit //
         ch_freebayes_vcfs = concat_vcfs
             .filter { group, meta, vc, vcf, tbi -> vc == 'freebayes' }
-            .map { group, meta, vc, vcf, tbi -> [ group, vc, vcf ] }
+            .map { group, meta, vc, vcf, tbi -> tuple(group, meta, vc, vcf) }
 
         GERMLINE_FOR_CNVKIT ( ANNOTATE_VEP.out.vcf_vep )
         ch_versions = ch_versions.mix(GERMLINE_FOR_CNVKIT.out.versions)
 
-        ch_filter_for_cnv_joined = ch_freebayes_vcfs.join(GERMLINE_FOR_CNVKIT.out.germline_vcf)
+        ch_filter_for_cnv_joined = ch_freebayes_vcfs.join(GERMLINE_FOR_CNVKIT.out.germline_vcf, by: 0, failOnDuplicate: true, failOnMismatch: params.freebayes)
 
         ch_filter_for_cnv = ch_filter_for_cnv_joined
-            .map { group, vc, vcf_unfilt, meta, germline_vcf ->
+            .map { group, caller_meta, vc, vcf_unfilt, meta, germline_vcf ->
+                def caller_ids = SampleGroups.validateMetadata(group, caller_meta).collect { it.id }.sort()
+                def germline_ids = SampleGroups.validateMetadata(group, meta).collect { it.id }.sort()
+                if (caller_ids != germline_ids) {
+                    error "FreeBayes and annotated germline VCF sample IDs differ for group '${group}'"
+                }
                 tuple(group, meta, vc, vcf_unfilt, germline_vcf)
             }
 

@@ -20,13 +20,19 @@ workflow VCF_QC {
         }
 
         ped_ch_tumor = meta_filtered
-            .filter { group, meta -> meta.type == 'T' || meta.type == 'tumor' }
-            .join(tumor_germline.map { group, germline_meta, vcf, tbi -> tuple(group, vcf, tbi) })
-            .map { group, meta, vcf, tbi -> tuple(group, meta, vcf, tbi) }
+            .filter { group, meta -> SampleGroups.isTumor(meta) }
+            .map { group, meta -> tuple(group, meta.id, meta) }
+            .join(tumor_germline.map { group, germline_meta, vcf, tbi ->
+                def tumor_meta = SampleGroups.validateMetadata(group, germline_meta).find { SampleGroups.isTumor(it) }
+                tumor_meta ? tuple(group, tumor_meta.id, vcf, tbi) : null
+            }, by: [0,1], failOnDuplicate: true)
+            .map { group, id, meta, vcf, tbi -> tuple(group, meta, vcf, tbi) }
 
         ped_ch_normal = meta_filtered
-            .filter { group, meta -> meta.type == 'N' || meta.type == 'normal' }
-            .join(normal_germline, by:[0,1])
+            .filter { group, meta -> SampleGroups.isNormal(meta) }
+            .map { group, meta -> tuple(group, meta.id, meta) }
+            .join(normal_germline.map { group, meta, vcf, tbi -> tuple(group, meta.id, vcf, tbi) }, by: [0,1], failOnDuplicate: true)
+            .map { group, id, meta, vcf, tbi -> tuple(group, meta, vcf, tbi) }
 
         PEDDY ( ped_ch_tumor.mix(ped_ch_normal) )
         PEDDY2CDM ( PEDDY.out.peddy_files )

@@ -27,7 +27,10 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(GATK.out.versions)
 
         /////////////////////////// MANTA /////////////////////////////////////////////////////
-        MANTA ( bam_markdup.groupTuple(), params.bedgz, "CNV" )
+        ch_manta_groups = bam_markdup.groupTuple()
+            .map { record -> SampleGroups.validate(record) }
+            .filter { group, metas, bams, bais -> SampleGroups.hasTumor(metas) }
+        MANTA ( ch_manta_groups, params.bedgz, "CNV" )
         ch_versions = ch_versions.mix(MANTA.out.versions)
 
         MANTA_NORMAL = MANTA.out.manta_vcf.flatMap { group, meta, vcfs ->
