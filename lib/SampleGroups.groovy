@@ -39,6 +39,10 @@ class SampleGroups {
         members
     }
 
+    static boolean isPaired(Object group, Object meta) {
+        validateMetadata(group, meta).size() == 2
+    }
+
     static List validate(List record) {
         if (!record || record.size() < 2) {
             skip(record ? record[0] : null, 'missing group or metadata columns')

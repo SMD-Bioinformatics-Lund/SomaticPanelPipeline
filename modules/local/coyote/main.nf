@@ -132,12 +132,13 @@ process OUTPUTS_YAML_COYOTE {
         tuple val(group), val(meta), path(vcf), path(json_INFO)
 
     output:
-        tuple val(group), path("${group}.coyote3.yaml"), emit: yaml_coyote3
+        tuple val(group), path("${group}*.coyote3.yaml"), emit: yaml_coyote3
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
+        def process_group = SampleGroups.isPaired(group, meta) ? "${group}p" : group
         def environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         def meta_json = groovy.json.JsonOutput.toJson(meta)
         """
@@ -155,10 +156,11 @@ process OUTPUTS_YAML_COYOTE {
             --environment      '${environment}' \\
             --pipeline_name    '${workflow.manifest.name}' \\
             --pipeline_version '${workflow.manifest.version}' \\
-            --out              ${group}.coyote3.yaml
+            --out              ${process_group}.coyote3.yaml
         """
 
     stub:
+        def process_group = SampleGroups.isPaired(group, meta) ? "${group}p" : group
         environment = params.dev ? 'development' : params.validation ? 'validation' : params.testing ? 'testing' : 'production'
         """
         echo "STUB: make_coyote_yaml.py would run with:"
@@ -171,7 +173,7 @@ process OUTPUTS_YAML_COYOTE {
         echo "  --environment      ${environment}"
         echo "  --pipeline_name    ${workflow.manifest.name}"
         echo "  --pipeline_version ${workflow.manifest.version}"
-        echo "  --out              ${group}.coyote3.yaml"
-        touch ${group}.coyote3.yaml
+        echo "  --out              ${process_group}.coyote3.yaml"
+        touch ${process_group}.coyote3.yaml
         """
 }
