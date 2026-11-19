@@ -7,7 +7,7 @@ include { FASTP                } from '../../modules/local/fastp/main'
 
 workflow SAMPLE {
     take:
-        fastq       // channel: [ val(meta), [ reads ] ]
+        fastq       // channel: [ val(group), val(meta), [ reads ] ]
 
     main:
         ch_versions = Channel.empty()

@@ -14,7 +14,6 @@ include { VALIDATE_PARAMETERS           } from '../subworkflows/local/validate_p
 
 csv = file(params.csv)
 
-params.paired = csv.countLines() > 2 ? true : false
 
 
 // Split bed file in to smaller parts to be used for parallel variant calling
@@ -37,10 +36,10 @@ workflow SPP_QC {
     ch_versions = Channel.empty()
 
     // Checks input, creates meta-channel and decides whether data should be downsampled //
-    CHECK_INPUT ( Channel.fromPath(csv), params.paired )
+    CHECK_INPUT ( Channel.fromPath(csv) )
 
-	parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
-	VALIDATE_PARAMETERS(parameters_to_validate)
+    parameters_to_validate = params.global_parameters_to_validate + params.profile_parameters_to_validate
+    VALIDATE_PARAMETERS(parameters_to_validate)
 
     // Downsample if meta.sub == value and not false //
     SAMPLE ( CHECK_INPUT.out.fastq )  
@@ -48,7 +47,7 @@ workflow SPP_QC {
     ch_versions = ch_versions.mix(ch_trim.versions)
 
     // Do alignment if downsample was false and mix with SAMPLE subworkflow output
-    ALIGN_SENTIEON ( 
+    ALIGN_SENTIEON (
         ch_trim.fastq_trim,
         CHECK_INPUT.out.bam,
         CHECK_INPUT.out.meta
@@ -64,11 +63,10 @@ workflow SPP_QC {
     .set { ch_qc }
     ch_versions = ch_versions.mix(ch_qc.versions)
 
-    SNV_CALLING ( 
+    SNV_CALLING (
         ch_mapped.bam_umi,
         ch_mapped.bam_dedup,
         beds,
-        CHECK_INPUT.out.meta,
         ch_qc.melt_qc,
         ch_qc.dedup_bam_is_metrics.groupTuple(),
     )
@@ -78,7 +76,7 @@ workflow SPP_QC {
     SNV_ANNOTATE (
         ch_vcf.agg_vcf,
         ch_vcf.concat_vcfs,
-        CHECK_INPUT.out.meta
+        // CHECK_INPUT.out.meta
     )
     .set { ch_vcf_anno }
     ch_versions = ch_versions.mix(ch_vcf_anno.versions)
@@ -128,19 +126,19 @@ workflow.onComplete {
 
 workflow.onError {
 
-	def msg = """\
-	Success     : ${workflow.success}
-	scriptFile  : ${workflow.scriptFile}
-	workDir     : ${workflow.workDir}
-	csv         : ${params.csv}
-	errorMessage: ${workflow.errorMessage}
-	"""
-	def base = file(params.csv).getBaseName()
-	File logFile = new File("${params.crondir}/logs/${base}.complete")
-	if ( !logFile.exists() ) {
-		if (!logFile.getParentFile().exists()) {
-			logFile.getParentFile().mkdirs()
-		}
-		logFile.text = msg
-	}
+    def msg = """\
+    Success     : ${workflow.success}
+    scriptFile  : ${workflow.scriptFile}
+    workDir     : ${workflow.workDir}
+    csv         : ${params.csv}
+    errorMessage: ${workflow.errorMessage}
+    """
+    def base = file(params.csv).getBaseName()
+    File logFile = new File("${params.resultsdir}/cron/logs/" + base + ".complete")
+    if ( !logFile.exists() ) {
+        if (!logFile.getParentFile().exists()) {
+            logFile.getParentFile().mkdirs()
+        }
+        logFile.text = msg
+    }
 }

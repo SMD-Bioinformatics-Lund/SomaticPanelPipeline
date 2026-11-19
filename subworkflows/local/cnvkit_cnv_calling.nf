@@ -1,0 +1,220 @@
+#!/usr/bin/env nextflow
+
+include { CNVKIT_BATCH as CNVKIT_FULL                               } from '../../modules/local/cnvkit/main'
+include { CNVKIT_BATCH as CNVKIT_BACKBONE                           } from '../../modules/local/cnvkit/main'
+include { CNVKIT_BATCH as CNVKIT_EXONS                              } from '../../modules/local/cnvkit/main'
+include { CNVKIT_GENS                                               } from '../../modules/local/cnvkit/main'
+include { CNVKIT_PLOT                                               } from '../../modules/local/cnvkit/main'
+include { CNVKIT_CALL                                               } from '../../modules/local/cnvkit/main'
+include { CNVKIT_EXPORT_VCF                                         } from '../../modules/local/cnvkit/main'
+include { CNVKIT_EXPORT_NEXUS_OGT                                   } from '../../modules/local/cnvkit/main'
+include { CNVKIT_CALL as CNVKIT_CALL_TC                             } from '../../modules/local/cnvkit/main'
+include { CNVKIT_EXPORT_VCF as CNVKIT_EXPORT_VCF_TC                 } from '../../modules/local/cnvkit/main'
+include { PREPARE_BED as GENS_PREPARE_BED                           } from '../../modules/local/gens/main'
+include { EXPAND_ALLELES as GENS_EXPAND_ALLELES                     } from '../../modules/local/gens/main'
+include { WRITE_COMMANDS as GENS_WRITE_COMMANDS                   } from '../../modules/local/gens/main'
+include { BEDTOOLS_SORT as GENS_BASE_SORT                          } from '../../modules/local/bedtools/main'
+include { BEDTOOLS_SORT as GENS_MERGED_SORT                        } from '../../modules/local/bedtools/main'
+include { BGZIP as GENS_PART_BGZIP                                 } from '../../modules/local/tabix/main'
+include { BGZIP as GENS_MERGED_BGZIP                              } from '../../modules/local/tabix/main'
+include { TABIX_INDEX as GENS_TABIX_INDEX                         } from '../../modules/local/tabix/main'
+
+
+workflow CNVKIT {
+    take:
+        bam_umi              // channel: [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr.table) ]
+        germline_variants    // channel: [ val(group), val(meta), file(vcf), file(tbi) ]
+
+    main:
+        ch_versions = Channel.empty()
+
+        // One case-level BAF VCF is shared by that group's per-sample CNVkit tasks.
+        ch_germline_variants = germline_variants.groupTuple().map { group, metas, vcfs, indexes ->
+            if (vcfs.size() != 1 || indexes.size() != 1) {
+                SampleGroups.skip(group, 'CNVkit requires exactly one germline VCF/index')
+                return null
+            }
+            if (!SampleGroups.validateMetadata(group, metas[0])) {
+                return null
+            }
+            tuple(group, metas[0], vcfs[0], indexes[0])
+        }
+
+        if (!params.cnvkit_split) {
+            CNVKIT_FULL ( bam_umi, params.cnvkit_reference, "full" )
+            batch_plot_cns = CNVKIT_FULL.out.cnvkit_cns
+            batch_plot_cnr = CNVKIT_FULL.out.cnvkit_cnr
+            ch_versions = ch_versions.mix(CNVKIT_FULL.out.versions)
+
+            cnvkit_full_input = batch_plot_cns.join(batch_plot_cnr, by:[0,1,3])
+                .combine(ch_germline_variants, by:[0])
+                .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    if (!SampleGroups.matchesMember(group, meta, germline_meta)) return null
+                    tuple(group, meta, part, cns, cnr, vcf, tbi)
+                }
+
+            cnvkit_full_call_input = cnvkit_full_input.map { group, meta, part, cns, cnr, vcf, tbi ->
+                tuple(group, meta, part, cns, vcf, tbi)
+            }
+
+            cnvkit_nexus_input = cnvkit_full_input.map { group, meta, part, cns, cnr, vcf, tbi ->
+                tuple(group, meta, part, cnr, vcf, tbi)
+            }
+
+            CNVKIT_PLOT ( cnvkit_full_input )
+            ch_versions = ch_versions.mix(CNVKIT_PLOT.out.versions)
+
+            CNVKIT_CALL ( cnvkit_full_call_input, "false" )
+            ch_versions = ch_versions.mix(CNVKIT_CALL.out.versions)
+
+            CNVKIT_EXPORT_VCF ( CNVKIT_CALL.out.cnvkitsegment )
+            ch_versions = ch_versions.mix(CNVKIT_EXPORT_VCF.out.versions)
+
+            CNVKIT_EXPORT_NEXUS_OGT ( cnvkit_nexus_input )
+            ch_versions = ch_versions.mix(CNVKIT_EXPORT_NEXUS_OGT.out.versions)
+
+            cnvkit_full_gens_input = batch_plot_cnr.combine(ch_germline_variants, by:[0])
+                .map { group, meta, cnr, part, germline_meta, vcf, tbi ->
+                    if (!SampleGroups.matchesMember(group, meta, germline_meta)) return null
+                    tuple(group, meta, cnr, part, vcf, tbi)
+                }
+
+            CNVKIT_GENS ( cnvkit_full_gens_input )
+            ch_versions = ch_versions.mix(CNVKIT_GENS.out.versions)
+
+            ch_gens_parts = CNVKIT_GENS.out.cnvkit_gens
+
+            cnvkitplot = CNVKIT_PLOT.out.cnvkitplot
+            cnvkit_hrd = CNVKIT_CALL.out.cnvkitsegment
+            cnvkit_vcf_tumor = CNVKIT_EXPORT_VCF.out.cnvkit_vcf
+                .filter { it -> it[2] == "full" && it[1].type == "T" }
+                .map { val -> tuple(val[0], val[1], val[3]) }
+        }
+        else {
+            CNVKIT_FULL ( bam_umi, params.cnvkit_reference, "full" )
+            ch_versions = ch_versions.mix(CNVKIT_FULL.out.versions)
+
+            CNVKIT_EXONS ( bam_umi, params.cnvkit_reference_exons, "exons" )
+            ch_versions = ch_versions.mix(CNVKIT_EXONS.out.versions)
+
+            CNVKIT_BACKBONE ( bam_umi, params.cnvkit_reference_backbone, "backbone" )
+            ch_versions = ch_versions.mix(CNVKIT_BACKBONE.out.versions)
+
+            cnvkit_backbone_input = CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3])
+                .combine(ch_germline_variants, by:[0])
+                .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    if (!SampleGroups.matchesMember(group, meta, germline_meta)) return null
+                    tuple(group, meta, part, cns, cnr, vcf, tbi)
+                }
+
+            CNVKIT_PLOT ( cnvkit_backbone_input )
+            ch_versions = ch_versions.mix(CNVKIT_PLOT.out.versions)
+
+            cnvkit_split_input = CNVKIT_EXONS.out.cnvkit_cns.join(CNVKIT_EXONS.out.cnvkit_cnr, by:[0,1,3])
+                .mix(
+                    CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3]),
+                    CNVKIT_FULL.out.cnvkit_cns.join(CNVKIT_FULL.out.cnvkit_cnr, by:[0,1,3])
+                )
+                .combine(ch_germline_variants, by:[0])
+                .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    if (!SampleGroups.matchesMember(group, meta, germline_meta)) return null
+                    tuple(group, meta, part, cns, cnr, vcf, tbi)
+                }
+
+            cnvkit_split_call_input = cnvkit_split_input.map { group, meta, part, cns, cnr, vcf, tbi ->
+                tuple(group, meta, part, cns, vcf, tbi)
+            }
+
+            cnvkit_nexus_input = cnvkit_split_input.map { group, meta, part, cns, cnr, vcf, tbi ->
+                tuple(group, meta, part, cnr, vcf, tbi)
+            }
+
+            CNVKIT_CALL ( cnvkit_split_call_input, "false" )
+            ch_versions = ch_versions.mix(CNVKIT_CALL.out.versions)
+
+            CNVKIT_EXPORT_VCF ( CNVKIT_CALL.out.cnvkitsegment )
+            ch_versions = ch_versions.mix(CNVKIT_EXPORT_VCF.out.versions)
+
+            CNVKIT_EXPORT_NEXUS_OGT ( cnvkit_nexus_input )
+            ch_versions = ch_versions.mix(CNVKIT_EXPORT_NEXUS_OGT.out.versions)
+
+            cnvkit_tc_input = CNVKIT_BACKBONE.out.cnvkit_cns.join(CNVKIT_BACKBONE.out.cnvkit_cnr, by:[0,1,3])
+                .combine(ch_germline_variants, by:[0])
+                .map { group, meta, part, cns, cnr, germline_meta, vcf, tbi ->
+                    if (!SampleGroups.matchesMember(group, meta, germline_meta)) return null
+                    tuple(group, meta, part, cns, cnr, vcf, tbi)
+                }
+
+            cnvkit_tc_call_input = cnvkit_tc_input.filter { group, meta, part, cns, cnr, vcf, tbi ->
+                meta.purity
+            }.map { group, meta, part, cns, cnr, vcf, tbi ->
+                tuple(group, meta, part, cns, vcf, tbi)
+            }
+
+            CNVKIT_CALL_TC ( cnvkit_tc_call_input, "true" )
+            ch_versions = ch_versions.mix(CNVKIT_CALL_TC.out.versions)
+
+            CNVKIT_EXPORT_VCF_TC ( CNVKIT_CALL_TC.out.cnvkitsegment )
+            ch_versions = ch_versions.mix(CNVKIT_EXPORT_VCF_TC.out.versions)
+
+            cnvkit_split_gens_input = CNVKIT_EXONS.out.cnvkit_cnr.mix(CNVKIT_BACKBONE.out.cnvkit_cnr)
+                .combine(ch_germline_variants, by:[0])
+                .map { group, meta, cnr, part, germline_meta, vcf, tbi ->
+                    if (!SampleGroups.matchesMember(group, meta, germline_meta)) return null
+                    tuple(group, meta, cnr, part, vcf, tbi)
+                }
+
+            CNVKIT_GENS ( cnvkit_split_gens_input )
+            ch_versions = ch_versions.mix(CNVKIT_GENS.out.versions)
+
+            ch_gens_parts = CNVKIT_GENS.out.cnvkit_gens
+
+            cnvkitplot = CNVKIT_PLOT.out.cnvkitplot.filter { it -> it[2] == "backbone" }
+            cnvkit_hrd = CNVKIT_CALL_TC.out.cnvkitsegment.mix(
+                CNVKIT_CALL.out.cnvkitsegment.filter { group, meta, part, cns ->
+                    part == "backbone" && !meta.purity
+                }
+            )
+            cnvkit_vcf_tumor = CNVKIT_EXPORT_VCF.out.cnvkit_vcf.mix(CNVKIT_EXPORT_VCF_TC.out.cnvkit_vcf)
+                .filter { it -> it[2] == "full" && it[1].type == "T" }
+                .map { val -> tuple(val[0], val[1], val[3]) }
+        }
+
+        ch_gens_beds = ch_gens_parts.flatMap { group, meta, part, baf, cov ->
+            [tuple(group, meta, 'baf', baf), tuple(group, meta, 'cov', cov)]
+        }
+        GENS_PART_BGZIP ( ch_gens_beds )
+        ch_versions = ch_versions.mix(GENS_PART_BGZIP.out.versions)
+
+        if (params.cnvkit_split) {
+            GENS_PREPARE_BED ( ch_gens_beds.groupTuple(by: [0,1,2]) )
+            GENS_BASE_SORT ( GENS_PREPARE_BED.out.base_bed )
+            GENS_EXPAND_ALLELES ( GENS_BASE_SORT.out.sorted_file )
+            GENS_MERGED_SORT ( GENS_EXPAND_ALLELES.out.expanded_bed )
+            GENS_MERGED_BGZIP ( GENS_MERGED_SORT.out.sorted_file )
+            ch_gens_final = GENS_MERGED_BGZIP.out.compressed_file
+            ch_versions = ch_versions.mix(GENS_PREPARE_BED.out.versions, GENS_BASE_SORT.out.versions,
+                GENS_EXPAND_ALLELES.out.versions, GENS_MERGED_SORT.out.versions, GENS_MERGED_BGZIP.out.versions)
+        }
+        else {
+            ch_gens_final = GENS_PART_BGZIP.out.compressed_file
+        }
+
+        GENS_TABIX_INDEX ( ch_gens_final )
+        ch_gens_baf = GENS_TABIX_INDEX.out.indexed_file
+            .filter { group, meta, kind, bed, index -> kind == 'baf' }
+            .map { group, meta, kind, bed, index -> tuple(group, meta, bed, index) }
+        ch_gens_cov = GENS_TABIX_INDEX.out.indexed_file
+            .filter { group, meta, kind, bed, index -> kind == 'cov' }
+            .map { group, meta, kind, bed, index -> tuple(group, meta, bed, index) }
+        GENS_WRITE_COMMANDS ( ch_gens_baf.join(ch_gens_cov, by: [0,1], failOnDuplicate: true) )
+        ch_versions = ch_versions.mix(GENS_TABIX_INDEX.out.versions, GENS_WRITE_COMMANDS.out.versions)
+
+    emit:
+        plot      = cnvkitplot
+        hrd       = cnvkit_hrd
+        tumor_vcf = cnvkit_vcf_tumor
+        gens      = GENS_WRITE_COMMANDS.out.dbload
+        gens_v4   = GENS_WRITE_COMMANDS.out.gens_v4
+        versions  = ch_versions
+}

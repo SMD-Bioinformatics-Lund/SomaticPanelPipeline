@@ -10,7 +10,7 @@ process FASTP {
 
     output:
         tuple val(group), val(meta), file("*.cleaned_R1.fastq.gz"), file("*.cleaned_R2.fastq.gz"),  emit: fastq_trimmed
-        tuple val(group), file("*.cleaned.fastp.json"), file("*.cleaned.html"),                     emit: fastq_stats
+        tuple val(group), val(meta), file("*.cleaned.fastp.json"), file("*.cleaned.html"),          emit: fastq_stats
         path "versions.yml",                                                                        emit: versions
 
     when:
