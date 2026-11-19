@@ -1,6 +1,6 @@
 ## Changelog ##
 
-## v3.3.0
+## v4.0.0
 - Restore the trailing `p` in paired Coyote3 YAML filenames (`<group>p.coyote3.yaml`); single-sample filenames remain `<group>.coyote3.yaml`.
 - Split the legacy monolithic pipeline container into smaller, tool-specific containers and command-specific DSL2 processes.
 - Refactored SNV calling, annotation, CNV calling, QC, Coyote export, and supporting utilities while retaining the established user-facing result folders and output names.
