@@ -25,7 +25,7 @@ process PON_FILTER {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -38,7 +38,7 @@ process PON_FILTER {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 }
@@ -71,7 +71,7 @@ process FFPE_PON_FILTER {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
@@ -84,54 +84,48 @@ process FFPE_PON_FILTER {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """ 
 }
 
 
-process ANNOTATE_VEP {
-
-    label "process_medium"
+process FIX_VEP_GNOMAD {
+    label "process_single"
     tag "$group"
 
     input:
         tuple val(group), val(meta), file(vcf)
-        
+
     output:
-        tuple val(group), val(meta), file("*.vep.vcf"), emit: vcf_vep
-        path "versions.yml",                            emit: versions
+        tuple val(group), val(meta), file("*.agg.pon.vep.fix.vcf"), emit: fixed_vcf
+        path "versions.yml",                                        emit: versions
 
     when:
         task.ext.when == null || task.ext.when
 
     script:
-        def args   = task.ext.args   ?: ''
-        def prefix = task.ext.prefix ?: "${vcf.baseName}"
-
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        vep -i ${vcf} -o ${prefix}".vep.vcf" --fork ${task.cpus} $args
+        fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            vep: \$( echo \$(vep --help 2>&1) | sed 's/^.*Versions:.*ensembl-vep : //;s/ .*\$//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
 
     stub:
-        def prefix = task.ext.prefix ?: "${vcf.baseName}"
-
+        def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${prefix}".vep.vcf"
-        echo $args
+        touch ${prefix}.agg.pon.vep.fix.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
         END_VERSIONS
-        """ 
+        """
 }
-
 
 process MARK_GERMLINES {
     label "process_single"
@@ -155,23 +149,21 @@ process MARK_GERMLINES {
             tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
             normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
             """
-            fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
-            mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}p.agg.pon.vep.markgerm.vcf
+            mark_germlines.pl --vcf $vcf --tumor-id ${meta.id[tumor_idx]} --normal-id ${meta.id[normal_idx]} $args > ${prefix}p.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
         else if( meta.id.size() == 1 ) {
             """
-            fix_vep_gnomad.pl $vcf > ${prefix}.agg.pon.vep.fix.vcf
-            mark_germlines.pl --vcf ${prefix}.agg.pon.vep.fix.vcf --tumor-id ${meta.id[0]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
+            mark_germlines.pl --vcf $vcf --tumor-id ${meta.id[0]} $args > ${prefix}.agg.pon.vep.markgerm.vcf
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -187,7 +179,7 @@ process MARK_GERMLINES {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
@@ -198,41 +190,177 @@ process MARK_GERMLINES {
 
             cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
             END_VERSIONS
             """
         }
 }
 
 
-process FILTER_FOR_CNV {
+process GERMLINE_FOR_CNVKIT {
     label "process_single"
     tag "$group"
 
     input:
-        tuple val(group), val(meta), file(vcf), val(vc), file(vcf_unfilt)
+        tuple val(group), val(meta), file(vcf)
 
     output:
-        tuple val(group), file("*_vardict.germlines.vcf.gz"), file("*_vardict.germlines.vcf.gz.tbi"),   emit: vcf_only_germline
-        path "versions.yml",                                                                            emit: versions
-    
+        tuple val(group), val(meta), file("*.agg.pon.vep.germline.vcf"), emit: germline_vcf
+        path "versions.yml",                                             emit: versions
+
     when:
         task.ext.when == null || task.ext.when
 
     script:
-        def args = task.ext.args ?: ''
         def prefix = task.ext.prefix ?: "${group}"
         """
         germline_for_cnvkit.pl $vcf > ${prefix}.agg.pon.vep.germline.vcf
-        bedtools intersect -a $vcf_unfilt -b ${prefix}.agg.pon.vep.germline.vcf $args > ${prefix}_vardict.germlines.vcf
-        bgzip ${prefix}_vardict.germlines.vcf
-        tabix ${prefix}_vardict.germlines.vcf.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+
+    stub:
+        def prefix = task.ext.prefix ?: "${group}"
+        """
+        touch ${prefix}.agg.pon.vep.germline.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+}
+
+process FILTER_FREEBAYES {
+    label "process_low"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), val(vc), file(vcf)
+
+    output:
+        tuple val(group), val(meta), val(vc), file("filtered_*.vcf"), emit: filtered_vcf
+        path "versions.yml",                                          emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def part = vcf.name.replaceFirst(/\.filt1\.vcf$/, '')
+
+        if( meta.id.size() >= 2 ) {
+            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+
+            """
+            filter_freebayes_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > filtered_${part}.vcf
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            END_VERSIONS
+            """
+        }
+        else if( meta.id.size() == 1 ) {
+            """
+            filter_freebayes_unpaired.pl $vcf > filtered_${part}.vcf
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            END_VERSIONS
+            """
+        }
+
+    stub:
+        def part = vcf.name.replaceFirst(/\.filt1\.vcf$/, '')
+        """
+        touch filtered_${part}.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+}
+
+process FILTER_VARDICT {
+    label "process_low"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), val(vc), file(vcf)
+
+    output:
+        tuple val(group), val(meta), val(vc), file("vardict_*.vcf"), emit: vcfparts_vardict
+        path "versions.yml",                                         emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        output_vcf = vcf.name.replaceFirst(/\.raw$/, '')
+
+        if( meta.id.size() >= 2 ) {
+            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+
+            """
+            filter_vardict_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > ${output_vcf}
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+            END_VERSIONS
+            """
+        }
+        else if( meta.id.size() == 1 ) {
+            """
+            filter_vardict_unpaired.pl $vcf > ${output_vcf}
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+            END_VERSIONS
+            """
+        }
+
+    stub:
+        output_vcf = vcf.name.replaceFirst(/\.raw$/, '')
+        """
+        touch ${output_vcf}
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            perl: \$(echo \$(perl -v 2>&1) | sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+}
+
+process FILTER_PINDEL {
+    label "process_medium"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), val(vc), file(vcf)
+
+    output:
+        tuple val(group), val(meta), val(vc), file("*_pindel.vcf"), emit: pindel_vcf
+        path "versions.yml",                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        def prefix = task.ext.prefix ?: "${group}"
+        """
+        filter_pindel_somatic.pl ${vcf} ${prefix}_pindel.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
             perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
@@ -240,15 +368,59 @@ process FILTER_FOR_CNV {
     stub:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        echo $vcf $vcf_unfilt
-        touch ${prefix}_vardict.germlines.vcf.gz 
-        touch ${prefix}_vardict.germlines.vcf.gz.tbi
+        touch ${prefix}_pindel.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-            bgzip: \$(bgzip --v | grep 'bgzip' | sed 's/.* //g')
-            tabix: \$(echo \$(tabix -h 2>&1) | sed 's/^.*Version: //; s/ .*\$//')
+            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+        END_VERSIONS
+        """
+}
+
+process FILTER_TNSCOPE {
+    label "process_medium"
+    tag "$group"
+
+    input:
+        tuple val(group), val(meta), val("tnscope"), file(vcf)
+
+    output:
+        tuple val(group), val(meta), val("tnscope"), file("*.vcf"), emit: vcfparts_tnscope_filtered
+        path "versions.yml",                                        emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
+
+    script:
+        if( meta.id.size() >= 2 ) {
+            tumor_idx = meta.type.findIndexOf{ it == 'tumor' || it == 'T' }
+            normal_idx = meta.type.findIndexOf{ it == 'normal' || it == 'N' }
+            """
+            filter_tnscope_somatic.pl $vcf ${meta.id[tumor_idx]} ${meta.id[normal_idx]} > ${vcf}.vcf
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            END_VERSIONS
+            """
+        }
+        else if( meta.id.size() == 1 ) {
+            """
+            filter_tnscope_unpaired.pl $vcf > ${vcf}.vcf
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
+            END_VERSIONS
+            """
+        }
+
+    stub:
+        """
+        touch ${vcf}.vcf
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
             perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
         END_VERSIONS
         """
@@ -261,10 +433,10 @@ process COYOTE_SEGMENTS {
 
     input:
         tuple val(group), val(meta), file(vcf)
-    
+
     output:
-        tuple val(group), val(meta), file("*.cn-segments.panel.bed"),  emit: filtered
-        tuple val(group), val(meta), file("*.cn-segments.bed"),        emit: raw
+        tuple val(group), val(meta), path(panel_bed), emit: filtered
+        tuple val(group), val(meta), path(raw_bed),   emit: raw
         path "versions.yml",                                           emit: versions
 
     when:
@@ -273,10 +445,16 @@ process COYOTE_SEGMENTS {
     script:
         def args   = task.ext.args   ?: ''
         def prefix = task.ext.prefix ?: "${meta.id}"
+        panel_bed = "${prefix}.cn-segments.panel.bed"
+        raw_bed = "${prefix}.cn-segments.bed"
         def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
 
         """
         coyote_segmentator.pl --vcf $vcf --id ${meta.id} $normal $args
+        if [ "${prefix}" != "${meta.id}" ]; then
+            mv "${meta.id}.cn-segments.panel.bed" "${panel_bed}"
+            mv "${meta.id}.cn-segments.bed" "${raw_bed}"
+        fi
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -286,8 +464,10 @@ process COYOTE_SEGMENTS {
 
     stub:
         def prefix = task.ext.prefix ?: "${meta.id}"
+        panel_bed = "${prefix}.cn-segments.panel.bed"
+        raw_bed = "${prefix}.cn-segments.bed"
         """
-        touch ${prefix}.cn-segments.panel.bed ${prefix}.cn-segments.bed
+        touch ${panel_bed} ${raw_bed}
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -316,7 +496,7 @@ process COYOTE_SEGMENTS_JSON {
         def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
 
         """
-        cnvJSON.py --bed $bed $args --id ${meta.id} $normal
+        cnvJSON.py --bed $bed $args --id ${meta.id} --out ${prefix}_cnvs.json --panelmatched-out ${prefix}_cnvs_panelmatched.json $normal
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -329,7 +509,7 @@ process COYOTE_SEGMENTS_JSON {
         def prefix = task.ext.prefix ?: "${meta.id}"
         def normal = meta.type.equals('normal') || meta.type.equals('N') ? "--normal" : ""
         """
-        echo cnvJSON.py --bed $bed $args --id ${meta.id} $normal > ${meta.id}cnvs_panelmatched.json
+        touch ${prefix}_cnvs_panelmatched.json
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -347,6 +527,7 @@ process MERGE_SEGMENTS {
 
     output:
         tuple val(group), file("*.cn-segments.panel.merged.bed"), emit: merged
+        path "versions.yml", emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -356,12 +537,22 @@ process MERGE_SEGMENTS {
         def prefix = task.ext.prefix ?: "${group}"
         """
         cat $segments > ${prefix}.cn-segments.panel.merged.bed
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            coreutils: \$(cat --version | sed -n '1s/.* //p')
+        END_VERSIONS
         """
 
     stub:
         def prefix = task.ext.prefix ?: "${group}"
         """
         touch ${prefix}.cn-segments.panel.merged.bed
+
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            coreutils: \$(cat --version | sed -n '1s/.* //p')
+        END_VERSIONS
         """
 
 }
@@ -375,6 +566,7 @@ process MERGE_JSON {
 
     output:
         tuple val(group), file("*.cnvs.merged.json"), emit: merged
+        path "versions.yml", emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -386,11 +578,21 @@ process MERGE_JSON {
         if (meta.id.size() >= 2) {
             """
             jq $args $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
         else {
             """
             cat $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
 
@@ -402,11 +604,21 @@ process MERGE_JSON {
         if (meta.id.size() >= 2) {
             """
             echo jq $args $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
         else {
             """
             echo $segments > ${group}.cnvs.merged.json
+
+            cat <<-END_VERSIONS > versions.yml
+            "${task.process}":
+                jq: \$(jq --version | sed 's/^jq-//')
+            END_VERSIONS
             """
         }
 
@@ -461,8 +673,8 @@ process GENEFUSE_JSON_TO_VCF {
         tuple val(group), val(meta), file(json)
 
     output:
-        tuple val(group), file("*_genefuse.vcf"),  emit: genefuse_vcf
-        path "versions.yml",                                emit: versions
+        tuple val(group), val(meta), file("*_genefuse.vcf"),    emit: genefuse_vcf
+        path "versions.yml",                                    emit: versions
 
     when:
         task.ext.when == null || task.ext.when
@@ -548,162 +760,6 @@ process BIOMARKERS_TO_JSON {
         """
 }
 
-process VCFANNO {
-    label "process_single"
-    tag "$group"
-
-    input:
-        tuple val(group), val(meta), file(vcf) 
-        
-    output:
-        tuple val(group), val(meta), file("*.agg.enigma.vcf"),  emit: vcf_enigma
-        path "versions.yml",                                    emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args = task.ext.args ?: ''
-        def prefix = task.ext.prefix ?: "${group}"
-        """
-        vcfanno_linux64 $args $vcf > ${prefix}.agg.enigma.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vcfanno: \$( echo \$(vcfanno_linux64 2>&1) | sed 's/.*version //' | sed 's/ \\[.*//')
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix = task.ext.prefix ?: "${group}"
-        """
-        touch ${prefix}.agg.enigma.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            vcfanno: \$( echo \$(vcfanno_linux64 2>&1) | sed 's/.*version //' | sed 's/ \\[.*//')
-        END_VERSIONS
-        """
-}
-
-process CREATE_SNVPON {
-    label "process_alot"
-    tag "$vc"
-
-    input:
-        tuple val(group), val(vc), file(vcfs) 
-
-    output:
-        tuple val(group), val(vc), file("*_${vc}_PON.snv"), emit: SNV_PON
-        path "versions.yml",                                emit: versions
-
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def prefix = task.ext.prefix ?: "${params.assay}"
-        """
-        create_snv_pon.pl "*.vcf.gz" > ${prefix}_${vc}_PON.snv
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix = task.ext.prefix ?: "${params.assay}"
-        """
-        echo $vcfs
-        touch ${prefix}_${vc}_PON.snv
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            perl: \$( echo \$(perl -v 2>&1) |sed 's/.*(v//; s/).*//')
-        END_VERSIONS
-        """
-}
-
-process BEDTOOLS_INTERSECT {
-    label "process_single"
-    tag "${meta.id}"
-
-    input:
-        tuple val(group), val(meta), val(vc), file(vcf)
-        val(bed)
-
-    output:
-        tuple val(group), val(vc), file("*_${vc}_intersected.vcf"), emit: vcf_intersected
-        path "versions.yml",                                        emit: versions
-    
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args    = task.ext.args     ?: ''
-        def prefix  = task.ext.prefix ?: "${meta.id}"
-        """
-        bedtools intersect -a $vcf -b $bed $args > ${prefix}_${vc}_intersected.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix  = task.ext.prefix ?: "${meta.id}"
-        """
-        echo $vcf
-        touch ${prefix}_${vc}_intersected.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-        END_VERSIONS
-        """
-}
-
-process CNV_BACKBONE_FILTER {
-    label "process_single"
-    tag "${meta.group}"
-
-    input:
-        tuple val(group), val(meta), file(vcf)
-        val(bed)
-
-    output:
-        tuple val(group), val(meta), file("*.cnv_bb_filtered.vcf"), emit: vcf_cnv_bb_filtered
-        path "versions.yml",                                        emit: versions
-    
-    when:
-        task.ext.when == null || task.ext.when
-
-    script:
-        def args    = task.ext.args     ?: ''
-        def prefix  = task.ext.prefix   ?: "${group}"
-        """
-        bedtools intersect -a $vcf -b $bed $args > ${prefix}.agg.pon.vep.markgerm.cnv_bb_filtered.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-        END_VERSIONS
-        """
-
-    stub:
-        def prefix  = task.ext.prefix ?: "${group}"
-        """
-        echo $vcf
-        touch ${prefix}.agg.pon.vep.markgerm.cnv_bb_filtered.vcf
-
-        cat <<-END_VERSIONS > versions.yml
-        "${task.process}":
-            bedtools: \$(bedtools --version | sed -e "s/bedtools v//g")
-        END_VERSIONS
-        """
-}
-
 process POST_ANNOTATION_FILTERS {
     label "process_single"
     tag "$group"
@@ -722,7 +778,7 @@ process POST_ANNOTATION_FILTERS {
         def prefix  = task.ext.prefix   ?: "${group}"
         def args    = task.ext.args     ?: ''
         """
-        post_annotation_filtering.py --vcf $vcf $args > ${prefix}.final.filtered.vcf
+        post_annotation_filtering.py --vcf $vcf $args --out ${prefix}.final.filtered.vcf
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
             python: \$(python --version 2>&1| sed -e 's/Python //g')

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import pprint
 import json
 
 parser = argparse.ArgumentParser()

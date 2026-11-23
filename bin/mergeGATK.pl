@@ -36,8 +36,14 @@ sub merge {
     my @agg;
     my @vars;
     my @header;
+    my $column_count;
     while(<$vcf>) {
 	if( /^#/ ) {
+	    if( /^#CHROM\t/ ) {
+		my $column_header = $_;
+		chomp $column_header;
+		$column_count = scalar split /\t/, $column_header, -1;
+	    }
 	    
 	    # Modify header entries to allow multiple values for modified fields
 	    if( /<ID=(.*?),/ ) {
@@ -50,7 +56,10 @@ sub merge {
 	}
 	
 	
-	my @data = split /\t/;
+	chomp;
+	my @data = split /\t/, $_, -1;
+	# Drop only surplus empty columns, not declared sample columns.
+	pop @data while defined($column_count) && @data > $column_count && $data[-1] eq "";
 	my $info = $data[7];
 	my @info = split /;/, $info;
 	my %info;
@@ -91,7 +100,7 @@ sub merge {
 		$var .= join(";", @info_fields);
 		$var .= "\t";
 		$var .= join("\t", @agg[8..$#agg]);
-		push(@vars, $var);
+		push(@vars, $var."\n");
 		@agg = @data;
 		%agg_info = %info;
 	    }
@@ -114,7 +123,7 @@ sub merge {
     $var .= join(";", @info_fields);
     $var .= "\t";
     $var .= join("\t", @agg[8..$#agg]);
-    push @vars, $var;
+    push @vars, $var."\n";
 
     return( \@header, \@vars );
 }
