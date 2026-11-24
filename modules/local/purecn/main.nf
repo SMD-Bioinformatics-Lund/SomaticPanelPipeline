@@ -17,7 +17,7 @@ process PURECN_FORMAT_VCF {
             if (meta.id.size() >= 2) {
                 prefix = "${prefix}p"
                 }
-        // old name of the script: 5b_format_vcf_for_purecn_AD_POPAF.py. Change it also in the description of the python script
+        // old name of the script: 5b_format_vcf_for_purecn_AD_POPAF.py.
         """
         format_vcf_for_purecn.py \\
             --input ${vcf} \\ 
@@ -171,8 +171,7 @@ process PURECN_CALL {
         """
 
 }
-
-// in the python script, i need to have a different filtering of the snps if the sample is paired (>10 snps) or unpaired (>20 snps). 
+ 
 process PURECN_LOH_EXTRACT {
     label "process_single"
     tag "${meta.id}"
@@ -226,10 +225,13 @@ process PURECN_CNLOH_GENS {
         tuple val(group), val(meta), file("_purecn_cnloh_gens.tsv"),                               emit: purecn_cnloh_gens
         tuple val(group), val(meta), file("_baf_purecn_cnlohseg.png"),                             emit: purecn_cnloh_baf_plot, optional = true
 
+    // checking the input contains data
+    when:
+        purecn_loh_filtered.text.readLines().size() > 1
     
     script: // old name of the script: 8c_CNLOH_extract_infoSNP_make_GENSbed_plotVAF.py. Change it also in the description of the python script
         """
-        prepare_cnloh_visualization_and_informative_snps.py \\
+        cnloh_visualization_and_extractSNP.py \\
             -i ${purecn_loh_filtered} \\
             -i2 ${purecn_snv_posteriors} \\
             --out_snp ${meta.id}_informative_cnloh_snp.tsv \\
