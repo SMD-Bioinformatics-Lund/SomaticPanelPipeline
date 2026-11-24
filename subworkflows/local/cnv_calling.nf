@@ -7,6 +7,7 @@ include { SVDB_MERGE_PANEL as JOIN_TUMOR                            } from '../.
 include { SVDB_MERGE_PANEL as JOIN_NORMAL                           } from '../../modules/local/svdb/main'
 include { FILTER_MANTA as FILTER_MANTA_TUMOR                        } from '../../modules/local/filters/main'
 include { FILTER_MANTA as FILTER_MANTA_NORMAL                       } from '../../modules/local/filters/main'
+include { PURECN                                                   } from './purecn_cnv_calling'   
 
 
 workflow CNV_CALLING {
@@ -76,6 +77,10 @@ workflow CNV_CALLING {
 
         JOIN_TUMOR ( GATK_TUMOR_LABELLED.mix(MANTA_TUMOR_LABELLED, CNVKIT_TUMOR_LABELLED).groupTuple(by:[0,1]) )
         ch_versions = ch_versions.mix(JOIN_TUMOR.out.versions)
+
+        PURECN (SNV_ANNOTATE.out.mark_germlines_vcf, 
+            ch_mapped.bam_umi)
+        ch_versions = ch_versions.mix(PURECN.out.versions)
 
     emit:
         gatcov_plot =   GATK.out.gatcov_plot            // channel: [ val(group), val(meta), file(modeled.png) ]
