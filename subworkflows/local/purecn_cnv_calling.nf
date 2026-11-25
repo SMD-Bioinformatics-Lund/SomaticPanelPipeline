@@ -14,6 +14,9 @@ workflow PURECN {
 
     main:
         ch_versions = Channel.empty()
+        ch_purecn_cnloh_snp = Channel.empty()
+        ch_purecn_cnloh_gens = Channel.empty()
+        ch_purecn_cnloh_baf_plot = Channel.empty()
 
         if (params.purecn) {
             PURECN_FORMAT_VCF ( mark_germlines_vcf )
@@ -44,14 +47,17 @@ workflow PURECN {
                 PURECN_CALL.out.purecn_snv_posteriors, 
                 meta 
             )
+            ch_purecn_cnloh_snp = PURECN_CNLOH_GENS.out.purecn_cnloh_snp
+            ch_purecn_cnloh_gens = PURECN_CNLOH_GENS.out.purecn_cnloh_gens
+            ch_purecn_cnloh_baf_plot = PURECN_CNLOH_GENS.out.purecn_cnloh_baf_plot
             ch_versions = ch_versions.mix(PURECN_CNLOH_GENS.out.versions)
         }
 
     
     emit:
-        purecn_cnloh_snp          = PURECN_CNLOH_GENS.out.purecn_cnloh_snp
-        purecn_cnloh_gens         = PURECN_CNLOH_GENS.out.purecn_cnloh_gens
-        purecn_cnloh_baf_plot     = PURECN_CNLOH_GENS.out.purecn_cnloh_baf_plot
+        purecn_cnloh_snp          = ch_purecn_cnloh_snp
+        purecn_cnloh_gens         = ch_purecn_cnloh_gens
+        purecn_cnloh_baf_plot     = ch_purecn_cnloh_baf_plot
         versions                  = ch_versions
 
 }
