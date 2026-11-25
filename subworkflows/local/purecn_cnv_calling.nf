@@ -1,3 +1,5 @@
+#!/usr/bin/env nextflow
+
 include { PURECN_FORMAT_VCF                         } from '../../modules/local/purecn/main'
 include { PURECN_COVERAGE                           } from '../../modules/local/purecn/main'
 include { PURECN_CALL                               } from '../../modules/local/purecn/main'
@@ -40,4 +42,4 @@ workflow PURECN {
         purecn_cnloh_baf_plot     = PURECN_CNLOH_GENS.out.purecn_cnloh_baf_plot
         versions                  = ch_versions
 
-        }
+}
