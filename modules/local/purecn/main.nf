@@ -6,7 +6,7 @@ process PURECN_FORMAT_VCF {
         tuple val(group), val(meta), path(vcf) // from process MARK_GERMLINES in SNV_ANNOTATE subworkflow
     
     output:
-        tuple val(group), val(meta), path("*.agg.pon.vep.markgerm.purecn.vcf.gz"), path("*.agg.pon.vep.markgerm.purecn.vcf.gz.tbi")    emit: vcf_purecn
+        tuple val(group), val(meta), path("*.agg.pon.vep.markgerm.purecn.vcf.gz"), path("*.agg.pon.vep.markgerm.purecn.vcf.gz.tbi"),    emit: vcf_purecn
         path "versions.yml",                                                                                                           emit: versions
 
     when:
