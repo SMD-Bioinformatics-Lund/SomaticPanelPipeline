@@ -102,7 +102,7 @@ process PURECN_COVERAGE {
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            purecn: $(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
+            purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
         END_VERSIONS
         """
 
@@ -156,7 +156,7 @@ process PURECN_CALL {
 
         cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                purecn: $(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
+                purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
         END_VERSIONS
         """
 
@@ -166,7 +166,7 @@ process PURECN_CALL {
         touch ${meta.id}_purecn_snv_posteriors.tsv  
         cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                purecn: $(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
+                purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
         END_VERSIONS
         """
 
