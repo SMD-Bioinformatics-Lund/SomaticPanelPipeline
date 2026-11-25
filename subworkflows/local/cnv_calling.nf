@@ -78,8 +78,10 @@ workflow CNV_CALLING {
         JOIN_TUMOR ( GATK_TUMOR_LABELLED.mix(MANTA_TUMOR_LABELLED, CNVKIT_TUMOR_LABELLED).groupTuple(by:[0,1]) )
         ch_versions = ch_versions.mix(JOIN_TUMOR.out.versions)
 
-        PURECN (SNV_ANNOTATE.out.mark_germlines_vcf, 
-            ch_mapped.bam_umi)
+        PURECN (
+            SNV_ANNOTATE.out.mark_germlines_vcf, 
+            ch_mapped.bam_umi,
+            meta)
         ch_versions = ch_versions.mix(PURECN.out.versions)
 
     emit:

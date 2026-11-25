@@ -16,25 +16,37 @@ workflow PURECN {
         ch_versions = Channel.empty()
 
         if (params.purecn) {
-            PURECN_FORMAT_VCF { mark_germlines_vcf }
+            PURECN_FORMAT_VCF ( mark_germlines_vcf )
             ch_versions = ch_versions.mix(PURECN_FORMAT_VCF.out.versions)
 
             tumor_bam_umi = bam_umi.filter { it[1].type == "T" }
-            PURECN_COVERAGE { tumor_bam_umi }
+
+            PURECN_COVERAGE ( tumor_bam_umi )
             ch_versions = ch_versions.mix(PURECN_COVERAGE.out.versions)
 
-            PURECN_CALL { PURECN_FORMAT_VCF.out.vcf_purecn, PURECN_COVERAGE.out.tumor_cov, meta }
+            PURECN_CALL ( 
+                PURECN_FORMAT_VCF.out.vcf_purecn, 
+                PURECN_COVERAGE.out.tumor_cov, 
+                meta 
+            )
             ch_versions = ch_versions.mix(PURECN_CALL.out.versions)
 
-            PURECN_LOH_EXTRACT { PURECN_CALL.out.purecn_loh_raw_calls, PURECN_CALL.out.purecn_log, PURECN_CALL.out.purecn_rds, meta }
+            PURECN_LOH_EXTRACT ( 
+                PURECN_CALL.out.purecn_loh_raw_calls, 
+                PURECN_CALL.out.purecn_log, 
+                PURECN_CALL.out.purecn_rds, 
+                meta 
+            )
             ch_versions = ch_versions.mix(PURECN_LOH_EXTRACT.out.versions)
 
-            PURECN_CNLOH_GENS { PURECN_LOH_EXTRACT.out.purecn_loh_filtered_calls, PURECN_CALL.out.purecn_snv_posteriors, meta }
+            PURECN_CNLOH_GENS ( 
+                PURECN_LOH_EXTRACT.out.purecn_loh_filtered_calls, 
+                PURECN_CALL.out.purecn_snv_posteriors, 
+                meta 
+            )
             ch_versions = ch_versions.mix(PURECN_CNLOH_GENS.out.versions)
         }
-        else {
-           
-        }
+
     
     emit:
         purecn_cnloh_snp          = PURECN_CNLOH_GENS.out.purecn_cnloh_snp
