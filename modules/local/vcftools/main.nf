@@ -27,7 +27,7 @@ process VCF_CONCAT {
     stub:
         def prefix = task.ext.prefix ?: "${group}"
         """
-        touch ${prefix}_${vc}_bcftools.vcf.gz
+        touch ${prefix}_${vc}.concat.vcf
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
