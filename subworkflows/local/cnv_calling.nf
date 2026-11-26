@@ -81,8 +81,7 @@ workflow CNV_CALLING {
 
         PURECN (
             vcf_marked_germlines, 
-            ch_mapped.bam_umi,
-            meta)
+            ch_mapped.bam_umi)
         ch_versions = ch_versions.mix(PURECN.out.versions)
 
     emit:

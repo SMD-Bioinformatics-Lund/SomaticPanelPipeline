@@ -1,6 +1,6 @@
 process PURECN_FORMAT_VCF {
     label "process_single"
-    tag "${meta.id}"
+    tag "${group}"
     
     input:
         tuple val(group), val(meta), path(vcf) // from process MARK_GERMLINES in SNV_ANNOTATE subworkflow
@@ -20,7 +20,7 @@ process PURECN_FORMAT_VCF {
         // old name of the script: 5b_format_vcf_for_purecn_AD_POPAF.py.
         """
         format_vcf_for_purecn.py \\
-            --input ${vcf} \\ 
+            --input ${vcf} \\
             --output ${prefix}.agg.pon.vep.markgerm.ad_popaf.vcf
         
         bgzip -c ${prefix}.agg.pon.vep.markgerm.ad_popaf.vcf > ${prefix}.agg.pon.vep.markgerm.ad_popaf.vcf.gz
@@ -41,7 +41,7 @@ process PURECN_FORMAT_VCF {
         "${task.process}":
             python: \$(python --version | sed -e 's/Python //g')
             bgzip: \$(bgzip --version | grep 'bgzip' | sed 's/.* //g')
-            bcftools \$bcftools --version | sed -e 's/bcftools v//g')
+            bcftools: \$(bcftools --version | head -n1 | sed -e 's/bcftools //')
         END_VERSIONS
 
         """
@@ -61,7 +61,7 @@ process PURECN_FORMAT_VCF {
         "${task.process}":
             python: \$(python --version | sed -e 's/Python //g')
             bgzip: \$(bgzip --version | grep 'bgzip' | sed 's/.* //g')
-            bcftools \$bcftools --version | sed -e 's/bcftools v//g')
+            bcftools: \$(bcftools --version | head -n1 | sed -e 's/bcftools //')
         END_VERSIONS
         """
         
@@ -73,13 +73,16 @@ process PURECN_COVERAGE {
     tag "${meta.id}"
     
     input:
-        tuple val(group), val(meta), path(tumor_bam)
+        tuple val(group), val(meta), path(tumor_bam), path(tumor_bai)
     
     output:
         tuple val(group), val(meta), path(params.purecn_skip_gc_norm
             ? "${meta.id}.*_coverage.txt.gz"
             : "${meta.id}.*_coverage_loess.txt.gz"),                         emit: tumor_cov
         path "versions.yml",                                                 emit: versions
+
+    when:
+        task.ext.when == null || task.ext.when
 
     script:
         def gc_norm_option = params.purecn_skip_gc_norm ? '--skip-gc-norm' : ''
@@ -108,27 +111,29 @@ process PURECN_COVERAGE {
 
 }
 
-// put params.purecn_skip_gc_norm in config
 
 process PURECN_CALL {
     label "process_single"
     tag "${meta.id}"
     
     input:
-        tuple val(group), val(meta), path(purecn_vcf)
-        tuple val(group), val(meta), path(tumor_cov)
+        tuple val(group), path(purecn_vcf), path(purecn_tbi), val(meta), path(tumor_cov)
     
     output:
-        tuple val(group), val(meta), path("_loh.csv"),                            emit: purecn_loh_raw_calls
-        tuple val(group), val(meta), path("_purecn_snv_posteriors.tsv"),          emit: purecn_snv_posteriors
-        tuple val(group), val(meta), path(".log"),                                emit: purecn_log
-        tuple val(group), val(meta), path(".rds"),                                emit: purecn_rds
-        path "versions.yml",                                                      emit: versions                   
+        tuple val(group), val(meta), path("${meta.id}_loh.csv"),                            emit: purecn_loh_raw_calls
+        tuple val(group), val(meta), path("${meta.id}_purecn_snv_posteriors.tsv"),          emit: purecn_snv_posteriors
+        tuple val(group), val(meta), path("${meta.id}.log"),                                emit: purecn_log
+        tuple val(group), val(meta), path("${meta.id}.rds"),                                emit: purecn_rds
+        path "versions.yml",                                                                emit: versions                   
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
+        def args = task.ext.args ?: ''
 
         """
-        Rscript /usr/local/lib/R/site-library/PureCN/extdata/PureCN.R \
+        Rscript /usr/local/lib/R/site-library/PureCN/extdata/PureCN.R \\
             --out . \\
             --tumor ${tumor_cov} \\
             --vcf ${purecn_vcf} \\
@@ -156,17 +161,19 @@ process PURECN_CALL {
 
         cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
+            purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
         END_VERSIONS
         """
 
     stub:
         """
         touch ${meta.id}_loh.csv
-        touch ${meta.id}_purecn_snv_posteriors.tsv  
+        touch ${meta.id}_purecn_snv_posteriors.tsv
+        touch ${meta.id}.log
+        touch ${meta.id}.rds
         cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
+            purecn: \$(Rscript -e 'cat(as.character(packageVersion("PureCN")))')
         END_VERSIONS
         """
 
@@ -177,13 +184,14 @@ process PURECN_LOH_EXTRACT {
     tag "${meta.id}"
     
     input:
-        tuple val(group), val(meta), file(purecn_loh_raw_calls)
-        tuple val(group), val(meta), file(purecn_log)
-        tuple val(group), val(meta), file(purecn_rds)
+        tuple val(group), val(meta), path(purecn_loh_raw_calls), path(purecn_log), path(purecn_rds)
     
     output:
-        tuple val(group), val(meta), file("_purecn_loh_filtered.csv"),                     emit: purecn_loh_filtered
+        tuple val(group), val(meta), file("${meta.id}_purecn_loh_filtered.csv"),                     emit: purecn_loh_filtered
     
+    when:
+        task.ext.when == null || task.ext.when
+
     script:
         def snp_threshold = meta.id.size() >= 2 ? 10 : 10
         """
@@ -196,7 +204,7 @@ process PURECN_LOH_EXTRACT {
 
         cat <<-END_VERSIONS > versions.yml
             "${task.process}":
-                python: \$(python --version | sed -e 's/Python //g')
+            python: \$(python --version | sed -e 's/Python //g')
         END_VERSIONS
         """
 
@@ -217,17 +225,17 @@ process PURECN_CNLOH_GENS {
     tag "${meta.id}"
     
     input:
-        tuple val(group), val(meta), file(purecn_loh_filtered)
-        tuple val(group), val(meta), file(purecn_snv_posteriors)
+        tuple val(group), val(meta), path(purecn_loh_filtered), path(purecn_snv_posteriors)
     
     output:
-        tuple val(group), val(meta), file("_informative_cnloh_snp.tsv"),                           emit: purecn_cnloh_snp
-        tuple val(group), val(meta), file("_purecn_cnloh_gens.tsv"),                               emit: purecn_cnloh_gens
-        tuple val(group), val(meta), file("_baf_purecn_cnlohseg.png"),                             emit: purecn_cnloh_baf_plot, optional = true
+        tuple val(group), val(meta), file("${meta.id}_informative_cnloh_snp.tsv"),                           emit: purecn_cnloh_snp
+        tuple val(group), val(meta), file("${meta.id}_purecn_cnloh_gens.tsv"),                               emit: purecn_cnloh_gens
+        tuple val(group), val(meta), file("${meta.id}_baf_purecn_cnlohseg.png"),                             emit: purecn_cnloh_baf_plot, optional: true
+        tuple val(group), val(meta), file("${meta.id}_cnloh_coyote.json"),                                 emit: purecn_cnloh_coyote_json
 
     // checking the input contains data
     when:
-        purecn_loh_filtered.text.readLines().size() > 1
+        (task.ext.when == null || task.ext.when) && purecn_loh_filtered.text.readLines().size() > 1
     
     script: // old name of the script: 8c_CNLOH_extract_infoSNP_make_GENSbed_plotVAF.py. Change it also in the description of the python script
         """
@@ -249,6 +257,8 @@ process PURECN_CNLOH_GENS {
         """
         touch ${meta.id}_informative_cnloh_snp.tsv
         touch ${meta.id}_loh_genes.tsv
+        touch ${meta.id}_baf_purecn_cnlohseg.png
+        touch ${meta.id}_cnloh_coyote.json
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

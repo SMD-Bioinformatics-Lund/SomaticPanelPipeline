@@ -9,8 +9,7 @@ include { PURECN_CNLOH_GENS                         } from '../../modules/local/
 workflow PURECN {
     take:
         vcf_marked_germlines           // channel: [mandatory] [ val(group), val(meta), file(agg.pon.vep.markgerm.vcf) ]
-        bam_umi                      // channel: [mandatory] [ val(group), val(meta), file(bam), file(bai) ]
-        meta                         // channel: [mandatory] [ [sample_id, group, sex, phenotype, paternal_id, maternal_id, case_id] ]
+        bam_umi                      // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr.table) ]
 
     main:
         ch_versions = Channel.empty()
@@ -22,32 +21,42 @@ workflow PURECN {
             PURECN_FORMAT_VCF ( vcf_marked_germlines )
             ch_versions = ch_versions.mix(PURECN_FORMAT_VCF.out.versions)
 
-            tumor_bam_umi = bam_umi.filter { it[1].type == "T" }
+            tumor_bam_umi = bam_umi
+                .filter { it[1].type == "T" }
+                .map { group, meta, bam, bai, bqsr ->
+                    tuple(group, meta, bam, bai)}
 
             PURECN_COVERAGE ( tumor_bam_umi )
             ch_versions = ch_versions.mix(PURECN_COVERAGE.out.versions)
 
-            PURECN_CALL ( 
-                PURECN_FORMAT_VCF.out.vcf_purecn, 
-                PURECN_COVERAGE.out.tumor_cov 
-            )
+            ch_call_input = PURECN_FORMAT_VCF.out.vcf_purecn
+                .map { group, meta, vcf, tbi -> tuple(group, vcf, tbi) }
+                .join(PURECN_COVERAGE.out.tumor_cov)
+                // -> [group, vcf, tbi, meta_tumor, cov]
+            ch_call_input.view()
+            
+            PURECN_CALL ( ch_call_input)
             ch_versions = ch_versions.mix(PURECN_CALL.out.versions)
 
-            PURECN_LOH_EXTRACT ( 
-                PURECN_CALL.out.purecn_loh_raw_calls, 
-                PURECN_CALL.out.purecn_log, 
-                PURECN_CALL.out.purecn_rds
-            )
+            ch_loh_extract_input = PURECN_CALL.out.purecn_loh_raw_calls
+                .join(PURECN_CALL.out.purecn_log, by:[0,1])
+                .join(PURECN_CALL.out.purecn_rds, by:[0,1])
+                // -> [group, meta, loh_raw, log, rds]
+
+            PURECN_LOH_EXTRACT ( ch_loh_extract_input )
             ch_versions = ch_versions.mix(PURECN_LOH_EXTRACT.out.versions)
 
-            PURECN_CNLOH_GENS ( 
-                PURECN_LOH_EXTRACT.out.purecn_loh_filtered_calls, 
-                PURECN_CALL.out.purecn_snv_posteriors
-            )
+            ch_gens_input = PURECN_LOH_EXTRACT.out.purecn_loh_filtered
+                .join(PURECN_CALL.out.purecn_snv_posteriors, by:[0,1])
+                // -> [group, meta, loh_filtered, posteriors]
+
+            PURECN_CNLOH_GENS ( ch_gens_input)
+            ch_versions = ch_versions.mix(PURECN_CNLOH_GENS.out.versions)
+
             ch_purecn_cnloh_snp = PURECN_CNLOH_GENS.out.purecn_cnloh_snp
             ch_purecn_cnloh_gens = PURECN_CNLOH_GENS.out.purecn_cnloh_gens
             ch_purecn_cnloh_baf_plot = PURECN_CNLOH_GENS.out.purecn_cnloh_baf_plot
-            ch_versions = ch_versions.mix(PURECN_CNLOH_GENS.out.versions)
+
         }
 
     
