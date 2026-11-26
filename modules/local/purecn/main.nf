@@ -124,7 +124,7 @@ process PURECN_CALL {
         tuple val(group), val(meta), path("${meta.id}_purecn_snv_posteriors.tsv"),          emit: purecn_snv_posteriors
         tuple val(group), val(meta), path("${meta.id}.log"),                                emit: purecn_log
         tuple val(group), val(meta), path("${meta.id}.rds"),                                emit: purecn_rds
-        path "versions.yml",                                                                emit: versions                   
+        path "versions.yml",                                                                emit: versions
     
     when:
         task.ext.when == null || task.ext.when
@@ -187,7 +187,8 @@ process PURECN_LOH_EXTRACT {
         tuple val(group), val(meta), path(purecn_loh_raw_calls), path(purecn_log), path(purecn_rds)
     
     output:
-        tuple val(group), val(meta), file("${meta.id}_purecn_loh_filtered.csv"),                     emit: purecn_loh_filtered
+        tuple val(group), val(meta), file("${meta.id}_purecn_loh_filtered.csv"),            emit: purecn_loh_filtered
+        path "versions.yml",                                                                emit: versions
     
     when:
         task.ext.when == null || task.ext.when
@@ -228,10 +229,11 @@ process PURECN_CNLOH_GENS {
         tuple val(group), val(meta), path(purecn_loh_filtered), path(purecn_snv_posteriors)
     
     output:
-        tuple val(group), val(meta), file("${meta.id}_informative_cnloh_snp.tsv"),                           emit: purecn_cnloh_snp
-        tuple val(group), val(meta), file("${meta.id}_purecn_cnloh_gens.tsv"),                               emit: purecn_cnloh_gens
-        tuple val(group), val(meta), file("${meta.id}_baf_purecn_cnlohseg.png"),                             emit: purecn_cnloh_baf_plot, optional: true
-        tuple val(group), val(meta), file("${meta.id}_cnloh_coyote.json"),                                 emit: purecn_cnloh_coyote_json
+        tuple val(group), val(meta), file("${meta.id}_informative_cnloh_snp.tsv"),                          emit: purecn_cnloh_snp
+        tuple val(group), val(meta), file("${meta.id}_purecn_cnloh_gens.tsv"),                              emit: purecn_cnloh_gens
+        tuple val(group), val(meta), file("${meta.id}_baf_purecn_cnlohseg.png"),                            emit: purecn_cnloh_baf_plot, optional: true
+        tuple val(group), val(meta), file("${meta.id}_cnloh_coyote.json"),                                  emit: purecn_cnloh_coyote_json
+        path "versions.yml",                                                                                emit: versions
 
     // checking the input contains data
     when:
