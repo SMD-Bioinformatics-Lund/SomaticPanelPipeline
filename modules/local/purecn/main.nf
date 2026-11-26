@@ -211,7 +211,7 @@ process PURECN_LOH_EXTRACT {
 
     stub:
         """
-        touch ${meta.id}_loh_filtered.csv
+        touch ${meta.id}_purecn_loh_filtered.csv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -258,7 +258,7 @@ process PURECN_CNLOH_GENS {
     stub:
         """
         touch ${meta.id}_informative_cnloh_snp.tsv
-        touch ${meta.id}_loh_genes.tsv
+        touch ${meta.id}_purecn_cnloh_gens.tsv
         touch ${meta.id}_baf_purecn_cnlohseg.png
         touch ${meta.id}_cnloh_coyote.json
 
