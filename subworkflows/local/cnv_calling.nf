@@ -15,7 +15,8 @@ workflow CNV_CALLING {
         bam_umi              // channel: [mandatory] [ val(group), val(meta), file(umi_bam), file(umi_bai), file(bqsr.table) ]
         germline_variants    // channel: [mandatory] [ val(group), val(meta), file(vcf), file(tbi) ]
         bam_markdup          // channel: [mandatory] [ val(group), val(meta), file(dedup_bam), file(dedup_bai)]  ]
-        gatk_ref             // channel: [mandatory] [ val(interger), val(part_of_genome) used for germline gatk-calling ]
+        gatk_ref              // channel: [mandatory] [ val(interger), val(part_of_genome) used for germline gatk-calling ]
+        vcf_marked_germlines  // channel: [mandatory] [ val(group), val(meta), file(vcf.gz) ] structure to be verified
 
     main:
         ch_versions = Channel.empty()
@@ -79,7 +80,7 @@ workflow CNV_CALLING {
         ch_versions = ch_versions.mix(JOIN_TUMOR.out.versions)
 
         PURECN (
-            SNV_ANNOTATE.out.mark_germlines_vcf, 
+            vcf_marked_germlines, 
             ch_mapped.bam_umi,
             meta)
         ch_versions = ch_versions.mix(PURECN.out.versions)

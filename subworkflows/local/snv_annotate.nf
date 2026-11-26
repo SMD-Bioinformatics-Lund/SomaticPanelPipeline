@@ -106,8 +106,9 @@ workflow SNV_ANNOTATE {
         ch_versions = ch_versions.mix(FILTER_FOR_CNV_TABIX.out.versions)
 
     emit:
-        germline_variants   =   FILTER_FOR_CNV_TABIX.out.gz_index.map { group, meta, vc, vcf, tbi -> [ group, meta, vcf, tbi ] } // channel: [ val(group), val(meta), file(vcf.gz), file(vcf.gz.tbi) ]
-        finished_vcf        =   POST_ANNOTATION_FILTERS.out.filtered_vcf         // channel: [ val(group), val(vc), file(vcf.gz) ]
-        vep_vcf             =   ANNOTATE_VEP.out.vcf_vep                         // channel: [ val(group), val(meta), file("*.vep.vcf") ]
-        versions            =   ch_versions                                      // channel: [ file(versions) ]
+        vcf_marked_germlines   =   MARK_GERMLINES.out.vcf_germline                  // channel: [ val(group), val(meta), file(vcf.gz) ] structure to be verified
+        germline_variants      =   FILTER_FOR_CNV_TABIX.out.gz_index.map { group, meta, vc, vcf, tbi -> [ group, meta, vcf, tbi ] } // channel: [ val(group), val(meta), file(vcf.gz), file(vcf.gz.tbi) ]
+        finished_vcf           =   POST_ANNOTATION_FILTERS.out.filtered_vcf         // channel: [ val(group), val(vc), file(vcf.gz) ]
+        vep_vcf                =   ANNOTATE_VEP.out.vcf_vep                         // channel: [ val(group), val(meta), file("*.vep.vcf") ]
+        versions               =   ch_versions                                      // channel: [ file(versions) ]
 }

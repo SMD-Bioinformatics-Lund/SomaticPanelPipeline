@@ -115,7 +115,7 @@ workflow SPP_COMMON {
         // CHECK_INPUT.out.meta,
         ch_mapped.bam_dedup,
         gatk_ref,
-        SNV_ANNOTATE.out.mark_germlines_vcf
+        SNV_ANNOTATE.out.vcf_marked_germlines
     )
     .set { ch_cnvcalled }
     ch_versions = ch_versions.mix(ch_cnvcalled.versions)
