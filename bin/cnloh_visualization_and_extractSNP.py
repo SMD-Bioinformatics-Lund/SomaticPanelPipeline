@@ -22,7 +22,7 @@ cnloh_visualization_and_extractSNP.py \
     --input_loh sampleID_purecn_loh_filtered.csv \
     --posterior_file sampleID_snv_posteriors.tsv \
     --out_snp sampleID_informative_cnloh_snp.tsv \
-    --out_gens sampleID_purecn_cnloh_gens.tsv
+    --out_gens sampleID_purecn_cnloh_gens.tsv \
     --out_coyote sampleID_cnloh_coyote.json
 """
 
