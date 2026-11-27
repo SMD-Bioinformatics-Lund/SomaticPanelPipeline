@@ -211,7 +211,7 @@ process PURECN_LOH_EXTRACT {
 
     stub:
         """
-        touch ${meta.id}_purecn_loh_filtered.csv
+        printf "header\\nline\\n" > ${meta.id}_purecn_loh_filtered.csv
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
@@ -237,7 +237,7 @@ process PURECN_CNLOH_GENS {
 
     // checking the input contains data
     when:
-        (task.ext.when == null || task.ext.when) && purecn_loh_filtered.text.readLines().size() > 1
+        task.ext.when == null || task.ext.when
     
     script: // old name of the script: 8c_CNLOH_extract_infoSNP_make_GENSbed_plotVAF.py. Change it also in the description of the python script
         """
