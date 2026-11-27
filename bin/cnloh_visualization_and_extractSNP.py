@@ -331,7 +331,7 @@ def main():
 
         # Save the plot
         plt.savefig(
-            f"{sample_id}_chrom_{chromosome}.png", 
+            f"{sample_id}_chr_{chromosome}_{int(start)}_{int(end)}_CNLOH_BAF.png", 
             dpi=300, 
             bbox_inches="tight"
             )
